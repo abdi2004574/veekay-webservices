@@ -1,0 +1,130 @@
+name: veakay
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: veakay-postgres
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${POSTGRES_PORT:-57432}:5432"
+    volumes:
+      - veakay-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Isolated, wiped between E2E test runs — never the dev database.
+  postgres-test:
+    image: postgres:17-alpine
+    container_name: veakay-postgres-test
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_TEST_DB}
+    ports:
+      - "${POSTGRES_TEST_PORT:-57433}:5432"
+    volumes:
+      - veakay-postgres-test-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_TEST_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Shared between dev and E2E — E2E uses logical DB index 1 (REDIS_TEST_URL), dev uses index 0.
+  redis:
+    image: redis:7-alpine
+    container_name: veakay-redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    env_file: .env
+    ports:
+      - "${REDIS_PORT:-57379}:6379"
+    volumes:
+      - veakay-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "--no-auth-warning", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    platform: linux/amd64
+    container_name: veakay-mailhog
+    restart: unless-stopped
+    ports:
+      - "${MAIL_PORT:-57025}:1025"          # SMTP
+      - "${MAILHOG_UI_PORT:-58025}:8025"    # Web UI → http://localhost:58025
+
+  minio:
+    image: minio/minio:latest
+    container_name: veakay-minio
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY}
+    command: server /data --console-address ":9001"
+    ports:
+      - "${MINIO_API_PORT:-57900}:9000"
+      - "${MINIO_CONSOLE_PORT:-57901}:9001"
+    volumes:
+      - veakay-minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  app:
+    build:
+      context: .
+      target: dev
+    container_name: veakay-backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      MAIL_HOST: mailhog
+      MAIL_PORT: 1025
+      S3_ENDPOINT: http://minio:9000
+    ports:
+      - "${PORT:-57800}:57800"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mailhog:
+        condition: service_started
+      minio:
+        condition: service_healthy
+    command: npm run start:dev
+
+volumes:
+  veakay-postgres-data:
+    name: veakay-postgres-data
+  veakay-postgres-test-data:
+    name: veakay-postgres-test-data
+  veakay-redis-data:
+    name: veakay-redis-data
+  veakay-minio-data:
+    name: veakay-minio-data

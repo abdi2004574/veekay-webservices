@@ -1,0 +1,18 @@
+node_modules
+dist
+coverage
+*.log
+.DS_Store
+
+# Keep environment variables out of version control
+.env
+.env.*
+!.env.example
+
+/generated/prisma
+
+# AI tool / editor plugin scaffolding — not part of the app
+.claude
+.agents
+.windsurf
+skills-lock.json

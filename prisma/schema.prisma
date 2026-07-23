@@ -1,0 +1,261 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────────────────────
+
+enum UserRole {
+  traveler
+  agency
+  admin
+}
+
+enum PlatformRole {
+  user
+  super_admin
+}
+
+enum TravelerBadge {
+  dreamer
+  explorer
+  jetsetter
+}
+
+enum DestinationType {
+  beach
+  mountain
+  city
+  adventure
+  cruise
+}
+
+enum TravelStyle {
+  luxury
+  budget
+  backpacking
+  family
+  solo
+  group
+}
+
+enum SocialProvider {
+  google
+  apple
+}
+
+enum OtpType {
+  email_verify
+  password_reset
+  login
+}
+
+enum AgencyStatus {
+  pending_verification
+  approved
+  rejected
+}
+
+enum AgencyDocumentType {
+  business_license
+  certification
+  legal_document
+}
+
+enum AgencySubscriptionTier {
+  basic
+  premium
+  featured
+}
+
+enum AgencyStaffPermission {
+  owner
+  staff
+}
+
+// ─────────────────────────────────────────────────────────────
+// USERS & AUTH
+// ─────────────────────────────────────────────────────────────
+
+model User {
+  id                 String       @id @default(uuid())
+  email              String       @unique
+  displayName        String?      @map("display_name")
+  passwordHash       String?      @map("password_hash")
+  role               UserRole
+  platformRole       PlatformRole @default(user) @map("platform_role")
+  isEmailVerified    Boolean      @default(false) @map("is_email_verified")
+  isActive           Boolean      @default(true) @map("is_active")
+  onboardingComplete Boolean      @default(false) @map("onboarding_complete")
+  deactivatedAt      DateTime?    @map("deactivated_at")
+  fcmToken           String?      @map("fcm_token")
+  lastLoginAt        DateTime?    @map("last_login_at")
+  createdAt          DateTime     @default(now()) @map("created_at")
+  updatedAt          DateTime     @updatedAt @map("updated_at")
+
+  travelerProfile    TravelerProfile?
+  agency             Agency?
+  socialIdentities   SocialIdentity[]
+  refreshTokens      RefreshToken[]
+  adminTwoFactor     AdminTwoFactor?
+
+  @@map("users")
+}
+
+model TravelerProfile {
+  userId                String    @id @map("user_id")
+  photoMediaId          String?   @map("photo_media_id")
+  badge                 TravelerBadge @default(dreamer)
+  walletConnected        Boolean  @default(false) @map("wallet_connected")
+  walletPaymentMethodId  String?  @map("wallet_payment_method_id")
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+
+  user               User                             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  destinationTypes   TravelerDestinationPreference[]
+  travelStyles       TravelerTravelStylePreference[]
+  previousTripPhotos TravelerPreviousTripPhoto[]
+
+  @@map("traveler_profiles")
+}
+
+model TravelerPreviousTripPhoto {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  mediaId   String   @map("media_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  travelerProfile TravelerProfile @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@map("traveler_previous_trip_photos")
+}
+
+model TravelerDestinationPreference {
+  userId          String          @map("user_id")
+  destinationType DestinationType @map("destination_type")
+
+  travelerProfile TravelerProfile @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@id([userId, destinationType])
+  @@map("traveler_destination_preferences")
+}
+
+model TravelerTravelStylePreference {
+  userId      String      @map("user_id")
+  travelStyle TravelStyle @map("travel_style")
+
+  travelerProfile TravelerProfile @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@id([userId, travelStyle])
+  @@map("traveler_travel_style_preferences")
+}
+
+model SocialIdentity {
+  id             String         @id @default(uuid())
+  userId         String         @map("user_id")
+  provider       SocialProvider
+  providerUserId String         @map("provider_user_id")
+  createdAt      DateTime       @default(now()) @map("created_at")
+
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@map("social_identities")
+}
+
+model RefreshToken {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  tokenHash  String   @map("token_hash")
+  deviceId   String?  @map("device_id")
+  deviceName String?  @map("device_name")
+  expiresAt  DateTime @map("expires_at")
+  isRevoked  Boolean  @default(false) @map("is_revoked")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+model OtpCode {
+  id         String   @id @default(uuid())
+  identifier String
+  codeHash   String   @map("code_hash")
+  type       OtpType
+  attempts   Int      @default(0)
+  expiresAt  DateTime @map("expires_at")
+  isUsed     Boolean  @default(false) @map("is_used")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([identifier, type])
+  @@map("otp_codes")
+}
+
+model AdminTwoFactor {
+  userId      String   @id @map("user_id")
+  secret      String
+  isConfirmed Boolean  @default(false) @map("is_confirmed")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("admin_two_factor")
+}
+
+// ─────────────────────────────────────────────────────────────
+// AGENCIES
+// ─────────────────────────────────────────────────────────────
+
+model Agency {
+  id               String                 @id @default(uuid())
+  userId           String                 @unique @map("user_id")
+  agencyName       String                 @map("agency_name")
+  businessContact  String?                @map("business_contact")
+  businessAddress  String?                @map("business_address")
+  status           AgencyStatus           @default(pending_verification)
+  rejectionReason  String?                @map("rejection_reason")
+  reputationScore  Decimal?               @map("reputation_score")
+  subscriptionTier AgencySubscriptionTier @default(basic) @map("subscription_tier")
+  logoMediaId      String?                @map("logo_media_id")
+  description      String?
+  createdAt        DateTime               @default(now()) @map("created_at")
+  updatedAt        DateTime               @updatedAt @map("updated_at")
+
+  user             User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documents        AgencyDocument[]
+  staff            AgencyStaff[]
+
+  @@map("agencies")
+}
+
+model AgencyDocument {
+  id        String             @id @default(uuid())
+  agencyId  String             @map("agency_id")
+  type      AgencyDocumentType
+  mediaId   String             @map("media_id")
+  createdAt DateTime           @default(now()) @map("created_at")
+
+  agency    Agency             @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@map("agency_documents")
+}
+
+model AgencyStaff {
+  id         String                @id @default(uuid())
+  agencyId   String                @map("agency_id")
+  userId     String                @map("user_id")
+  permission AgencyStaffPermission @default(owner)
+  createdAt  DateTime              @default(now()) @map("created_at")
+
+  agency     Agency                @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@unique([agencyId, userId])
+  @@map("agency_staff")
+}
