@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { AppException } from '../../common/errors/app.exception';
 import { PrismaService } from '../prisma/prisma.service';
 import { FriendsService } from '../friends/friends.service';
+import { MediaAssetsService } from '../storage/media-assets.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 
@@ -19,6 +20,7 @@ export class PostsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly friendsService: FriendsService,
+    private readonly mediaAssetsService: MediaAssetsService,
   ) {}
 
   private async attachViewerContext(posts: any[], viewerId: string) {
@@ -29,11 +31,26 @@ export class PostsService {
       where: { userId: viewerId, postId: { in: posts.map((p) => p.id) } },
     });
     const likedPostIds = new Set(likes.map((l) => l.postId));
+
+    const mediaIds = posts.flatMap((p) =>
+      [p.imageMediaId, p.repostOf?.imageMediaId].filter((id): id is string => !!id),
+    );
+    const urlsByMediaId = await this.mediaAssetsService.resolveViewUrls(mediaIds);
+
     return posts.map((post) => ({
       ...post,
       likesCount: post._count.likes,
       commentsCount: post._count.comments,
       isLikedByMe: likedPostIds.has(post.id),
+      imageUrl: post.imageMediaId ? (urlsByMediaId.get(post.imageMediaId) ?? null) : null,
+      repostOf: post.repostOf
+        ? {
+            ...post.repostOf,
+            imageUrl: post.repostOf.imageMediaId
+              ? (urlsByMediaId.get(post.repostOf.imageMediaId) ?? null)
+              : null,
+          }
+        : null,
       _count: undefined,
     }));
   }

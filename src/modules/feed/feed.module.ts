@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { FriendsModule } from '../friends/friends.module';
+import { StorageModule } from '../storage/storage.module';
 import { PostsController } from './posts.controller';
 import { PostsService } from './posts.service';
 import { CommentsController } from './comments.controller';
@@ -9,7 +10,7 @@ import { StoriesService } from './stories.service';
 import { UserPostsController } from './user-posts.controller';
 
 @Module({
-  imports: [FriendsModule],
+  imports: [FriendsModule, StorageModule],
   controllers: [
     PostsController,
     CommentsController,

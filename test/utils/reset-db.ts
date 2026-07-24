@@ -23,6 +23,7 @@ export async function resetDb(): Promise<void> {
     prisma.storyView.deleteMany(),
     prisma.story.deleteMany(),
     prisma.friendRequest.deleteMany(),
+    prisma.mediaAsset.deleteMany(),
     prisma.user.deleteMany(),
   ]);
 }

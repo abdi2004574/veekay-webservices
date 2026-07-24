@@ -85,6 +85,21 @@ enum FriendRequestStatus {
   declined
 }
 
+enum MediaPurpose {
+  profile_photo
+  previous_trip_photo
+  post_media
+  story_media
+  agency_document
+  agency_logo
+}
+
+enum MediaStatus {
+  pending
+  uploaded
+  deleted
+}
+
 enum StoryTextSize {
   small
   medium
@@ -127,6 +142,7 @@ model User {
   storyViews              StoryView[]
   friendRequestsSent      FriendRequest[] @relation("FriendRequestsSent")
   friendRequestsReceived  FriendRequest[] @relation("FriendRequestsReceived")
+  mediaAssets             MediaAsset[]
 
   @@map("users")
 }
@@ -406,4 +422,24 @@ model FriendRequest {
 
   @@unique([requesterId, addresseeId])
   @@map("friend_requests")
+}
+
+// ─────────────────────────────────────────────────────────────
+// STORAGE
+// ─────────────────────────────────────────────────────────────
+
+model MediaAsset {
+  id          String       @id @default(uuid())
+  ownerId     String       @map("owner_id")
+  purpose     MediaPurpose
+  key         String       @unique
+  contentType String       @map("content_type")
+  status      MediaStatus  @default(pending)
+  sizeBytes   Int?         @map("size_bytes")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  owner       User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@map("media_assets")
 }

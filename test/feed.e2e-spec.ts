@@ -65,6 +65,60 @@ describe('Feed: posts, comments, likes, share (e2e)', () => {
         .expect(200);
     });
 
+    it('attaches a real uploaded photo to a post, resolves imageUrl, and clears it on edit', async () => {
+      const alice = await registerAndVerifyTraveler(server, 'alice1b@e2e.test', 'Alice');
+
+      const urlRes = await request(server())
+        .post('/api/v1/storage/upload-url')
+        .set('Authorization', `Bearer ${alice.accessToken}`)
+        .send({ contentType: 'image/jpeg', purpose: 'post_media' })
+        .expect(201);
+      const { uploadUrl, mediaId } = urlRes.body.data;
+
+      await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'image/jpeg' },
+        body: Buffer.from('fake-post-photo-bytes'),
+      });
+      await request(server())
+        .post('/api/v1/storage/confirm')
+        .set('Authorization', `Bearer ${alice.accessToken}`)
+        .send({ mediaId })
+        .expect(201);
+
+      const createRes = await request(server())
+        .post('/api/v1/posts')
+        .set('Authorization', `Bearer ${alice.accessToken}`)
+        .send({ text: 'Post with a real photo', imageMediaId: mediaId })
+        .expect(201);
+      const postId = createRes.body.data.id;
+
+      const feedRes = await request(server())
+        .get('/api/v1/feed')
+        .set('Authorization', `Bearer ${alice.accessToken}`)
+        .expect(200);
+      const postInFeed = feedRes.body.data.items.find((p: any) => p.id === postId);
+      expect(postInFeed.imageMediaId).toEqual(mediaId);
+      expect(postInFeed.imageUrl).toContain('http');
+
+      // Removing the photo must actually clear it (imageMediaId: null), not
+      // silently no-op the way `imageMediaId: undefined` would in Prisma.
+      const clearRes = await request(server())
+        .patch(`/api/v1/posts/${postId}`)
+        .set('Authorization', `Bearer ${alice.accessToken}`)
+        .send({ imageMediaId: null })
+        .expect(200);
+      expect(clearRes.body.data.imageMediaId).toBeNull();
+
+      const feedAfterRes = await request(server())
+        .get('/api/v1/feed')
+        .set('Authorization', `Bearer ${alice.accessToken}`)
+        .expect(200);
+      const postAfter = feedAfterRes.body.data.items.find((p: any) => p.id === postId);
+      expect(postAfter.imageMediaId).toBeNull();
+      expect(postAfter.imageUrl).toBeNull();
+    });
+
     it('rejects editing or deleting someone else’s post', async () => {
       const alice = await registerAndVerifyTraveler(server, 'alice2@e2e.test', 'Alice');
       const bob = await registerAndVerifyTraveler(server, 'bob2@e2e.test', 'Bob');

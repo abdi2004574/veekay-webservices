@@ -3,6 +3,7 @@ import { StoriesService } from './stories.service';
 describe('StoriesService', () => {
   let prisma: any;
   let friendsService: any;
+  let mediaAssetsService: any;
   let service: StoriesService;
 
   beforeEach(() => {
@@ -12,7 +13,8 @@ describe('StoriesService', () => {
       storyLike: { findUnique: jest.fn(), create: jest.fn() },
     };
     friendsService = { getFriendIds: jest.fn().mockResolvedValue([]) };
-    service = new StoriesService(prisma, friendsService);
+    mediaAssetsService = { resolveViewUrls: jest.fn().mockResolvedValue(new Map()) };
+    service = new StoriesService(prisma, friendsService, mediaAssetsService);
   });
 
   describe('create', () => {

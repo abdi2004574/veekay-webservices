@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { AppException } from '../../common/errors/app.exception';
 import { PrismaService } from '../prisma/prisma.service';
 import { FriendsService } from '../friends/friends.service';
+import { MediaAssetsService } from '../storage/media-assets.service';
 import { CreateStoryDto } from './dto/create-story.dto';
 
 const STORY_TTL_MS = 24 * 60 * 60 * 1000;
@@ -20,6 +21,7 @@ export class StoriesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly friendsService: FriendsService,
+    private readonly mediaAssetsService: MediaAssetsService,
   ) {}
 
   async create(authorId: string, dto: CreateStoryDto) {
@@ -52,7 +54,7 @@ export class StoriesService {
     const friendIds = await this.friendsService.getFriendIds(viewerId);
     const authorIds = [viewerId, ...friendIds];
 
-    return this.prisma.story.findMany({
+    const stories = await this.prisma.story.findMany({
       where: { authorId: { in: authorIds }, expiresAt: { gt: new Date() } },
       orderBy: { createdAt: 'desc' },
       include: {
@@ -60,6 +62,14 @@ export class StoriesService {
         _count: { select: { likes: true, views: true } },
       },
     });
+
+    const mediaIds = stories.map((s) => s.imageMediaId).filter((id): id is string => !!id);
+    const urlsByMediaId = await this.mediaAssetsService.resolveViewUrls(mediaIds);
+
+    return stories.map((story) => ({
+      ...story,
+      imageUrl: story.imageMediaId ? (urlsByMediaId.get(story.imageMediaId) ?? null) : null,
+    }));
   }
 
   async view(storyId: string, viewerId: string) {

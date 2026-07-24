@@ -3,6 +3,7 @@ import { PostsService } from './posts.service';
 describe('PostsService', () => {
   let prisma: any;
   let friendsService: any;
+  let mediaAssetsService: any;
   let service: PostsService;
 
   beforeEach(() => {
@@ -22,7 +23,8 @@ describe('PostsService', () => {
       },
     };
     friendsService = { getFriendIds: jest.fn().mockResolvedValue([]) };
-    service = new PostsService(prisma, friendsService);
+    mediaAssetsService = { resolveViewUrls: jest.fn().mockResolvedValue(new Map()) };
+    service = new PostsService(prisma, friendsService, mediaAssetsService);
   });
 
   describe('create', () => {

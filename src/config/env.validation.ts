@@ -30,6 +30,7 @@ export const envValidationSchema = Joi.object({
   MAIL_PASS: Joi.string().allow('').optional(),
 
   S3_ENDPOINT: Joi.string().uri().required(),
+  S3_PUBLIC_ENDPOINT: Joi.string().uri().optional(),
   S3_REGION: Joi.string().default('us-east-1'),
   S3_BUCKET: Joi.string().required(),
   S3_ACCESS_KEY: Joi.string().required(),
