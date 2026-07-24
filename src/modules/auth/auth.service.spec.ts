@@ -123,6 +123,7 @@ describe('AuthService', () => {
       expect(prisma.user.create).toHaveBeenCalledWith({
         data: {
           email: 'traveler@example.com',
+          username: 'jane',
           passwordHash: 'hashed:StrongPassword123!',
           role: UserRole.traveler,
           displayName: 'Jane',
@@ -396,6 +397,7 @@ describe('AuthService', () => {
       expect(prisma.user.create).toHaveBeenCalledWith({
         data: {
           email: 'newtraveler@example.com',
+          username: 'newtraveler',
           role: UserRole.traveler,
           isEmailVerified: true,
         },

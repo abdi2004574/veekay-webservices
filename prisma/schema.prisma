@@ -79,6 +79,18 @@ enum AgencyStaffPermission {
   staff
 }
 
+enum FriendRequestStatus {
+  pending
+  accepted
+  declined
+}
+
+enum StoryTextSize {
+  small
+  medium
+  large
+}
+
 // ─────────────────────────────────────────────────────────────
 // USERS & AUTH
 // ─────────────────────────────────────────────────────────────
@@ -86,6 +98,7 @@ enum AgencyStaffPermission {
 model User {
   id                 String       @id @default(uuid())
   email              String       @unique
+  username           String       @unique
   displayName        String?      @map("display_name")
   passwordHash       String?      @map("password_hash")
   role               UserRole
@@ -105,12 +118,24 @@ model User {
   refreshTokens      RefreshToken[]
   adminTwoFactor     AdminTwoFactor?
 
+  posts                   Post[]
+  postLikes               PostLike[]
+  comments                Comment[]
+  commentLikes            CommentLike[]
+  stories                 Story[]
+  storyLikes              StoryLike[]
+  storyViews              StoryView[]
+  friendRequestsSent      FriendRequest[] @relation("FriendRequestsSent")
+  friendRequestsReceived  FriendRequest[] @relation("FriendRequestsReceived")
+
   @@map("users")
 }
 
 model TravelerProfile {
   userId                String    @id @map("user_id")
   photoMediaId          String?   @map("photo_media_id")
+  bio                   String?
+  location              String?
   badge                 TravelerBadge @default(dreamer)
   walletConnected        Boolean  @default(false) @map("wallet_connected")
   walletPaymentMethodId  String?  @map("wallet_payment_method_id")
@@ -258,4 +283,127 @@ model AgencyStaff {
 
   @@unique([agencyId, userId])
   @@map("agency_staff")
+}
+
+// ─────────────────────────────────────────────────────────────
+// SOCIAL FEED, STORIES & FRIENDS
+// ─────────────────────────────────────────────────────────────
+
+model Post {
+  id           String    @id @default(uuid())
+  authorId     String    @map("author_id")
+  text         String
+  imageMediaId String?   @map("image_media_id")
+  location     String?
+  tags         String[]
+  repostOfId   String?   @map("repost_of_id")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  author       User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  repostOf     Post?      @relation("PostReposts", fields: [repostOfId], references: [id], onDelete: SetNull)
+  reposts      Post[]     @relation("PostReposts")
+  likes        PostLike[]
+  comments     Comment[]
+
+  @@map("posts")
+}
+
+model PostLike {
+  id        String   @id @default(uuid())
+  postId    String   @map("post_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@map("post_likes")
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  postId    String   @map("post_id")
+  authorId  String   @map("author_id")
+  text      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  post      Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author    User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  likes     CommentLike[]
+
+  @@map("comments")
+}
+
+model CommentLike {
+  id        String   @id @default(uuid())
+  commentId String   @map("comment_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@map("comment_likes")
+}
+
+model Story {
+  id              String         @id @default(uuid())
+  authorId        String         @map("author_id")
+  imageMediaId    String?        @map("image_media_id")
+  text            String?
+  backgroundColor String?        @map("background_color")
+  textSize        StoryTextSize? @map("text_size")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  expiresAt       DateTime       @map("expires_at")
+
+  author          User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  likes           StoryLike[]
+  views           StoryView[]
+
+  @@map("stories")
+}
+
+model StoryLike {
+  id        String   @id @default(uuid())
+  storyId   String   @map("story_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  story     Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([storyId, userId])
+  @@map("story_likes")
+}
+
+model StoryView {
+  id        String   @id @default(uuid())
+  storyId   String   @map("story_id")
+  viewerId  String   @map("viewer_id")
+  viewedAt  DateTime @default(now()) @map("viewed_at")
+
+  story     Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  viewer    User     @relation(fields: [viewerId], references: [id], onDelete: Cascade)
+
+  @@unique([storyId, viewerId])
+  @@map("story_views")
+}
+
+model FriendRequest {
+  id          String              @id @default(uuid())
+  requesterId String              @map("requester_id")
+  addresseeId String              @map("addressee_id")
+  status      FriendRequestStatus @default(pending)
+  createdAt   DateTime            @default(now()) @map("created_at")
+  respondedAt DateTime?           @map("responded_at")
+
+  requester   User @relation("FriendRequestsSent", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee   User @relation("FriendRequestsReceived", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+  @@map("friend_requests")
 }

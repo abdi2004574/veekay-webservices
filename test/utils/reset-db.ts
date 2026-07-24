@@ -15,6 +15,14 @@ export async function resetDb(): Promise<void> {
     prisma.travelerDestinationPreference.deleteMany(),
     prisma.travelerTravelStylePreference.deleteMany(),
     prisma.travelerProfile.deleteMany(),
+    prisma.postLike.deleteMany(),
+    prisma.commentLike.deleteMany(),
+    prisma.comment.deleteMany(),
+    prisma.post.deleteMany(),
+    prisma.storyLike.deleteMany(),
+    prisma.storyView.deleteMany(),
+    prisma.story.deleteMany(),
+    prisma.friendRequest.deleteMany(),
     prisma.user.deleteMany(),
   ]);
 }
