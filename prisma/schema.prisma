@@ -92,6 +92,30 @@ enum MediaPurpose {
   story_media
   agency_document
   agency_logo
+  chat_image
+  chat_document
+}
+
+enum ConversationType {
+  direct
+  group
+  agency
+}
+
+enum ConversationParticipantRole {
+  member
+  admin
+}
+
+enum MessageType {
+  text
+  image
+  document
+}
+
+enum MessageReceiptStatus {
+  delivered
+  read
 }
 
 enum MediaStatus {
@@ -143,6 +167,10 @@ model User {
   friendRequestsSent      FriendRequest[] @relation("FriendRequestsSent")
   friendRequestsReceived  FriendRequest[] @relation("FriendRequestsReceived")
   mediaAssets             MediaAsset[]
+  conversationsCreated    Conversation[]
+  conversationParticipants ConversationParticipant[]
+  messages                Message[]
+  messageReceipts         MessageReceipt[]
 
   @@map("users")
 }
@@ -272,6 +300,7 @@ model Agency {
   user             User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   documents        AgencyDocument[]
   staff            AgencyStaff[]
+  conversations    Conversation[]
 
   @@map("agencies")
 }
@@ -442,4 +471,83 @@ model MediaAsset {
   owner       User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   @@map("media_assets")
+}
+
+// ─────────────────────────────────────────────────────────────
+// CHAT / MESSAGING
+// ─────────────────────────────────────────────────────────────
+
+model Conversation {
+  id                String           @id @default(uuid())
+  type              ConversationType
+  title             String?
+  createdById       String           @map("created_by_id")
+  // Set only for type=agency. Staff are authorized via AgencyStaff.agencyId
+  // matching this, not via an explicit ConversationParticipant row per staff
+  // member — a shared team inbox, not per-agent membership. The traveler on
+  // the other side of the conversation *does* get a normal participant row.
+  agencyId          String?          @map("agency_id")
+  lastMessageAt     DateTime?        @map("last_message_at")
+  // Shared read cursor for the agency side of an agency conversation — any
+  // staff member marking it read clears it for the whole team, same idea as
+  // a shared support inbox. Direct/group conversations use each participant's
+  // own lastReadAt instead.
+  agencyLastReadAt  DateTime?        @map("agency_last_read_at")
+  createdAt         DateTime         @default(now()) @map("created_at")
+
+  createdBy         User             @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  agency            Agency?          @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  participants      ConversationParticipant[]
+  messages          Message[]
+
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id             String                      @id @default(uuid())
+  conversationId String                      @map("conversation_id")
+  userId         String                      @map("user_id")
+  role           ConversationParticipantRole @default(member)
+  joinedAt       DateTime                    @default(now()) @map("joined_at")
+  lastReadAt     DateTime?                   @map("last_read_at")
+  leftAt         DateTime?                   @map("left_at")
+
+  conversation   Conversation                @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id             String      @id @default(uuid())
+  conversationId String      @map("conversation_id")
+  senderId       String      @map("sender_id")
+  type           MessageType @default(text)
+  body           String?
+  mediaId        String?     @map("media_id")
+  fileName       String?     @map("file_name")
+  createdAt      DateTime    @default(now()) @map("created_at")
+
+  conversation   Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User             @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  receipts       MessageReceipt[]
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+}
+
+model MessageReceipt {
+  id          String               @id @default(uuid())
+  messageId   String               @map("message_id")
+  userId      String               @map("user_id")
+  status      MessageReceiptStatus
+  deliveredAt DateTime?            @map("delivered_at")
+  readAt      DateTime?            @map("read_at")
+
+  message     Message              @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@map("message_receipts")
 }

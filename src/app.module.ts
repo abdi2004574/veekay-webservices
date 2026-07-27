@@ -15,6 +15,7 @@ import { AgenciesModule } from './modules/agencies/agencies.module';
 import { FriendsModule } from './modules/friends/friends.module';
 import { FeedModule } from './modules/feed/feed.module';
 import { StorageModule } from './modules/storage/storage.module';
+import { ChatModule } from './modules/chat/chat.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
@@ -65,6 +66,7 @@ import { AppConfig } from './config/configuration';
     FriendsModule,
     FeedModule,
     StorageModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [
