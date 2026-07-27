@@ -171,6 +171,7 @@ model User {
   conversationParticipants ConversationParticipant[]
   messages                Message[]
   messageReceipts         MessageReceipt[]
+  agencyReviews           AgencyReview[]
 
   @@map("users")
 }
@@ -301,8 +302,32 @@ model Agency {
   documents        AgencyDocument[]
   staff            AgencyStaff[]
   conversations    Conversation[]
+  reviews          AgencyReview[]
 
   @@map("agencies")
+}
+
+// One review per traveler per agency (edit/delete instead of stacking new
+// ones) — matches figma's binary hasReviewed check and MyReviewsScreen's
+// single-entry-per-agency list. No tripId/completed-trip gate yet: TRD open
+// question #1 leaves "completed trip" undefined and there's no Trip/Booking
+// model to gate against yet, so review creation is open to any traveler for
+// now (documented, not silently skipped).
+model AgencyReview {
+  id            String   @id @default(uuid())
+  agencyId      String   @map("agency_id")
+  reviewerId    String   @map("reviewer_id")
+  rating        Int
+  body          String?
+  editableUntil DateTime @map("editable_until")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  agency        Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  reviewer      User     @relation(fields: [reviewerId], references: [id], onDelete: Cascade)
+
+  @@unique([agencyId, reviewerId])
+  @@map("agency_reviews")
 }
 
 model AgencyDocument {

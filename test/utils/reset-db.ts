@@ -8,6 +8,7 @@ export async function resetDb(): Promise<void> {
     prisma.refreshToken.deleteMany(),
     prisma.socialIdentity.deleteMany(),
     prisma.adminTwoFactor.deleteMany(),
+    prisma.agencyReview.deleteMany(),
     prisma.agencyDocument.deleteMany(),
     prisma.agencyStaff.deleteMany(),
     prisma.agency.deleteMany(),
