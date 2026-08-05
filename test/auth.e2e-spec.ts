@@ -60,6 +60,20 @@ describe('Auth (e2e)', () => {
           photoMediaId: 'media-1',
           destinationTypes: ['beach', 'city'],
           travelStyles: ['solo', 'luxury'],
+          gender: 'female',
+          dateOfBirth: '1995-04-12',
+          bio: 'Loves the mountains.',
+          previousTrips: [
+            {
+              mediaId: 'media-trip-1',
+              name: 'Swiss Alps',
+              location: 'Zermatt, Switzerland',
+              startDate: '2023-01-05',
+              endDate: '2023-01-12',
+              travelerCount: 2,
+              description: 'First ski trip.',
+            },
+          ],
         })
         .expect(201);
 
@@ -73,6 +87,58 @@ describe('Auth (e2e)', () => {
       expect(loginRes.body.data.user.onboardingComplete).toBe(true);
       expect(loginRes.body.data.accessToken).toBeDefined();
       expect(loginRes.body.data.refreshToken).toBeDefined();
+
+      const meRes = await request(server())
+        .get('/api/v1/me')
+        .set('Authorization', `Bearer ${loginRes.body.data.accessToken}`)
+        .expect(200);
+
+      expect(meRes.body.data.gender).toEqual('female');
+      expect(meRes.body.data.dateOfBirth).toEqual(
+        new Date('1995-04-12').toISOString(),
+      );
+      expect(meRes.body.data.bio).toEqual('Loves the mountains.');
+
+      const previousTrips = await testPrisma.travelerPreviousTripPhoto.findMany(
+        { where: { userId } },
+      );
+      expect(previousTrips).toHaveLength(1);
+      expect(previousTrips[0]).toMatchObject({
+        mediaId: 'media-trip-1',
+        name: 'Swiss Alps',
+        location: 'Zermatt, Switzerland',
+        travelerCount: 2,
+        description: 'First ski trip.',
+      });
+    });
+
+    it('accepts profile setup without a photo and with no previous trips', async () => {
+      const registerRes = await request(server())
+        .post('/api/v1/auth/register/email')
+        .send({
+          email: 'nophoto@e2e.test',
+          password: 'StrongPassword123!',
+          displayName: 'No Photo',
+        })
+        .expect(201);
+
+      const { userId } = registerRes.body.data;
+      const otp = await fetchLatestOtp('nophoto@e2e.test');
+
+      const verifyRes = await request(server())
+        .post('/api/v1/auth/verify-email')
+        .send({ userId, otp })
+        .expect(201);
+      const { accessToken } = verifyRes.body.data;
+
+      await request(server())
+        .post('/api/v1/me/profile-setup')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          destinationTypes: ['beach'],
+          travelStyles: ['solo'],
+        })
+        .expect(201);
     });
 
     it('rejects a duplicate email registration with 409', async () => {

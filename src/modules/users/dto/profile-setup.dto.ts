@@ -1,17 +1,26 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
   IsArray,
+  IsDateString,
   IsEnum,
   IsOptional,
   IsString,
+  MaxLength,
+  ValidateNested,
 } from 'class-validator';
-import { DestinationType, TravelStyle } from '@prisma/client';
+import { DestinationType, Gender, TravelStyle } from '@prisma/client';
+import { PreviousTripInputDto } from './previous-trip-input.dto';
 
 export class ProfileSetupDto {
-  @ApiProperty({ description: 'Media asset id from a prior presigned upload.' })
+  @ApiProperty({
+    required: false,
+    description: 'Media asset id from a prior presigned upload.',
+  })
+  @IsOptional()
   @IsString()
-  photoMediaId: string;
+  photoMediaId?: string;
 
   @ApiProperty({ enum: DestinationType, isArray: true })
   @IsArray()
@@ -25,11 +34,28 @@ export class ProfileSetupDto {
   @IsEnum(TravelStyle, { each: true })
   travelStyles: TravelStyle[];
 
-  @ApiProperty({ required: false, type: [String] })
+  @ApiProperty({ enum: Gender, required: false })
+  @IsOptional()
+  @IsEnum(Gender)
+  gender?: Gender;
+
+  @ApiProperty({ required: false, description: 'ISO date string.' })
+  @IsOptional()
+  @IsDateString()
+  dateOfBirth?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  bio?: string;
+
+  @ApiProperty({ required: false, type: [PreviousTripInputDto] })
   @IsOptional()
   @IsArray()
-  @IsString({ each: true })
-  previousTripPhotoIds?: string[];
+  @ValidateNested({ each: true })
+  @Type(() => PreviousTripInputDto)
+  previousTrips?: PreviousTripInputDto[];
 
   @ApiProperty({ required: false })
   @IsOptional()

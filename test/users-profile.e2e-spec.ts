@@ -40,6 +40,43 @@ describe('Users profile: GET /me and GET /users/:id/profile (e2e)', () => {
     expect(res.body.data.username).toBeTruthy();
     expect(res.body.data.friendsCount).toBe(0);
     expect(res.body.data.postsCount).toBe(0);
+    expect(res.body.data.campaignsCount).toBe(0);
+  });
+
+  it('counts campaigns for real — including your own private ones, but hiding others’ private ones from strangers', async () => {
+    const alice = await registerAndVerifyTraveler(server, 'alice5@e2e.test', 'Alice');
+    const bob = await registerAndVerifyTraveler(server, 'bob5@e2e.test', 'Bob');
+
+    const campaignPayload = {
+      title: 'My Dream Trip',
+      destination: 'Santorini, Greece',
+      goalAmount: 1000,
+      tripStartDate: '2026-09-15',
+      giftMode: false,
+      photoMediaIds: ['fake-media-1'],
+    };
+    await request(server())
+      .post('/api/v1/campaigns')
+      .set('Authorization', `Bearer ${alice.accessToken}`)
+      .send({ ...campaignPayload, privacy: 'public' })
+      .expect(201);
+    await request(server())
+      .post('/api/v1/campaigns')
+      .set('Authorization', `Bearer ${alice.accessToken}`)
+      .send({ ...campaignPayload, privacy: 'private' })
+      .expect(201);
+
+    const meRes = await request(server())
+      .get('/api/v1/me')
+      .set('Authorization', `Bearer ${alice.accessToken}`)
+      .expect(200);
+    expect(meRes.body.data.campaignsCount).toBe(2);
+
+    const strangerViewRes = await request(server())
+      .get(`/api/v1/users/${alice.userId}/profile`)
+      .set('Authorization', `Bearer ${bob.accessToken}`)
+      .expect(200);
+    expect(strangerViewRes.body.data.campaignsCount).toBe(1);
   });
 
   it('returns another traveler’s public profile with isFriend and mutualFriendsCount', async () => {

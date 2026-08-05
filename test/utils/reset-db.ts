@@ -5,6 +5,8 @@ const prisma = new PrismaClient();
 export async function resetDb(): Promise<void> {
   await prisma.$transaction([
     prisma.otpCode.deleteMany(),
+    prisma.campaignPhoto.deleteMany(),
+    prisma.campaign.deleteMany(),
     prisma.refreshToken.deleteMany(),
     prisma.socialIdentity.deleteMany(),
     prisma.adminTwoFactor.deleteMany(),

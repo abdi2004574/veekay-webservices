@@ -45,6 +45,12 @@ enum TravelStyle {
   group
 }
 
+enum Gender {
+  male
+  female
+  other
+}
+
 enum SocialProvider {
   google
   apple
@@ -94,6 +100,8 @@ enum MediaPurpose {
   agency_logo
   chat_image
   chat_document
+  campaign_photo
+  campaign_document
 }
 
 enum ConversationType {
@@ -130,6 +138,28 @@ enum StoryTextSize {
   large
 }
 
+// No "funded"/"canceled" states yet — CreateCampaignScreen always publishes
+// immediately (no save-draft UI), so every campaign is created `active`.
+// `draft`/`completed` are modeled now for the real lifecycle figma's
+// CampaignsScreen displays, but nothing transitions a campaign automatically
+// (TRD open question #1, same "no lifecycle gate yet" default as reviews).
+enum CampaignStatus {
+  draft
+  active
+  completed
+}
+
+enum CampaignPrivacy {
+  public
+  private
+}
+
+enum ProfileVisibility {
+  public
+  friends
+  private
+}
+
 // ─────────────────────────────────────────────────────────────
 // USERS & AUTH
 // ─────────────────────────────────────────────────────────────
@@ -152,6 +182,8 @@ model User {
   updatedAt          DateTime     @updatedAt @map("updated_at")
 
   travelerProfile    TravelerProfile?
+  notificationPreference NotificationPreference?
+  privacySetting     PrivacySetting?
   agency             Agency?
   socialIdentities   SocialIdentity[]
   refreshTokens      RefreshToken[]
@@ -172,6 +204,7 @@ model User {
   messages                Message[]
   messageReceipts         MessageReceipt[]
   agencyReviews           AgencyReview[]
+  campaigns               Campaign[]
 
   @@map("users")
 }
@@ -181,6 +214,9 @@ model TravelerProfile {
   photoMediaId          String?   @map("photo_media_id")
   bio                   String?
   location              String?
+  phone                 String?
+  gender                Gender?
+  dateOfBirth           DateTime? @map("date_of_birth")
   badge                 TravelerBadge @default(dreamer)
   walletConnected        Boolean  @default(false) @map("wallet_connected")
   walletPaymentMethodId  String?  @map("wallet_payment_method_id")
@@ -196,14 +232,42 @@ model TravelerProfile {
 }
 
 model TravelerPreviousTripPhoto {
-  id        String   @id @default(uuid())
-  userId    String   @map("user_id")
-  mediaId   String   @map("media_id")
-  createdAt DateTime @default(now()) @map("created_at")
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  mediaId       String   @map("media_id")
+  name          String
+  location      String
+  startDate     DateTime @map("start_date")
+  endDate       DateTime @map("end_date")
+  travelerCount Int      @default(1) @map("traveler_count")
+  description   String?
+  createdAt     DateTime @default(now()) @map("created_at")
 
   travelerProfile TravelerProfile @relation(fields: [userId], references: [userId], onDelete: Cascade)
 
   @@map("traveler_previous_trip_photos")
+}
+
+model NotificationPreference {
+  userId          String  @id @map("user_id")
+  donationAlerts  Boolean @default(true) @map("donation_alerts")
+  campaignUpdates Boolean @default(true) @map("campaign_updates")
+  agencyMessages  Boolean @default(true) @map("agency_messages")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
+}
+
+model PrivacySetting {
+  userId                String            @id @map("user_id")
+  profileVisibility     ProfileVisibility @default(public) @map("profile_visibility")
+  activityStatusVisible Boolean           @default(true) @map("activity_status_visible")
+  readReceiptsEnabled   Boolean           @default(true) @map("read_receipts_enabled")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("privacy_settings")
 }
 
 model TravelerDestinationPreference {
@@ -575,4 +639,58 @@ model MessageReceipt {
 
   @@unique([messageId, userId])
   @@map("message_receipts")
+}
+
+// ─────────────────────────────────────────────────────────────
+// CAMPAIGNS
+// ─────────────────────────────────────────────────────────────
+
+// Donation/withdrawal money-movement lives entirely in #6 (Payments) —
+// nothing here reads/writes a Donation table because none exists yet.
+// `viewsCount` is the one denormalized counter (incremented on detail
+// fetch); contributor/donor counts shown in figma are computed as 0 until
+// #6 ships real donations, never faked.
+model Campaign {
+  id             String          @id @default(uuid())
+  creatorId      String          @map("creator_id")
+  title          String
+  destination    String
+  goalAmount     Decimal         @map("goal_amount")
+  currency       String          @default("USD")
+  story          String?
+  tripStartDate  DateTime        @map("trip_start_date")
+  tripEndDate    DateTime?       @map("trip_end_date")
+  status         CampaignStatus  @default(active)
+  privacy        CampaignPrivacy @default(public)
+  giftMode       Boolean         @default(false) @map("gift_mode")
+  giftOccasion   String?         @map("gift_occasion")
+  // Exactly one optional file per slot in the real screen (single upload
+  // button each, not a list) — no separate CampaignDocument table needed.
+  itineraryMediaId  String?      @map("itinerary_media_id")
+  agencyQuoteMediaId String?     @map("agency_quote_media_id")
+  viewsCount     Int             @default(0) @map("views_count")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+
+  creator        User            @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  photos         CampaignPhoto[]
+
+  @@index([creatorId])
+  @@map("campaigns")
+}
+
+// Ordered, up-to-5 photo list (matches CreateCampaignScreen's "Up to 5" cap
+// and individually-removable grid) — the first (position 0) doubles as the
+// hero image shown on CampaignsScreen/CampaignDetailScreen.
+model CampaignPhoto {
+  id         String   @id @default(uuid())
+  campaignId String   @map("campaign_id")
+  mediaId    String   @map("media_id")
+  position   Int
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, position])
+  @@map("campaign_photos")
 }
