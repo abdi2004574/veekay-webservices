@@ -10,5 +10,6 @@ import { MessagesController } from './messages.controller';
   imports: [FriendsModule, StorageModule],
   controllers: [ConversationsController, MessagesController],
   providers: [ConversationsService, MessagesService],
+  exports: [ConversationsService],
 })
 export class ChatModule {}

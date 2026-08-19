@@ -81,4 +81,13 @@ export class CreateCampaignDto {
   @IsOptional()
   @IsString()
   agencyQuoteMediaId?: string;
+
+  @ApiProperty({
+    required: false,
+    default: false,
+    description: 'Group trip campaigns are always forced private, never in public discovery.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  isGroup?: boolean;
 }

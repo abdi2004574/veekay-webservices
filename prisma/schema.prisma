@@ -205,6 +205,9 @@ model User {
   messageReceipts         MessageReceipt[]
   agencyReviews           AgencyReview[]
   campaigns               Campaign[]
+  groupMemberships        GroupMember[]
+  groupContributions      GroupContribution[]
+  groupExpensesPaid       GroupExpense[]
 
   @@map("users")
 }
@@ -669,11 +672,20 @@ model Campaign {
   itineraryMediaId  String?      @map("itinerary_media_id")
   agencyQuoteMediaId String?     @map("agency_quote_media_id")
   viewsCount     Int             @default(0) @map("views_count")
+  // Group-fund money logic (#8) — always forced private, never in public
+  // discovery. groupConversationId stays null until the first member is
+  // added (ConversationsService.create requires >=1 participant besides
+  // the caller, so it can't be created at solo-creator time).
+  isGroup             Boolean  @default(false) @map("is_group")
+  groupConversationId String?  @unique @map("group_conversation_id")
   createdAt      DateTime        @default(now()) @map("created_at")
   updatedAt      DateTime        @updatedAt @map("updated_at")
 
   creator        User            @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   photos         CampaignPhoto[]
+  groupMembers        GroupMember[]
+  groupContributions  GroupContribution[]
+  groupExpenses       GroupExpense[]
 
   @@index([creatorId])
   @@map("campaigns")
@@ -693,4 +705,71 @@ model CampaignPhoto {
 
   @@unique([campaignId, position])
   @@map("campaign_photos")
+}
+
+enum GroupMemberRole {
+  admin
+  member
+}
+
+model GroupMember {
+  id         String          @id @default(uuid())
+  campaignId String          @map("campaign_id")
+  userId     String          @map("user_id")
+  role       GroupMemberRole @default(member)
+  joinedAt   DateTime        @default(now()) @map("joined_at")
+
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, userId])
+  @@map("group_members")
+}
+
+enum GroupContributionType {
+  manual
+  donation
+}
+
+// `donation`/`donationId` are schema-ready for #6 to hook into (an
+// auto-recorded contribution from a real Donation) — never written this
+// pass, only `manual` is ever created.
+model GroupContribution {
+  id            String                 @id @default(uuid())
+  campaignId    String                 @map("campaign_id")
+  memberUserId  String                 @map("member_user_id")
+  amount        Decimal
+  type          GroupContributionType  @default(manual)
+  note          String?
+  donationId    String?                @map("donation_id")
+  createdAt     DateTime               @default(now()) @map("created_at")
+
+  campaign      Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  member        User     @relation(fields: [memberUserId], references: [id], onDelete: Cascade)
+
+  @@map("group_contributions")
+}
+
+enum GroupExpenseCategory {
+  transportation
+  accommodation
+  activities
+  food
+  other
+}
+
+model GroupExpense {
+  id           String                @id @default(uuid())
+  campaignId   String                @map("campaign_id")
+  name         String
+  amount       Decimal
+  category     GroupExpenseCategory
+  paidByUserId String                @map("paid_by_user_id")
+  spentAt      DateTime              @default(now()) @map("spent_at")
+  createdAt    DateTime              @default(now()) @map("created_at")
+
+  campaign     Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  paidBy       User     @relation(fields: [paidByUserId], references: [id], onDelete: Cascade)
+
+  @@map("group_expenses")
 }

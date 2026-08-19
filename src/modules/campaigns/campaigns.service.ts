@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { CampaignPrivacy, CampaignStatus } from '@prisma/client';
+import { CampaignPrivacy, CampaignStatus, GroupMemberRole } from '@prisma/client';
 import { AppException } from '../../common/errors/app.exception';
 import { PrismaService } from '../prisma/prisma.service';
 import { MediaAssetsService } from '../storage/media-assets.service';
@@ -42,6 +42,7 @@ export class CampaignsService {
 
   async create(creatorId: string, dto: CreateCampaignDto) {
     this.validateDateRange(dto.tripStartDate, dto.tripEndDate);
+    const isGroup = !!dto.isGroup;
 
     const campaign = await this.prisma.campaign.create({
       data: {
@@ -52,15 +53,22 @@ export class CampaignsService {
         story: dto.story,
         tripStartDate: new Date(dto.tripStartDate),
         tripEndDate: dto.tripEndDate ? new Date(dto.tripEndDate) : null,
-        privacy: dto.privacy,
+        // Group trips are always effectively private — a friend-group's
+        // financial ledger, never public discovery — regardless of what the
+        // privacy field was sent as.
+        privacy: isGroup ? CampaignPrivacy.private : dto.privacy,
         giftMode: dto.giftMode,
         giftOccasion: dto.giftMode ? dto.giftOccasion : null,
         itineraryMediaId: dto.itineraryMediaId,
         agencyQuoteMediaId: dto.agencyQuoteMediaId,
         status: CampaignStatus.active,
+        isGroup,
         photos: {
           create: dto.photoMediaIds.map((mediaId, position) => ({ mediaId, position })),
         },
+        ...(isGroup
+          ? { groupMembers: { create: { userId: creatorId, role: GroupMemberRole.admin } } }
+          : {}),
       },
       include: { photos: true },
     });
@@ -145,6 +153,7 @@ export class CampaignsService {
     const campaigns = await this.prisma.campaign.findMany({
       where: {
         privacy: CampaignPrivacy.public,
+        isGroup: false,
         ...(creatorId ? { creatorId } : {}),
         ...(search
           ? {

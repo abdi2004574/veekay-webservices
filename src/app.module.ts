@@ -18,6 +18,7 @@ import { StorageModule } from './modules/storage/storage.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { CampaignsModule } from './modules/campaigns/campaigns.module';
+import { GroupCampaignsModule } from './modules/group-campaigns/group-campaigns.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
@@ -71,6 +72,7 @@ import { AppConfig } from './config/configuration';
     ChatModule,
     ReviewsModule,
     CampaignsModule,
+    GroupCampaignsModule,
   ],
   controllers: [AppController],
   providers: [

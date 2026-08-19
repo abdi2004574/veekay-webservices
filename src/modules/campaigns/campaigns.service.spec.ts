@@ -1,4 +1,4 @@
-import { CampaignPrivacy, CampaignStatus } from '@prisma/client';
+import { CampaignPrivacy, CampaignStatus, GroupMemberRole } from '@prisma/client';
 import { CampaignsService } from './campaigns.service';
 
 describe('CampaignsService', () => {
@@ -50,6 +50,21 @@ describe('CampaignsService', () => {
           giftMode: false,
           giftOccasion: null,
           photos: { create: [{ mediaId: 'media-1', position: 0 }] },
+        }),
+        include: { photos: true },
+      });
+    });
+
+    it('forces privacy to private and seeds the creator as group admin when isGroup is true', async () => {
+      prisma.campaign.create.mockResolvedValue({ id: 'c-1', creatorId: 'user-1', photos: [] });
+
+      await service.create('user-1', { ...baseDto, privacy: CampaignPrivacy.public, isGroup: true });
+
+      expect(prisma.campaign.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          privacy: CampaignPrivacy.private,
+          isGroup: true,
+          groupMembers: { create: { userId: 'user-1', role: GroupMemberRole.admin } },
         }),
         include: { photos: true },
       });
@@ -182,7 +197,7 @@ describe('CampaignsService', () => {
 
       expect(prisma.campaign.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { privacy: CampaignPrivacy.public },
+          where: { privacy: CampaignPrivacy.public, isGroup: false },
         }),
       );
     });
@@ -194,7 +209,7 @@ describe('CampaignsService', () => {
 
       expect(prisma.campaign.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { privacy: CampaignPrivacy.public, creatorId: 'creator-1' },
+          where: { privacy: CampaignPrivacy.public, isGroup: false, creatorId: 'creator-1' },
         }),
       );
     });
@@ -208,6 +223,7 @@ describe('CampaignsService', () => {
         expect.objectContaining({
           where: {
             privacy: CampaignPrivacy.public,
+            isGroup: false,
             OR: [
               { title: { contains: 'santorini', mode: 'insensitive' } },
               { destination: { contains: 'santorini', mode: 'insensitive' } },
