@@ -7,9 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ─────────────────────────────────────────────────────────────
 // ENUMS
-// ─────────────────────────────────────────────────────────────
 
 enum UserRole {
   traveler
@@ -102,6 +100,7 @@ enum MediaPurpose {
   chat_document
   campaign_photo
   campaign_document
+  package_visual
 }
 
 enum ConversationType {
@@ -138,11 +137,29 @@ enum StoryTextSize {
   large
 }
 
-// No "funded"/"canceled" states yet — CreateCampaignScreen always publishes
-// immediately (no save-draft UI), so every campaign is created `active`.
-// `draft`/`completed` are modeled now for the real lifecycle figma's
-// CampaignsScreen displays, but nothing transitions a campaign automatically
-// (TRD open question #1, same "no lifecycle gate yet" default as reviews).
+enum PaymentMethodType {
+  card
+}
+
+enum PayoutAccountType {
+  bank
+  paypal
+  mobile_money
+}
+
+enum WithdrawalStatus {
+  pending
+  processing
+  completed
+  failed
+}
+
+enum DonationStatus {
+  pending
+  succeeded
+  failed
+}
+
 enum CampaignStatus {
   draft
   active
@@ -154,15 +171,28 @@ enum CampaignPrivacy {
   private
 }
 
+enum PackageStatus {
+  active
+  inactive
+  archived
+}
+
+enum TripRequestStatus {
+  pending
+  in_discussion
+  confirmed
+  completed
+  declined
+  cancelled
+}
+
 enum ProfileVisibility {
   public
   friends
   private
 }
 
-// ─────────────────────────────────────────────────────────────
 // USERS & AUTH
-// ─────────────────────────────────────────────────────────────
 
 model User {
   id                 String       @id @default(uuid())
@@ -208,6 +238,12 @@ model User {
   groupMemberships        GroupMember[]
   groupContributions      GroupContribution[]
   groupExpensesPaid       GroupExpense[]
+  stripeConnectAccounts StripeConnectAccount[]
+  donations             Donation[]
+  paymentMethods        PaymentMethod[]
+  payoutAccounts        PayoutAccount[]
+  withdrawalRequests    WithdrawalRequest[]
+  tripRequests           TripRequest[]
 
   @@map("users")
 }
@@ -346,9 +382,7 @@ model AdminTwoFactor {
   @@map("admin_two_factor")
 }
 
-// ─────────────────────────────────────────────────────────────
 // AGENCIES
-// ─────────────────────────────────────────────────────────────
 
 model Agency {
   id               String                 @id @default(uuid())
@@ -370,16 +404,14 @@ model Agency {
   staff            AgencyStaff[]
   conversations    Conversation[]
   reviews          AgencyReview[]
+  packages        Package[]
+  stripeConnectAccounts StripeConnectAccount[]
+  tripRequests          TripRequest[]
+  smartReplyTemplates   SmartReplyTemplate[]
 
   @@map("agencies")
 }
 
-// One review per traveler per agency (edit/delete instead of stacking new
-// ones) — matches figma's binary hasReviewed check and MyReviewsScreen's
-// single-entry-per-agency list. No tripId/completed-trip gate yet: TRD open
-// question #1 leaves "completed trip" undefined and there's no Trip/Booking
-// model to gate against yet, so review creation is open to any traveler for
-// now (documented, not silently skipped).
 model AgencyReview {
   id            String   @id @default(uuid())
   agencyId      String   @map("agency_id")
@@ -422,9 +454,7 @@ model AgencyStaff {
   @@map("agency_staff")
 }
 
-// ─────────────────────────────────────────────────────────────
 // SOCIAL FEED, STORIES & FRIENDS
-// ─────────────────────────────────────────────────────────────
 
 model Post {
   id           String    @id @default(uuid())
@@ -460,12 +490,12 @@ model PostLike {
 }
 
 model Comment {
-  id        String   @id @default(uuid())
-  postId    String   @map("post_id")
-  authorId  String   @map("author_id")
+  id        String    @id @default(uuid())
+  postId    String    @map("post_id")
+  authorId  String    @map("author_id")
   text      String
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
 
   post      Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
   author    User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
@@ -545,9 +575,7 @@ model FriendRequest {
   @@map("friend_requests")
 }
 
-// ─────────────────────────────────────────────────────────────
 // STORAGE
-// ─────────────────────────────────────────────────────────────
 
 model MediaAsset {
   id          String       @id @default(uuid())
@@ -565,25 +593,15 @@ model MediaAsset {
   @@map("media_assets")
 }
 
-// ─────────────────────────────────────────────────────────────
 // CHAT / MESSAGING
-// ─────────────────────────────────────────────────────────────
 
 model Conversation {
   id                String           @id @default(uuid())
   type              ConversationType
   title             String?
   createdById       String           @map("created_by_id")
-  // Set only for type=agency. Staff are authorized via AgencyStaff.agencyId
-  // matching this, not via an explicit ConversationParticipant row per staff
-  // member — a shared team inbox, not per-agent membership. The traveler on
-  // the other side of the conversation *does* get a normal participant row.
   agencyId          String?          @map("agency_id")
   lastMessageAt     DateTime?        @map("last_message_at")
-  // Shared read cursor for the agency side of an agency conversation — any
-  // staff member marking it read clears it for the whole team, same idea as
-  // a shared support inbox. Direct/group conversations use each participant's
-  // own lastReadAt instead.
   agencyLastReadAt  DateTime?        @map("agency_last_read_at")
   createdAt         DateTime         @default(now()) @map("created_at")
 
@@ -591,6 +609,7 @@ model Conversation {
   agency            Agency?          @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   participants      ConversationParticipant[]
   messages          Message[]
+  tripRequests       TripRequest[]
 
   @@map("conversations")
 }
@@ -644,15 +663,8 @@ model MessageReceipt {
   @@map("message_receipts")
 }
 
-// ─────────────────────────────────────────────────────────────
 // CAMPAIGNS
-// ─────────────────────────────────────────────────────────────
 
-// Donation/withdrawal money-movement lives entirely in #6 (Payments) —
-// nothing here reads/writes a Donation table because none exists yet.
-// `viewsCount` is the one denormalized counter (incremented on detail
-// fetch); contributor/donor counts shown in figma are computed as 0 until
-// #6 ships real donations, never faked.
 model Campaign {
   id             String          @id @default(uuid())
   creatorId      String          @map("creator_id")
@@ -667,15 +679,12 @@ model Campaign {
   privacy        CampaignPrivacy @default(public)
   giftMode       Boolean         @default(false) @map("gift_mode")
   giftOccasion   String?         @map("gift_occasion")
-  // Exactly one optional file per slot in the real screen (single upload
-  // button each, not a list) — no separate CampaignDocument table needed.
   itineraryMediaId  String?      @map("itinerary_media_id")
   agencyQuoteMediaId String?     @map("agency_quote_media_id")
   viewsCount     Int             @default(0) @map("views_count")
-  // Group-fund money logic (#8) — always forced private, never in public
-  // discovery. groupConversationId stays null until the first member is
-  // added (ConversationsService.create requires >=1 participant besides
-  // the caller, so it can't be created at solo-creator time).
+  raisedAmount     Decimal   @default(0) @map("raised_amount")
+  donations        Donation[]
+  withdrawalRequests WithdrawalRequest[]
   isGroup             Boolean  @default(false) @map("is_group")
   groupConversationId String?  @unique @map("group_conversation_id")
   createdAt      DateTime        @default(now()) @map("created_at")
@@ -686,14 +695,13 @@ model Campaign {
   groupMembers        GroupMember[]
   groupContributions  GroupContribution[]
   groupExpenses       GroupExpense[]
+  packageLinks    PackageCampaignLink[]
+  tripRequests       TripRequest[]
 
   @@index([creatorId])
   @@map("campaigns")
 }
 
-// Ordered, up-to-5 photo list (matches CreateCampaignScreen's "Up to 5" cap
-// and individually-removable grid) — the first (position 0) doubles as the
-// hero image shown on CampaignsScreen/CampaignDetailScreen.
 model CampaignPhoto {
   id         String   @id @default(uuid())
   campaignId String   @map("campaign_id")
@@ -705,6 +713,59 @@ model CampaignPhoto {
 
   @@unique([campaignId, position])
   @@map("campaign_photos")
+}
+
+// PACKAGES
+
+model Package {
+  id               String           @id @default(uuid())
+  agencyId         String           @map("agency_id")
+  title            String
+  description      String?
+  basePrice        Decimal          @map("base_price")
+  currency         String           @default("USD")
+  destinationType  DestinationType? @map("destination_type")
+  season           String?
+  theme            String?
+  itinerary        String?
+  status           PackageStatus    @default(active)
+  isDynamicPricing Boolean          @default(false) @map("is_dynamic_pricing")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  agency           Agency              @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  media            PackageMedia[]
+  campaignLinks    PackageCampaignLink[]
+  tripRequests       TripRequest[]
+
+  @@index([agencyId])
+  @@map("packages")
+}
+
+model PackageMedia {
+  id          String   @id @default(uuid())
+  packageId   String   @map("package_id")
+  mediaId     String   @map("media_id")
+  displayOrder Int     @default(0) @map("display_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  package     Package  @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  @@unique([packageId, displayOrder])
+  @@map("package_media")
+}
+
+model PackageCampaignLink {
+  id         String    @id @default(uuid())
+  packageId  String    @map("package_id")
+  campaignId String    @map("campaign_id")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  package    Package   @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  campaign   Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@unique([packageId, campaignId])
+  @@map("package_campaign_links")
 }
 
 enum GroupMemberRole {
@@ -731,9 +792,6 @@ enum GroupContributionType {
   donation
 }
 
-// `donation`/`donationId` are schema-ready for #6 to hook into (an
-// auto-recorded contribution from a real Donation) — never written this
-// pass, only `manual` is ever created.
 model GroupContribution {
   id            String                 @id @default(uuid())
   campaignId    String                 @map("campaign_id")
@@ -772,4 +830,147 @@ model GroupExpense {
   paidBy       User     @relation(fields: [paidByUserId], references: [id], onDelete: Cascade)
 
   @@map("group_expenses")
+}
+
+model StripeConnectAccount {
+  id                String    @id @default(uuid())
+  userId            String?   @map("user_id")
+  agencyId          String?   @map("agency_id")
+  stripeAccountId   String    @unique @map("stripe_account_id")
+  payoutsEnabled    Boolean   @default(false) @map("payouts_enabled")
+  chargesEnabled    Boolean   @default(false) @map("charges_enabled")
+  detailsSubmitted  Boolean   @default(false) @map("details_submitted")
+  onboardingUrl     String?   @map("onboarding_url")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  user       User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agency     Agency?   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@map("stripe_connect_accounts")
+}
+
+model Donation {
+  id                     String       @id @default(uuid())
+  campaignId             String       @map("campaign_id")
+  donorUserId            String?      @map("donor_user_id")
+  amount                 Decimal
+  currency               String       @default("USD")
+  isAnonymous            Boolean      @default(false) @map("is_anonymous")
+  giftMessage            String?      @map("gift_message")
+  isGift                 Boolean      @default(false) @map("is_gift")
+  stripePaymentIntentId  String?      @unique @map("stripe_payment_intent_id")
+  status                 DonationStatus @default(pending)
+  receiptEmailSentAt     DateTime?    @map("receipt_email_sent_at")
+  createdAt              DateTime     @default(now()) @map("created_at")
+  updatedAt              DateTime     @updatedAt @map("updated_at")
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  donor    User?    @relation(fields: [donorUserId], references: [id], onDelete: SetNull)
+
+  @@map("donations")
+}
+
+model PaymentMethod {
+  id                  String           @id @default(uuid())
+  userId              String           @map("user_id")
+  stripePaymentMethodId String         @unique @map("stripe_payment_method_id")
+  type                PaymentMethodType
+  brand               String?
+  last4               String?
+  expMonth             Int?             @map("exp_month")
+  expYear              Int?             @map("exp_year")
+  isDefault           Boolean          @default(false) @map("is_default")
+  createdAt           DateTime         @default(now()) @map("created_at")
+  updatedAt           DateTime         @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("payment_methods")
+}
+
+model PayoutAccount {
+  id               String          @id @default(uuid())
+  userId           String          @map("user_id")
+  type             PayoutAccountType
+  label            String
+  maskedIdentifier String          @map("masked_identifier")
+  isDefault        Boolean         @default(false) @map("is_default")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    withdrawalRequests WithdrawalRequest[]
+
+  @@map("payout_accounts")
+}
+
+model WithdrawalRequest {
+  id              String          @id @default(uuid())
+  userId          String          @map("user_id")
+  campaignId      String?         @map("campaign_id")
+  payoutAccountId String          @map("payout_account_id")
+  amount          Decimal
+  status          WithdrawalStatus @default(pending)
+  stripePayoutId  String?         @unique @map("stripe_payout_id")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaign      Campaign?   @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  payoutAccount PayoutAccount @relation(fields: [payoutAccountId], references: [id], onDelete: Restrict)
+
+  @@map("withdrawal_requests")
+}
+
+model StripeWebhookEvent {
+  id              String   @id @default(uuid())
+  eventId         String   @unique @map("event_id")
+  eventType       String   @map("event_type")
+  rawPayload      String   @map("raw_payload")
+  processingStatus String  @default("pending") @map("processing_status")
+  processedAt     DateTime? @map("processed_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("stripe_webhook_events")
+}
+
+// TRIP REQUESTS
+
+model TripRequest {
+  id              String            @id @default(uuid())
+  travelerId      String            @map("traveler_id")
+  agencyId        String            @map("agency_id")
+  packageId       String?           @map("package_id")
+  campaignId      String?           @map("campaign_id")
+  status          TripRequestStatus @default(pending)
+  initialMessage  String            @map("initial_message")
+  conversationId  String?           @map("conversation_id")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  traveler      User          @relation(fields: [travelerId], references: [id], onDelete: Cascade)
+  agency        Agency        @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  package       Package?      @relation(fields: [packageId], references: [id], onDelete: SetNull)
+  campaign      Campaign?     @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  conversation  Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+
+  @@index([agencyId, status])
+  @@index([travelerId, status])
+  @@map("trip_requests")
+}
+
+model SmartReplyTemplate {
+  id        String   @id @default(uuid())
+  agencyId  String   @map("agency_id")
+  title     String
+  body      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  agency Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@index([agencyId])
+  @@map("smart_reply_templates")
 }

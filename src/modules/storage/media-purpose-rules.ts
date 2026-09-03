@@ -33,6 +33,7 @@ export const MEDIA_PURPOSE_RULES: Record<MediaPurpose, MediaPurposeRule> = {
   // Covers both the itinerary PDF and agency quote/invoice slots — which
   // field references the mediaId (not the purpose) is what distinguishes them.
   campaign_document: { contentTypes: CHAT_DOCUMENT_TYPES, maxSizeBytes: 20 * 1024 * 1024 },
+  package_visual: { contentTypes: IMAGE_TYPES, maxSizeBytes: 10 * 1024 * 1024 },
 };
 
 const EXT_BY_CONTENT_TYPE: Record<string, string> = {

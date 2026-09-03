@@ -53,7 +53,7 @@ describe('ConversationsService', () => {
       const result = await service.assertAccess('conv-1', 'user-1');
 
       expect(result.isAgencyStaff).toBe(false);
-      expect(result.participant.id).toBe('p-1');
+      expect(result.participant!.id).toBe('p-1');
     });
 
     it('rejects a participant who has left', async () => {
