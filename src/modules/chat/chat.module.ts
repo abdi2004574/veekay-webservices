@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+﻿import { Module } from '@nestjs/common';
 import { FriendsModule } from '../friends/friends.module';
 import { StorageModule } from '../storage/storage.module';
 import { ConversationsService } from './conversations.service';
@@ -10,6 +10,6 @@ import { MessagesController } from './messages.controller';
   imports: [FriendsModule, StorageModule],
   controllers: [ConversationsController, MessagesController],
   providers: [ConversationsService, MessagesService],
-  exports: [ConversationsService],
+  exports: [ConversationsService, MessagesService],
 })
 export class ChatModule {}
