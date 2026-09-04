@@ -21,7 +21,9 @@ describe('CommentsService', () => {
         delete: jest.fn(),
       },
     };
-    postsService = { findByIdOrThrow: jest.fn().mockResolvedValue({ id: 'post-1' }) };
+    postsService = {
+      findByIdOrThrow: jest.fn().mockResolvedValue({ id: 'post-1' }),
+    };
     service = new CommentsService(prisma, postsService);
   });
 
@@ -47,7 +49,10 @@ describe('CommentsService', () => {
 
   describe('update / remove', () => {
     it('rejects editing a comment you do not own', async () => {
-      prisma.comment.findUnique.mockResolvedValue({ id: 'comment-1', authorId: 'user-2' });
+      prisma.comment.findUnique.mockResolvedValue({
+        id: 'comment-1',
+        authorId: 'user-2',
+      });
 
       await expect(
         service.update('comment-1', 'user-1', { text: 'edited' }),
@@ -55,16 +60,27 @@ describe('CommentsService', () => {
     });
 
     it('rejects deleting a comment you do not own', async () => {
-      prisma.comment.findUnique.mockResolvedValue({ id: 'comment-1', authorId: 'user-2' });
-
-      await expect(service.remove('comment-1', 'user-1')).rejects.toMatchObject({
-        getStatus: expect.any(Function),
+      prisma.comment.findUnique.mockResolvedValue({
+        id: 'comment-1',
+        authorId: 'user-2',
       });
+
+      await expect(service.remove('comment-1', 'user-1')).rejects.toMatchObject(
+        {
+          getStatus: expect.any(Function),
+        },
+      );
     });
 
     it('updates a comment you own', async () => {
-      prisma.comment.findUnique.mockResolvedValue({ id: 'comment-1', authorId: 'user-1' });
-      prisma.comment.update.mockResolvedValue({ id: 'comment-1', text: 'edited' });
+      prisma.comment.findUnique.mockResolvedValue({
+        id: 'comment-1',
+        authorId: 'user-1',
+      });
+      prisma.comment.update.mockResolvedValue({
+        id: 'comment-1',
+        text: 'edited',
+      });
 
       await service.update('comment-1', 'user-1', { text: 'edited' });
 
@@ -88,9 +104,11 @@ describe('CommentsService', () => {
     it('rejects unliking a comment you never liked', async () => {
       prisma.commentLike.findUnique.mockResolvedValue(null);
 
-      await expect(service.unlike('comment-1', 'user-1')).rejects.toMatchObject({
-        getStatus: expect.any(Function),
-      });
+      await expect(service.unlike('comment-1', 'user-1')).rejects.toMatchObject(
+        {
+          getStatus: expect.any(Function),
+        },
+      );
     });
   });
 
@@ -99,7 +117,9 @@ describe('CommentsService', () => {
       prisma.comment.findMany.mockResolvedValue([
         { id: 'comment-1', _count: { likes: 3 } },
       ]);
-      prisma.commentLike.findMany.mockResolvedValue([{ commentId: 'comment-1' }]);
+      prisma.commentLike.findMany.mockResolvedValue([
+        { commentId: 'comment-1' },
+      ]);
 
       const result = await service.list('post-1', 'user-1');
 

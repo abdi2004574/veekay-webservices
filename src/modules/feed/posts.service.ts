@@ -33,16 +33,21 @@ export class PostsService {
     const likedPostIds = new Set(likes.map((l) => l.postId));
 
     const mediaIds = posts.flatMap((p) =>
-      [p.imageMediaId, p.repostOf?.imageMediaId].filter((id): id is string => !!id),
+      [p.imageMediaId, p.repostOf?.imageMediaId].filter(
+        (id): id is string => !!id,
+      ),
     );
-    const urlsByMediaId = await this.mediaAssetsService.resolveViewUrls(mediaIds);
+    const urlsByMediaId =
+      await this.mediaAssetsService.resolveViewUrls(mediaIds);
 
     return posts.map((post) => ({
       ...post,
       likesCount: post._count.likes,
       commentsCount: post._count.comments,
       isLikedByMe: likedPostIds.has(post.id),
-      imageUrl: post.imageMediaId ? (urlsByMediaId.get(post.imageMediaId) ?? null) : null,
+      imageUrl: post.imageMediaId
+        ? (urlsByMediaId.get(post.imageMediaId) ?? null)
+        : null,
       repostOf: post.repostOf
         ? {
             ...post.repostOf,

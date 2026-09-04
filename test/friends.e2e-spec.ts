@@ -29,7 +29,11 @@ describe('Friends (e2e)', () => {
   const server = () => app.getHttpServer();
 
   it('sends, accepts a friend request, and lists both users as friends', async () => {
-    const alice = await registerAndVerifyTraveler(server, 'alice@e2e.test', 'Alice');
+    const alice = await registerAndVerifyTraveler(
+      server,
+      'alice@e2e.test',
+      'Alice',
+    );
     const bob = await registerAndVerifyTraveler(server, 'bob@e2e.test', 'Bob');
 
     const sendRes = await request(server())
@@ -66,7 +70,11 @@ describe('Friends (e2e)', () => {
   });
 
   it('rejects a duplicate friend request and lets the addressee decline', async () => {
-    const alice = await registerAndVerifyTraveler(server, 'alice2@e2e.test', 'Alice');
+    const alice = await registerAndVerifyTraveler(
+      server,
+      'alice2@e2e.test',
+      'Alice',
+    );
     const bob = await registerAndVerifyTraveler(server, 'bob2@e2e.test', 'Bob');
 
     await request(server())
@@ -101,7 +109,11 @@ describe('Friends (e2e)', () => {
   });
 
   it('unfriends an accepted connection', async () => {
-    const alice = await registerAndVerifyTraveler(server, 'alice3@e2e.test', 'Alice');
+    const alice = await registerAndVerifyTraveler(
+      server,
+      'alice3@e2e.test',
+      'Alice',
+    );
     const bob = await registerAndVerifyTraveler(server, 'bob3@e2e.test', 'Bob');
 
     const sendRes = await request(server())

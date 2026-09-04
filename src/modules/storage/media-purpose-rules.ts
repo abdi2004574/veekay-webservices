@@ -19,7 +19,10 @@ const CHAT_DOCUMENT_TYPES = [
 
 export const MEDIA_PURPOSE_RULES: Record<MediaPurpose, MediaPurposeRule> = {
   profile_photo: { contentTypes: IMAGE_TYPES, maxSizeBytes: 5 * 1024 * 1024 },
-  previous_trip_photo: { contentTypes: IMAGE_TYPES, maxSizeBytes: 5 * 1024 * 1024 },
+  previous_trip_photo: {
+    contentTypes: IMAGE_TYPES,
+    maxSizeBytes: 5 * 1024 * 1024,
+  },
   post_media: { contentTypes: IMAGE_TYPES, maxSizeBytes: 10 * 1024 * 1024 },
   story_media: { contentTypes: IMAGE_TYPES, maxSizeBytes: 10 * 1024 * 1024 },
   agency_document: {
@@ -28,11 +31,17 @@ export const MEDIA_PURPOSE_RULES: Record<MediaPurpose, MediaPurposeRule> = {
   },
   agency_logo: { contentTypes: IMAGE_TYPES, maxSizeBytes: 5 * 1024 * 1024 },
   chat_image: { contentTypes: IMAGE_TYPES, maxSizeBytes: 10 * 1024 * 1024 },
-  chat_document: { contentTypes: CHAT_DOCUMENT_TYPES, maxSizeBytes: 20 * 1024 * 1024 },
+  chat_document: {
+    contentTypes: CHAT_DOCUMENT_TYPES,
+    maxSizeBytes: 20 * 1024 * 1024,
+  },
   campaign_photo: { contentTypes: IMAGE_TYPES, maxSizeBytes: 10 * 1024 * 1024 },
   // Covers both the itinerary PDF and agency quote/invoice slots — which
   // field references the mediaId (not the purpose) is what distinguishes them.
-  campaign_document: { contentTypes: CHAT_DOCUMENT_TYPES, maxSizeBytes: 20 * 1024 * 1024 },
+  campaign_document: {
+    contentTypes: CHAT_DOCUMENT_TYPES,
+    maxSizeBytes: 20 * 1024 * 1024,
+  },
   package_visual: { contentTypes: IMAGE_TYPES, maxSizeBytes: 10 * 1024 * 1024 },
 };
 
@@ -42,7 +51,8 @@ const EXT_BY_CONTENT_TYPE: Record<string, string> = {
   'image/webp': 'webp',
   'application/pdf': 'pdf',
   'application/msword': 'doc',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+    'docx',
 };
 
 export function extensionForContentType(contentType: string): string {

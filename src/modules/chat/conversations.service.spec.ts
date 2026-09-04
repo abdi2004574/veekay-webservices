@@ -37,13 +37,18 @@ describe('ConversationsService', () => {
     it('rejects when the conversation does not exist', async () => {
       prisma.conversation.findUnique.mockResolvedValue(null);
 
-      await expect(service.assertAccess('conv-1', 'user-1')).rejects.toMatchObject({
+      await expect(
+        service.assertAccess('conv-1', 'user-1'),
+      ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
     });
 
     it('allows a live participant', async () => {
-      prisma.conversation.findUnique.mockResolvedValue({ id: 'conv-1', type: ConversationType.direct });
+      prisma.conversation.findUnique.mockResolvedValue({
+        id: 'conv-1',
+        type: ConversationType.direct,
+      });
       prisma.conversationParticipant.findUnique.mockResolvedValue({
         id: 'p-1',
         leftAt: null,
@@ -57,13 +62,18 @@ describe('ConversationsService', () => {
     });
 
     it('rejects a participant who has left', async () => {
-      prisma.conversation.findUnique.mockResolvedValue({ id: 'conv-1', type: ConversationType.group });
+      prisma.conversation.findUnique.mockResolvedValue({
+        id: 'conv-1',
+        type: ConversationType.group,
+      });
       prisma.conversationParticipant.findUnique.mockResolvedValue({
         id: 'p-1',
         leftAt: new Date(),
       });
 
-      await expect(service.assertAccess('conv-1', 'user-1')).rejects.toMatchObject({
+      await expect(
+        service.assertAccess('conv-1', 'user-1'),
+      ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
     });
@@ -92,7 +102,9 @@ describe('ConversationsService', () => {
       prisma.conversationParticipant.findUnique.mockResolvedValue(null);
       prisma.agencyStaff.findUnique.mockResolvedValue(null);
 
-      await expect(service.assertAccess('conv-1', 'stranger')).rejects.toMatchObject({
+      await expect(
+        service.assertAccess('conv-1', 'stranger'),
+      ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
     });
@@ -117,7 +129,10 @@ describe('ConversationsService', () => {
       friendsService.areFriends.mockResolvedValue(true);
       prisma.conversation.findFirst.mockResolvedValue({ id: 'conv-existing' });
 
-      const result = await service.create('user-1', { type: 'direct', participantId: 'user-2' });
+      const result = await service.create('user-1', {
+        type: 'direct',
+        participantId: 'user-2',
+      });
 
       expect(result).toEqual({ id: 'conv-existing' });
       expect(prisma.conversation.create).not.toHaveBeenCalled();
@@ -128,7 +143,10 @@ describe('ConversationsService', () => {
       prisma.conversation.findFirst.mockResolvedValue(null);
       prisma.conversation.create.mockResolvedValue({ id: 'conv-new' });
 
-      await service.create('user-1', { type: 'direct', participantId: 'user-2' });
+      await service.create('user-1', {
+        type: 'direct',
+        participantId: 'user-2',
+      });
 
       expect(prisma.conversation.create).toHaveBeenCalledWith({
         data: {
@@ -199,7 +217,9 @@ describe('ConversationsService', () => {
 
   describe('create — agency', () => {
     it('rejects without an agencyId', async () => {
-      await expect(service.create('user-1', { type: 'agency' })).rejects.toMatchObject({
+      await expect(
+        service.create('user-1', { type: 'agency' }),
+      ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
     });
@@ -216,7 +236,10 @@ describe('ConversationsService', () => {
       prisma.agency.findUnique.mockResolvedValue({ id: 'agency-1' });
       prisma.conversation.findFirst.mockResolvedValue({ id: 'conv-existing' });
 
-      const result = await service.create('user-1', { type: 'agency', agencyId: 'agency-1' });
+      const result = await service.create('user-1', {
+        type: 'agency',
+        agencyId: 'agency-1',
+      });
 
       expect(result).toEqual({ id: 'conv-existing' });
       expect(prisma.conversation.create).not.toHaveBeenCalled();
@@ -234,7 +257,11 @@ describe('ConversationsService', () => {
           type: ConversationType.agency,
           createdById: 'user-1',
           agencyId: 'agency-1',
-          participants: { create: [{ userId: 'user-1', role: ConversationParticipantRole.member }] },
+          participants: {
+            create: [
+              { userId: 'user-1', role: ConversationParticipantRole.member },
+            ],
+          },
         },
       });
     });
@@ -242,7 +269,10 @@ describe('ConversationsService', () => {
 
   describe('addParticipants', () => {
     it('rejects on a non-group conversation', async () => {
-      prisma.conversation.findUnique.mockResolvedValue({ id: 'conv-1', type: ConversationType.direct });
+      prisma.conversation.findUnique.mockResolvedValue({
+        id: 'conv-1',
+        type: ConversationType.direct,
+      });
       prisma.conversationParticipant.findUnique.mockResolvedValue({
         leftAt: null,
         role: ConversationParticipantRole.member,
@@ -254,7 +284,10 @@ describe('ConversationsService', () => {
     });
 
     it('rejects a non-admin caller', async () => {
-      prisma.conversation.findUnique.mockResolvedValue({ id: 'conv-1', type: ConversationType.group });
+      prisma.conversation.findUnique.mockResolvedValue({
+        id: 'conv-1',
+        type: ConversationType.group,
+      });
       prisma.conversationParticipant.findUnique.mockResolvedValue({
         leftAt: null,
         role: ConversationParticipantRole.member,
@@ -266,7 +299,10 @@ describe('ConversationsService', () => {
     });
 
     it('rejects adding a non-friend', async () => {
-      prisma.conversation.findUnique.mockResolvedValue({ id: 'conv-1', type: ConversationType.group });
+      prisma.conversation.findUnique.mockResolvedValue({
+        id: 'conv-1',
+        type: ConversationType.group,
+      });
       prisma.conversationParticipant.findUnique.mockResolvedValue({
         leftAt: null,
         role: ConversationParticipantRole.admin,
@@ -279,7 +315,10 @@ describe('ConversationsService', () => {
     });
 
     it('adds friends as an admin', async () => {
-      prisma.conversation.findUnique.mockResolvedValue({ id: 'conv-1', type: ConversationType.group });
+      prisma.conversation.findUnique.mockResolvedValue({
+        id: 'conv-1',
+        type: ConversationType.group,
+      });
       prisma.conversationParticipant.findUnique.mockResolvedValue({
         leftAt: null,
         role: ConversationParticipantRole.admin,
@@ -297,9 +336,15 @@ describe('ConversationsService', () => {
 
   describe('removeParticipant', () => {
     it('allows a member to leave on their own', async () => {
-      prisma.conversation.findUnique.mockResolvedValue({ id: 'conv-1', type: ConversationType.group });
+      prisma.conversation.findUnique.mockResolvedValue({
+        id: 'conv-1',
+        type: ConversationType.group,
+      });
       prisma.conversationParticipant.findUnique
-        .mockResolvedValueOnce({ leftAt: null, role: ConversationParticipantRole.member })
+        .mockResolvedValueOnce({
+          leftAt: null,
+          role: ConversationParticipantRole.member,
+        })
         .mockResolvedValueOnce({ id: 'p-target', leftAt: null });
 
       await service.removeParticipant('conv-1', 'user-1', 'user-1');
@@ -311,7 +356,10 @@ describe('ConversationsService', () => {
     });
 
     it('rejects a non-admin removing someone else', async () => {
-      prisma.conversation.findUnique.mockResolvedValue({ id: 'conv-1', type: ConversationType.group });
+      prisma.conversation.findUnique.mockResolvedValue({
+        id: 'conv-1',
+        type: ConversationType.group,
+      });
       prisma.conversationParticipant.findUnique.mockResolvedValue({
         leftAt: null,
         role: ConversationParticipantRole.member,
@@ -323,9 +371,15 @@ describe('ConversationsService', () => {
     });
 
     it('allows an admin to remove someone else', async () => {
-      prisma.conversation.findUnique.mockResolvedValue({ id: 'conv-1', type: ConversationType.group });
+      prisma.conversation.findUnique.mockResolvedValue({
+        id: 'conv-1',
+        type: ConversationType.group,
+      });
       prisma.conversationParticipant.findUnique
-        .mockResolvedValueOnce({ leftAt: null, role: ConversationParticipantRole.admin })
+        .mockResolvedValueOnce({
+          leftAt: null,
+          role: ConversationParticipantRole.admin,
+        })
         .mockResolvedValueOnce({ id: 'p-target', leftAt: null });
 
       await service.removeParticipant('conv-1', 'user-1', 'user-2');
@@ -339,10 +393,12 @@ describe('ConversationsService', () => {
 
   describe('unreadCount', () => {
     it('sums unread counts across all conversations', async () => {
-      jest.spyOn(service, 'listForUser').mockResolvedValue([
-        { unreadCount: 2 } as any,
-        { unreadCount: 5 } as any,
-      ]);
+      jest
+        .spyOn(service, 'listForUser')
+        .mockResolvedValue([
+          { unreadCount: 2 } as any,
+          { unreadCount: 5 } as any,
+        ]);
 
       await expect(service.unreadCount('user-1')).resolves.toBe(7);
     });

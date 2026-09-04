@@ -28,7 +28,10 @@ describe('Feed: posts, comments, likes, share (e2e)', () => {
 
   const server = () => app.getHttpServer();
 
-  async function befriend(a: { userId: string; accessToken: string }, b: { userId: string; accessToken: string }) {
+  async function befriend(
+    a: { userId: string; accessToken: string },
+    b: { userId: string; accessToken: string },
+  ) {
     const sendRes = await request(server())
       .post('/api/v1/friend-requests')
       .set('Authorization', `Bearer ${a.accessToken}`)
@@ -42,7 +45,11 @@ describe('Feed: posts, comments, likes, share (e2e)', () => {
 
   describe('Post CRUD, like, comment, share', () => {
     it('creates, edits, and deletes a post owned by the caller', async () => {
-      const alice = await registerAndVerifyTraveler(server, 'alice@e2e.test', 'Alice');
+      const alice = await registerAndVerifyTraveler(
+        server,
+        'alice@e2e.test',
+        'Alice',
+      );
 
       const createRes = await request(server())
         .post('/api/v1/posts')
@@ -66,7 +73,11 @@ describe('Feed: posts, comments, likes, share (e2e)', () => {
     });
 
     it('attaches a real uploaded photo to a post, resolves imageUrl, and clears it on edit', async () => {
-      const alice = await registerAndVerifyTraveler(server, 'alice1b@e2e.test', 'Alice');
+      const alice = await registerAndVerifyTraveler(
+        server,
+        'alice1b@e2e.test',
+        'Alice',
+      );
 
       const urlRes = await request(server())
         .post('/api/v1/storage/upload-url')
@@ -97,7 +108,9 @@ describe('Feed: posts, comments, likes, share (e2e)', () => {
         .get('/api/v1/feed')
         .set('Authorization', `Bearer ${alice.accessToken}`)
         .expect(200);
-      const postInFeed = feedRes.body.data.items.find((p: any) => p.id === postId);
+      const postInFeed = feedRes.body.data.items.find(
+        (p: any) => p.id === postId,
+      );
       expect(postInFeed.imageMediaId).toEqual(mediaId);
       expect(postInFeed.imageUrl).toContain('http');
 
@@ -114,14 +127,24 @@ describe('Feed: posts, comments, likes, share (e2e)', () => {
         .get('/api/v1/feed')
         .set('Authorization', `Bearer ${alice.accessToken}`)
         .expect(200);
-      const postAfter = feedAfterRes.body.data.items.find((p: any) => p.id === postId);
+      const postAfter = feedAfterRes.body.data.items.find(
+        (p: any) => p.id === postId,
+      );
       expect(postAfter.imageMediaId).toBeNull();
       expect(postAfter.imageUrl).toBeNull();
     });
 
     it('rejects editing or deleting someone else’s post', async () => {
-      const alice = await registerAndVerifyTraveler(server, 'alice2@e2e.test', 'Alice');
-      const bob = await registerAndVerifyTraveler(server, 'bob2@e2e.test', 'Bob');
+      const alice = await registerAndVerifyTraveler(
+        server,
+        'alice2@e2e.test',
+        'Alice',
+      );
+      const bob = await registerAndVerifyTraveler(
+        server,
+        'bob2@e2e.test',
+        'Bob',
+      );
 
       const createRes = await request(server())
         .post('/api/v1/posts')
@@ -144,7 +167,11 @@ describe('Feed: posts, comments, likes, share (e2e)', () => {
     });
 
     it('likes and unlikes a post, rejecting a duplicate like', async () => {
-      const alice = await registerAndVerifyTraveler(server, 'alice3@e2e.test', 'Alice');
+      const alice = await registerAndVerifyTraveler(
+        server,
+        'alice3@e2e.test',
+        'Alice',
+      );
 
       const createRes = await request(server())
         .post('/api/v1/posts')
@@ -171,8 +198,16 @@ describe('Feed: posts, comments, likes, share (e2e)', () => {
     });
 
     it('comments on a post, edits and deletes its own comment, and likes a comment', async () => {
-      const alice = await registerAndVerifyTraveler(server, 'alice4@e2e.test', 'Alice');
-      const bob = await registerAndVerifyTraveler(server, 'bob4@e2e.test', 'Bob');
+      const alice = await registerAndVerifyTraveler(
+        server,
+        'alice4@e2e.test',
+        'Alice',
+      );
+      const bob = await registerAndVerifyTraveler(
+        server,
+        'bob4@e2e.test',
+        'Bob',
+      );
       await befriend(alice, bob);
 
       const createRes = await request(server())
@@ -213,8 +248,16 @@ describe('Feed: posts, comments, likes, share (e2e)', () => {
     });
 
     it('reposts a post to the resharer’s own profile', async () => {
-      const alice = await registerAndVerifyTraveler(server, 'alice5@e2e.test', 'Alice');
-      const bob = await registerAndVerifyTraveler(server, 'bob5@e2e.test', 'Bob');
+      const alice = await registerAndVerifyTraveler(
+        server,
+        'alice5@e2e.test',
+        'Alice',
+      );
+      const bob = await registerAndVerifyTraveler(
+        server,
+        'bob5@e2e.test',
+        'Bob',
+      );
       await befriend(alice, bob);
 
       const createRes = await request(server())
@@ -244,8 +287,16 @@ describe('Feed: posts, comments, likes, share (e2e)', () => {
 
   describe('GET /feed visibility', () => {
     it('only shows the caller’s own and friends’ posts, chronologically', async () => {
-      const alice = await registerAndVerifyTraveler(server, 'alice6@e2e.test', 'Alice');
-      const bob = await registerAndVerifyTraveler(server, 'bob6@e2e.test', 'Bob');
+      const alice = await registerAndVerifyTraveler(
+        server,
+        'alice6@e2e.test',
+        'Alice',
+      );
+      const bob = await registerAndVerifyTraveler(
+        server,
+        'bob6@e2e.test',
+        'Bob',
+      );
       const stranger = await registerAndVerifyTraveler(
         server,
         'stranger6@e2e.test',

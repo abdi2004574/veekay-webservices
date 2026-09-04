@@ -1,5 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsIn, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  IsIn,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 const MESSAGE_TYPES = ['text', 'image', 'document'];
 
@@ -25,7 +31,10 @@ export class SendMessageDto {
   @IsString()
   mediaId?: string;
 
-  @ApiProperty({ required: false, description: 'Original filename, for type=document.' })
+  @ApiProperty({
+    required: false,
+    description: 'Original filename, for type=document.',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(255)

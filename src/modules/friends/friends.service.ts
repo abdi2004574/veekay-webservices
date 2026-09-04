@@ -67,7 +67,10 @@ export class FriendsService {
     return { isFriend: false, requestSent: false, requestReceived: false };
   }
 
-  async getMutualFriendsCount(userIdA: string, userIdB: string): Promise<number> {
+  async getMutualFriendsCount(
+    userIdA: string,
+    userIdB: string,
+  ): Promise<number> {
     const [friendsA, friendsB] = await Promise.all([
       this.getFriendIds(userIdA),
       this.getFriendIds(userIdB),
@@ -78,7 +81,9 @@ export class FriendsService {
 
   async sendRequest(requesterId: string, addresseeId: string) {
     if (requesterId === addresseeId) {
-      throw AppException.badRequest('You cannot send a friend request to yourself.');
+      throw AppException.badRequest(
+        'You cannot send a friend request to yourself.',
+      );
     }
 
     const addressee = await this.prisma.user.findUnique({
@@ -94,7 +99,9 @@ export class FriendsService {
           { requesterId, addresseeId },
           { requesterId: addresseeId, addresseeId: requesterId },
         ],
-        status: { in: [FriendRequestStatus.pending, FriendRequestStatus.accepted] },
+        status: {
+          in: [FriendRequestStatus.pending, FriendRequestStatus.accepted],
+        },
       },
     });
     if (existing) {
@@ -110,7 +117,10 @@ export class FriendsService {
     });
   }
 
-  private async findPendingRequestForAddressee(requestId: string, userId: string) {
+  private async findPendingRequestForAddressee(
+    requestId: string,
+    userId: string,
+  ) {
     const request = await this.prisma.friendRequest.findUnique({
       where: { id: requestId },
     });
@@ -118,7 +128,9 @@ export class FriendsService {
       throw AppException.notFound('Friend request not found.');
     }
     if (request.status !== FriendRequestStatus.pending) {
-      throw AppException.businessRule('This friend request has already been responded to.');
+      throw AppException.businessRule(
+        'This friend request has already been responded to.',
+      );
     }
     return request;
   }

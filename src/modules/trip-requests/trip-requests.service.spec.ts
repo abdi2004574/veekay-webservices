@@ -33,12 +33,19 @@ describe('TripRequestsService', () => {
     };
     conversationsService = { create: jest.fn() };
     messagesService = { send: jest.fn() };
-    service = new TripRequestsService(prisma, conversationsService, messagesService);
+    service = new TripRequestsService(
+      prisma,
+      conversationsService,
+      messagesService,
+    );
   });
 
   describe('create', () => {
     it('creates a request against an approved agency, reusing the existing conversation if one exists, and auto-posts the initial message', async () => {
-      prisma.agency.findUnique.mockResolvedValue({ id: 'agency-1', status: AgencyStatus.approved });
+      prisma.agency.findUnique.mockResolvedValue({
+        id: 'agency-1',
+        status: AgencyStatus.approved,
+      });
       conversationsService.create.mockResolvedValue({ id: 'convo-1' });
       prisma.package.findUnique.mockResolvedValue(null);
       prisma.campaign.findUnique.mockResolvedValue(null);
@@ -52,7 +59,11 @@ describe('TripRequestsService', () => {
         initialMessage: 'Hello',
         conversationId: 'convo-1',
         traveler: { id: 'traveler-1', username: 't1', displayName: 'T1' },
-        agency: { id: 'agency-1', agencyName: 'A1', status: AgencyStatus.approved },
+        agency: {
+          id: 'agency-1',
+          agencyName: 'A1',
+          status: AgencyStatus.approved,
+        },
         package: null,
         campaign: null,
       });
@@ -60,7 +71,7 @@ describe('TripRequestsService', () => {
       const result = await service.create('traveler-1', {
         agencyId: 'agency-1',
         message: 'Hello',
-      } as any);
+      });
 
       expect(prisma.agency.findUnique).toHaveBeenCalledWith({
         where: { id: 'agency-1' },
@@ -78,10 +89,14 @@ describe('TripRequestsService', () => {
           include: expect.any(Object),
         }),
       );
-      expect(messagesService.send).toHaveBeenCalledWith('convo-1', 'traveler-1', {
-        type: MessageType.text,
-        body: 'Hello',
-      });
+      expect(messagesService.send).toHaveBeenCalledWith(
+        'convo-1',
+        'traveler-1',
+        {
+          type: MessageType.text,
+          body: 'Hello',
+        },
+      );
       expect(result.status).toBe(TripRequestStatus.pending);
     });
 
@@ -89,62 +104,108 @@ describe('TripRequestsService', () => {
       prisma.agency.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.create('traveler-1', { agencyId: 'missing', message: 'Hi' } as any),
+        service.create('traveler-1', {
+          agencyId: 'missing',
+          message: 'Hi',
+        } as any),
       ).rejects.toMatchObject({ getStatus: expect.any(Function) });
       expect(prisma.tripRequest.create).not.toHaveBeenCalled();
     });
 
     it('rejects when the target agency is pending_verification', async () => {
-      prisma.agency.findUnique.mockResolvedValue({ id: 'agency-1', status: AgencyStatus.pending_verification });
+      prisma.agency.findUnique.mockResolvedValue({
+        id: 'agency-1',
+        status: AgencyStatus.pending_verification,
+      });
 
       await expect(
-        service.create('traveler-1', { agencyId: 'agency-1', message: 'Hi' } as any),
+        service.create('traveler-1', {
+          agencyId: 'agency-1',
+          message: 'Hi',
+        } as any),
       ).rejects.toMatchObject({ getStatus: expect.any(Function) });
       expect(prisma.tripRequest.create).not.toHaveBeenCalled();
     });
 
     it('rejects when packageId is provided but the package does not exist', async () => {
-      prisma.agency.findUnique.mockResolvedValue({ id: 'agency-1', status: AgencyStatus.approved });
+      prisma.agency.findUnique.mockResolvedValue({
+        id: 'agency-1',
+        status: AgencyStatus.approved,
+      });
       prisma.package.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.create('traveler-1', { agencyId: 'agency-1', packageId: 'pkg-missing', message: 'Hi' } as any),
+        service.create('traveler-1', {
+          agencyId: 'agency-1',
+          packageId: 'pkg-missing',
+          message: 'Hi',
+        } as any),
       ).rejects.toMatchObject({ getStatus: expect.any(Function) });
       expect(prisma.tripRequest.create).not.toHaveBeenCalled();
     });
 
     it('rejects when packageId belongs to a different agency', async () => {
-      prisma.agency.findUnique.mockResolvedValue({ id: 'agency-1', status: AgencyStatus.approved });
-      prisma.package.findUnique.mockResolvedValue({ id: 'pkg-1', agencyId: 'agency-2' });
+      prisma.agency.findUnique.mockResolvedValue({
+        id: 'agency-1',
+        status: AgencyStatus.approved,
+      });
+      prisma.package.findUnique.mockResolvedValue({
+        id: 'pkg-1',
+        agencyId: 'agency-2',
+      });
 
       await expect(
-        service.create('traveler-1', { agencyId: 'agency-1', packageId: 'pkg-1', message: 'Hi' } as any),
+        service.create('traveler-1', {
+          agencyId: 'agency-1',
+          packageId: 'pkg-1',
+          message: 'Hi',
+        } as any),
       ).rejects.toMatchObject({ getStatus: expect.any(Function) });
       expect(prisma.tripRequest.create).not.toHaveBeenCalled();
     });
 
     it('rejects when campaignId is provided but the campaign does not exist', async () => {
-      prisma.agency.findUnique.mockResolvedValue({ id: 'agency-1', status: AgencyStatus.approved });
+      prisma.agency.findUnique.mockResolvedValue({
+        id: 'agency-1',
+        status: AgencyStatus.approved,
+      });
       prisma.campaign.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.create('traveler-1', { agencyId: 'agency-1', campaignId: 'camp-missing', message: 'Hi' } as any),
+        service.create('traveler-1', {
+          agencyId: 'agency-1',
+          campaignId: 'camp-missing',
+          message: 'Hi',
+        } as any),
       ).rejects.toMatchObject({ getStatus: expect.any(Function) });
       expect(prisma.tripRequest.create).not.toHaveBeenCalled();
     });
 
     it('rejects when campaignId is owned by another traveler', async () => {
-      prisma.agency.findUnique.mockResolvedValue({ id: 'agency-1', status: AgencyStatus.approved });
-      prisma.campaign.findUnique.mockResolvedValue({ id: 'camp-1', creatorId: 'traveler-2' });
+      prisma.agency.findUnique.mockResolvedValue({
+        id: 'agency-1',
+        status: AgencyStatus.approved,
+      });
+      prisma.campaign.findUnique.mockResolvedValue({
+        id: 'camp-1',
+        creatorId: 'traveler-2',
+      });
 
       await expect(
-        service.create('traveler-1', { agencyId: 'agency-1', campaignId: 'camp-1', message: 'Hi' } as any),
+        service.create('traveler-1', {
+          agencyId: 'agency-1',
+          campaignId: 'camp-1',
+          message: 'Hi',
+        } as any),
       ).rejects.toMatchObject({ getStatus: expect.any(Function) });
       expect(prisma.tripRequest.create).not.toHaveBeenCalled();
     });
 
     it('sets status to pending by default', async () => {
-      prisma.agency.findUnique.mockResolvedValue({ id: 'agency-1', status: AgencyStatus.approved });
+      prisma.agency.findUnique.mockResolvedValue({
+        id: 'agency-1',
+        status: AgencyStatus.approved,
+      });
       prisma.package.findUnique.mockResolvedValue(null);
       prisma.campaign.findUnique.mockResolvedValue(null);
       conversationsService.create.mockResolvedValue({ id: 'convo-1' });
@@ -163,7 +224,10 @@ describe('TripRequestsService', () => {
         campaign: null,
       });
 
-      await service.create('traveler-1', { agencyId: 'agency-1', message: 'Hi' } as any);
+      await service.create('traveler-1', {
+        agencyId: 'agency-1',
+        message: 'Hi',
+      });
 
       expect(prisma.tripRequest.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -189,11 +253,19 @@ describe('TripRequestsService', () => {
     it('applies optional status filter', async () => {
       prisma.tripRequest.findMany.mockResolvedValue([]);
 
-      await service.listMineForTraveler('traveler-1', TripRequestStatus.pending, undefined, 20);
+      await service.listMineForTraveler(
+        'traveler-1',
+        TripRequestStatus.pending,
+        undefined,
+        20,
+      );
 
       expect(prisma.tripRequest.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { travelerId: 'traveler-1', status: TripRequestStatus.pending },
+          where: {
+            travelerId: 'traveler-1',
+            status: TripRequestStatus.pending,
+          },
         }),
       );
     });
@@ -213,7 +285,12 @@ describe('TripRequestsService', () => {
       }));
       prisma.tripRequest.findMany.mockResolvedValue(items);
 
-      const result = await service.listMineForTraveler('traveler-1', undefined, undefined, 2);
+      const result = await service.listMineForTraveler(
+        'traveler-1',
+        undefined,
+        undefined,
+        2,
+      );
 
       expect(result.items).toHaveLength(2);
       expect(result.nextCursor).toBe('req-1');
@@ -234,7 +311,12 @@ describe('TripRequestsService', () => {
       }));
       prisma.tripRequest.findMany.mockResolvedValue(items);
 
-      const result = await service.listMineForTraveler('traveler-1', undefined, undefined, 3);
+      const result = await service.listMineForTraveler(
+        'traveler-1',
+        undefined,
+        undefined,
+        3,
+      );
 
       expect(result.items).toHaveLength(3);
       expect(result.nextCursor).toBe('req-2');
@@ -257,11 +339,19 @@ describe('TripRequestsService', () => {
     it('applies optional status filter', async () => {
       prisma.tripRequest.findMany.mockResolvedValue([]);
 
-      await service.listForAgency('agency-1', TripRequestStatus.in_discussion, undefined, 20);
+      await service.listForAgency(
+        'agency-1',
+        TripRequestStatus.in_discussion,
+        undefined,
+        20,
+      );
 
       expect(prisma.tripRequest.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { agencyId: 'agency-1', status: TripRequestStatus.in_discussion },
+          where: {
+            agencyId: 'agency-1',
+            status: TripRequestStatus.in_discussion,
+          },
         }),
       );
     });
@@ -281,7 +371,12 @@ describe('TripRequestsService', () => {
       }));
       prisma.tripRequest.findMany.mockResolvedValue(items);
 
-      const result = await service.listForAgency('agency-1', undefined, undefined, 2);
+      const result = await service.listForAgency(
+        'agency-1',
+        undefined,
+        undefined,
+        2,
+      );
 
       expect(result.items).toHaveLength(2);
       expect(result.nextCursor).toBe('req-1');
@@ -296,18 +391,26 @@ describe('TripRequestsService', () => {
         agencyId: 'agency-1',
         status: TripRequestStatus.pending,
         traveler: { id: 'traveler-1', username: 't1', displayName: 'T1' },
-        agency: { id: 'agency-1', agencyName: 'A1', status: AgencyStatus.approved },
+        agency: {
+          id: 'agency-1',
+          agencyName: 'A1',
+          status: AgencyStatus.approved,
+        },
         package: null,
         campaign: null,
       });
 
-      const result = await service.getDetailForCaller('req-1', 'traveler-1', UserRole.traveler);
+      const result = await service.getDetailForCaller(
+        'req-1',
+        'traveler-1',
+        UserRole.traveler,
+      );
 
       expect(result.id).toBe('req-1');
       expect(prisma.agency.findUnique).not.toHaveBeenCalled();
     });
 
-    it('returns 404 when a traveler tries to view another traveler\'s request', async () => {
+    it("returns 404 when a traveler tries to view another traveler's request", async () => {
       prisma.tripRequest.findUnique.mockResolvedValue({
         id: 'req-1',
         travelerId: 'traveler-2',
@@ -326,18 +429,26 @@ describe('TripRequestsService', () => {
         agencyId: 'agency-1',
         status: TripRequestStatus.pending,
         traveler: { id: 'traveler-1' },
-        agency: { id: 'agency-1', agencyName: 'A1', status: AgencyStatus.approved },
+        agency: {
+          id: 'agency-1',
+          agencyName: 'A1',
+          status: AgencyStatus.approved,
+        },
         package: null,
         campaign: null,
       });
       prisma.agency.findUnique.mockResolvedValue({ id: 'agency-1' });
 
-      const result = await service.getDetailForCaller('req-1', 'agency-user-1', UserRole.agency);
+      const result = await service.getDetailForCaller(
+        'req-1',
+        'agency-user-1',
+        UserRole.agency,
+      );
 
       expect(result.id).toBe('req-1');
     });
 
-    it('returns 404 when an agency tries to view another agency\'s request', async () => {
+    it("returns 404 when an agency tries to view another agency's request", async () => {
       prisma.tripRequest.findUnique.mockResolvedValue({
         id: 'req-1',
         travelerId: 'traveler-1',
@@ -358,25 +469,37 @@ describe('TripRequestsService', () => {
       });
 
       await expect(
-        service.getDetailForCaller('req-1', 'traveler-1', 'admin' as UserRole),
+        service.getDetailForCaller('req-1', 'traveler-1', 'admin'),
       ).rejects.toMatchObject({ getStatus: expect.any(Function) });
     });
   });
 
   describe('updateStatus', () => {
-    it('rejects when the calling agency doesn\'t own the request', async () => {
+    it("rejects when the calling agency doesn't own the request", async () => {
       prisma.agency.findUnique.mockResolvedValue({ id: 'agency-1' });
-      prisma.tripRequest.findUnique.mockResolvedValue({ id: 'req-1', agencyId: 'agency-2', status: TripRequestStatus.pending });
+      prisma.tripRequest.findUnique.mockResolvedValue({
+        id: 'req-1',
+        agencyId: 'agency-2',
+        status: TripRequestStatus.pending,
+      });
 
       await expect(
-        service.updateStatus('req-1', 'agency-user-1', TripRequestStatus.in_discussion),
+        service.updateStatus(
+          'req-1',
+          'agency-user-1',
+          TripRequestStatus.in_discussion,
+        ),
       ).rejects.toMatchObject({ getStatus: expect.any(Function) });
       expect(prisma.tripRequest.update).not.toHaveBeenCalled();
     });
 
     it('allows pending ? in_discussion', async () => {
       prisma.agency.findUnique.mockResolvedValue({ id: 'agency-1' });
-      prisma.tripRequest.findUnique.mockResolvedValue({ id: 'req-1', agencyId: 'agency-1', status: TripRequestStatus.pending });
+      prisma.tripRequest.findUnique.mockResolvedValue({
+        id: 'req-1',
+        agencyId: 'agency-1',
+        status: TripRequestStatus.pending,
+      });
       prisma.tripRequest.update.mockResolvedValue({
         id: 'req-1',
         travelerId: 'traveler-1',
@@ -390,7 +513,11 @@ describe('TripRequestsService', () => {
         campaign: null,
       });
 
-      await service.updateStatus('req-1', 'agency-user-1', TripRequestStatus.in_discussion);
+      await service.updateStatus(
+        'req-1',
+        'agency-user-1',
+        TripRequestStatus.in_discussion,
+      );
 
       expect(prisma.tripRequest.update).toHaveBeenCalledWith({
         where: { id: 'req-1' },
@@ -401,7 +528,11 @@ describe('TripRequestsService', () => {
 
     it('allows pending ? declined', async () => {
       prisma.agency.findUnique.mockResolvedValue({ id: 'agency-1' });
-      prisma.tripRequest.findUnique.mockResolvedValue({ id: 'req-1', agencyId: 'agency-1', status: TripRequestStatus.pending });
+      prisma.tripRequest.findUnique.mockResolvedValue({
+        id: 'req-1',
+        agencyId: 'agency-1',
+        status: TripRequestStatus.pending,
+      });
       prisma.tripRequest.update.mockResolvedValue({
         id: 'req-1',
         agencyId: 'agency-1',
@@ -415,16 +546,26 @@ describe('TripRequestsService', () => {
         campaign: null,
       });
 
-      await service.updateStatus('req-1', 'agency-user-1', TripRequestStatus.declined);
+      await service.updateStatus(
+        'req-1',
+        'agency-user-1',
+        TripRequestStatus.declined,
+      );
 
       expect(prisma.tripRequest.update).toHaveBeenCalledWith(
-        expect.objectContaining({ data: { status: TripRequestStatus.declined } }),
+        expect.objectContaining({
+          data: { status: TripRequestStatus.declined },
+        }),
       );
     });
 
     it('allows pending ? cancelled', async () => {
       prisma.agency.findUnique.mockResolvedValue({ id: 'agency-1' });
-      prisma.tripRequest.findUnique.mockResolvedValue({ id: 'req-1', agencyId: 'agency-1', status: TripRequestStatus.pending });
+      prisma.tripRequest.findUnique.mockResolvedValue({
+        id: 'req-1',
+        agencyId: 'agency-1',
+        status: TripRequestStatus.pending,
+      });
       prisma.tripRequest.update.mockResolvedValue({
         id: 'req-1',
         agencyId: 'agency-1',
@@ -438,16 +579,26 @@ describe('TripRequestsService', () => {
         campaign: null,
       });
 
-      await service.updateStatus('req-1', 'agency-user-1', TripRequestStatus.cancelled);
+      await service.updateStatus(
+        'req-1',
+        'agency-user-1',
+        TripRequestStatus.cancelled,
+      );
 
       expect(prisma.tripRequest.update).toHaveBeenCalledWith(
-        expect.objectContaining({ data: { status: TripRequestStatus.cancelled } }),
+        expect.objectContaining({
+          data: { status: TripRequestStatus.cancelled },
+        }),
       );
     });
 
     it('allows in_discussion ? confirmed', async () => {
       prisma.agency.findUnique.mockResolvedValue({ id: 'agency-1' });
-      prisma.tripRequest.findUnique.mockResolvedValue({ id: 'req-1', agencyId: 'agency-1', status: TripRequestStatus.in_discussion });
+      prisma.tripRequest.findUnique.mockResolvedValue({
+        id: 'req-1',
+        agencyId: 'agency-1',
+        status: TripRequestStatus.in_discussion,
+      });
       prisma.tripRequest.update.mockResolvedValue({
         id: 'req-1',
         agencyId: 'agency-1',
@@ -461,16 +612,26 @@ describe('TripRequestsService', () => {
         campaign: null,
       });
 
-      await service.updateStatus('req-1', 'agency-user-1', TripRequestStatus.confirmed);
+      await service.updateStatus(
+        'req-1',
+        'agency-user-1',
+        TripRequestStatus.confirmed,
+      );
 
       expect(prisma.tripRequest.update).toHaveBeenCalledWith(
-        expect.objectContaining({ data: { status: TripRequestStatus.confirmed } }),
+        expect.objectContaining({
+          data: { status: TripRequestStatus.confirmed },
+        }),
       );
     });
 
     it('allows in_discussion ? declined', async () => {
       prisma.agency.findUnique.mockResolvedValue({ id: 'agency-1' });
-      prisma.tripRequest.findUnique.mockResolvedValue({ id: 'req-1', agencyId: 'agency-1', status: TripRequestStatus.in_discussion });
+      prisma.tripRequest.findUnique.mockResolvedValue({
+        id: 'req-1',
+        agencyId: 'agency-1',
+        status: TripRequestStatus.in_discussion,
+      });
       prisma.tripRequest.update.mockResolvedValue({
         id: 'req-1',
         agencyId: 'agency-1',
@@ -484,16 +645,26 @@ describe('TripRequestsService', () => {
         campaign: null,
       });
 
-      await service.updateStatus('req-1', 'agency-user-1', TripRequestStatus.declined);
+      await service.updateStatus(
+        'req-1',
+        'agency-user-1',
+        TripRequestStatus.declined,
+      );
 
       expect(prisma.tripRequest.update).toHaveBeenCalledWith(
-        expect.objectContaining({ data: { status: TripRequestStatus.declined } }),
+        expect.objectContaining({
+          data: { status: TripRequestStatus.declined },
+        }),
       );
     });
 
     it('allows in_discussion ? cancelled', async () => {
       prisma.agency.findUnique.mockResolvedValue({ id: 'agency-1' });
-      prisma.tripRequest.findUnique.mockResolvedValue({ id: 'req-1', agencyId: 'agency-1', status: TripRequestStatus.in_discussion });
+      prisma.tripRequest.findUnique.mockResolvedValue({
+        id: 'req-1',
+        agencyId: 'agency-1',
+        status: TripRequestStatus.in_discussion,
+      });
       prisma.tripRequest.update.mockResolvedValue({
         id: 'req-1',
         agencyId: 'agency-1',
@@ -507,16 +678,26 @@ describe('TripRequestsService', () => {
         campaign: null,
       });
 
-      await service.updateStatus('req-1', 'agency-user-1', TripRequestStatus.cancelled);
+      await service.updateStatus(
+        'req-1',
+        'agency-user-1',
+        TripRequestStatus.cancelled,
+      );
 
       expect(prisma.tripRequest.update).toHaveBeenCalledWith(
-        expect.objectContaining({ data: { status: TripRequestStatus.cancelled } }),
+        expect.objectContaining({
+          data: { status: TripRequestStatus.cancelled },
+        }),
       );
     });
 
     it('allows confirmed ? completed', async () => {
       prisma.agency.findUnique.mockResolvedValue({ id: 'agency-1' });
-      prisma.tripRequest.findUnique.mockResolvedValue({ id: 'req-1', agencyId: 'agency-1', status: TripRequestStatus.confirmed });
+      prisma.tripRequest.findUnique.mockResolvedValue({
+        id: 'req-1',
+        agencyId: 'agency-1',
+        status: TripRequestStatus.confirmed,
+      });
       prisma.tripRequest.update.mockResolvedValue({
         id: 'req-1',
         agencyId: 'agency-1',
@@ -530,56 +711,98 @@ describe('TripRequestsService', () => {
         campaign: null,
       });
 
-      await service.updateStatus('req-1', 'agency-user-1', TripRequestStatus.completed);
+      await service.updateStatus(
+        'req-1',
+        'agency-user-1',
+        TripRequestStatus.completed,
+      );
 
       expect(prisma.tripRequest.update).toHaveBeenCalledWith(
-        expect.objectContaining({ data: { status: TripRequestStatus.completed } }),
+        expect.objectContaining({
+          data: { status: TripRequestStatus.completed },
+        }),
       );
     });
 
     it('rejects declined ? anything with businessRule', async () => {
       prisma.agency.findUnique.mockResolvedValue({ id: 'agency-1' });
-      prisma.tripRequest.findUnique.mockResolvedValue({ id: 'req-1', agencyId: 'agency-1', status: TripRequestStatus.declined });
+      prisma.tripRequest.findUnique.mockResolvedValue({
+        id: 'req-1',
+        agencyId: 'agency-1',
+        status: TripRequestStatus.declined,
+      });
 
       await expect(
-        service.updateStatus('req-1', 'agency-user-1', TripRequestStatus.pending),
+        service.updateStatus(
+          'req-1',
+          'agency-user-1',
+          TripRequestStatus.pending,
+        ),
       ).rejects.toMatchObject({ getStatus: expect.any(Function) });
       expect(prisma.tripRequest.update).not.toHaveBeenCalled();
     });
 
     it('rejects completed ? anything with businessRule', async () => {
       prisma.agency.findUnique.mockResolvedValue({ id: 'agency-1' });
-      prisma.tripRequest.findUnique.mockResolvedValue({ id: 'req-1', agencyId: 'agency-1', status: TripRequestStatus.completed });
+      prisma.tripRequest.findUnique.mockResolvedValue({
+        id: 'req-1',
+        agencyId: 'agency-1',
+        status: TripRequestStatus.completed,
+      });
 
       await expect(
-        service.updateStatus('req-1', 'agency-user-1', TripRequestStatus.in_discussion),
+        service.updateStatus(
+          'req-1',
+          'agency-user-1',
+          TripRequestStatus.in_discussion,
+        ),
       ).rejects.toMatchObject({ getStatus: expect.any(Function) });
       expect(prisma.tripRequest.update).not.toHaveBeenCalled();
     });
 
     it('rejects pending ? confirmed with businessRule', async () => {
       prisma.agency.findUnique.mockResolvedValue({ id: 'agency-1' });
-      prisma.tripRequest.findUnique.mockResolvedValue({ id: 'req-1', agencyId: 'agency-1', status: TripRequestStatus.pending });
+      prisma.tripRequest.findUnique.mockResolvedValue({
+        id: 'req-1',
+        agencyId: 'agency-1',
+        status: TripRequestStatus.pending,
+      });
 
       await expect(
-        service.updateStatus('req-1', 'agency-user-1', TripRequestStatus.confirmed),
+        service.updateStatus(
+          'req-1',
+          'agency-user-1',
+          TripRequestStatus.confirmed,
+        ),
       ).rejects.toMatchObject({ getStatus: expect.any(Function) });
       expect(prisma.tripRequest.update).not.toHaveBeenCalled();
     });
 
     it('rejects pending ? completed with businessRule', async () => {
       prisma.agency.findUnique.mockResolvedValue({ id: 'agency-1' });
-      prisma.tripRequest.findUnique.mockResolvedValue({ id: 'req-1', agencyId: 'agency-1', status: TripRequestStatus.pending });
+      prisma.tripRequest.findUnique.mockResolvedValue({
+        id: 'req-1',
+        agencyId: 'agency-1',
+        status: TripRequestStatus.pending,
+      });
 
       await expect(
-        service.updateStatus('req-1', 'agency-user-1', TripRequestStatus.completed),
+        service.updateStatus(
+          'req-1',
+          'agency-user-1',
+          TripRequestStatus.completed,
+        ),
       ).rejects.toMatchObject({ getStatus: expect.any(Function) });
       expect(prisma.tripRequest.update).not.toHaveBeenCalled();
     });
 
     it('emits a structured log entry on every successful transition', async () => {
       prisma.agency.findUnique.mockResolvedValue({ id: 'agency-1' });
-      prisma.tripRequest.findUnique.mockResolvedValue({ id: 'req-1', agencyId: 'agency-1', status: TripRequestStatus.pending });
+      prisma.tripRequest.findUnique.mockResolvedValue({
+        id: 'req-1',
+        agencyId: 'agency-1',
+        status: TripRequestStatus.pending,
+      });
       prisma.tripRequest.update.mockResolvedValue({
         id: 'req-1',
         agencyId: 'agency-1',
@@ -595,9 +818,15 @@ describe('TripRequestsService', () => {
         campaign: null,
       });
 
-      const loggerSpy = jest.spyOn((service as any).logger, 'log').mockImplementation(() => {});
+      const loggerSpy = jest
+        .spyOn((service as any).logger, 'log')
+        .mockImplementation(() => {});
 
-      await service.updateStatus('req-1', 'agency-user-1', TripRequestStatus.in_discussion);
+      await service.updateStatus(
+        'req-1',
+        'agency-user-1',
+        TripRequestStatus.in_discussion,
+      );
 
       expect(loggerSpy).toHaveBeenCalledTimes(1);
       expect(loggerSpy).toHaveBeenCalledWith(
@@ -657,7 +886,9 @@ describe('TripRequestsService', () => {
       await service.cancel('req-1', 'traveler-1');
 
       expect(prisma.tripRequest.update).toHaveBeenCalledWith(
-        expect.objectContaining({ data: { status: TripRequestStatus.cancelled } }),
+        expect.objectContaining({
+          data: { status: TripRequestStatus.cancelled },
+        }),
       );
     });
 
@@ -668,9 +899,11 @@ describe('TripRequestsService', () => {
         status: TripRequestStatus.confirmed,
       });
 
-      await expect(service.cancel('req-1', 'traveler-1')).rejects.toMatchObject({
-        getStatus: expect.any(Function),
-      });
+      await expect(service.cancel('req-1', 'traveler-1')).rejects.toMatchObject(
+        {
+          getStatus: expect.any(Function),
+        },
+      );
       expect(prisma.tripRequest.update).not.toHaveBeenCalled();
     });
 
@@ -681,9 +914,11 @@ describe('TripRequestsService', () => {
         status: TripRequestStatus.completed,
       });
 
-      await expect(service.cancel('req-1', 'traveler-1')).rejects.toMatchObject({
-        getStatus: expect.any(Function),
-      });
+      await expect(service.cancel('req-1', 'traveler-1')).rejects.toMatchObject(
+        {
+          getStatus: expect.any(Function),
+        },
+      );
       expect(prisma.tripRequest.update).not.toHaveBeenCalled();
     });
 
@@ -694,9 +929,11 @@ describe('TripRequestsService', () => {
         status: TripRequestStatus.declined,
       });
 
-      await expect(service.cancel('req-1', 'traveler-1')).rejects.toMatchObject({
-        getStatus: expect.any(Function),
-      });
+      await expect(service.cancel('req-1', 'traveler-1')).rejects.toMatchObject(
+        {
+          getStatus: expect.any(Function),
+        },
+      );
       expect(prisma.tripRequest.update).not.toHaveBeenCalled();
     });
 
@@ -707,9 +944,11 @@ describe('TripRequestsService', () => {
         status: TripRequestStatus.cancelled,
       });
 
-      await expect(service.cancel('req-1', 'traveler-1')).rejects.toMatchObject({
-        getStatus: expect.any(Function),
-      });
+      await expect(service.cancel('req-1', 'traveler-1')).rejects.toMatchObject(
+        {
+          getStatus: expect.any(Function),
+        },
+      );
       expect(prisma.tripRequest.update).not.toHaveBeenCalled();
     });
 
@@ -720,9 +959,11 @@ describe('TripRequestsService', () => {
         status: TripRequestStatus.pending,
       });
 
-      await expect(service.cancel('req-1', 'traveler-1')).rejects.toMatchObject({
-        getStatus: expect.any(Function),
-      });
+      await expect(service.cancel('req-1', 'traveler-1')).rejects.toMatchObject(
+        {
+          getStatus: expect.any(Function),
+        },
+      );
       expect(prisma.tripRequest.update).not.toHaveBeenCalled();
     });
   });
@@ -751,7 +992,10 @@ describe('TripRequestsService', () => {
         body: 'Hi there!',
       });
 
-      const result = await service.createTemplate('agency-1', { title: 'Greeting', body: 'Hi there!' } as any);
+      const result = await service.createTemplate('agency-1', {
+        title: 'Greeting',
+        body: 'Hi there!',
+      });
 
       expect(prisma.smartReplyTemplate.create).toHaveBeenCalledWith({
         data: { agencyId: 'agency-1', title: 'Greeting', body: 'Hi there!' },
@@ -760,7 +1004,10 @@ describe('TripRequestsService', () => {
     });
 
     it('updateTemplate rejects when template belongs to another agency', async () => {
-      prisma.smartReplyTemplate.findUnique.mockResolvedValue({ id: 'tpl-1', agencyId: 'agency-2' });
+      prisma.smartReplyTemplate.findUnique.mockResolvedValue({
+        id: 'tpl-1',
+        agencyId: 'agency-2',
+      });
 
       await expect(
         service.updateTemplate('tpl-1', 'agency-1', { title: 'New' } as any),
@@ -769,7 +1016,10 @@ describe('TripRequestsService', () => {
     });
 
     it('updateTemplate applies only the fields sent', async () => {
-      prisma.smartReplyTemplate.findUnique.mockResolvedValue({ id: 'tpl-1', agencyId: 'agency-1' });
+      prisma.smartReplyTemplate.findUnique.mockResolvedValue({
+        id: 'tpl-1',
+        agencyId: 'agency-1',
+      });
       prisma.smartReplyTemplate.update.mockResolvedValue({
         id: 'tpl-1',
         agencyId: 'agency-1',
@@ -777,7 +1027,9 @@ describe('TripRequestsService', () => {
         body: 'Old Body',
       });
 
-      await service.updateTemplate('tpl-1', 'agency-1', { title: 'New Title' } as any);
+      await service.updateTemplate('tpl-1', 'agency-1', {
+        title: 'New Title',
+      });
 
       expect(prisma.smartReplyTemplate.update).toHaveBeenCalledWith({
         where: { id: 'tpl-1' },
@@ -786,20 +1038,30 @@ describe('TripRequestsService', () => {
     });
 
     it('deleteTemplate rejects when template belongs to another agency', async () => {
-      prisma.smartReplyTemplate.findUnique.mockResolvedValue({ id: 'tpl-1', agencyId: 'agency-2' });
+      prisma.smartReplyTemplate.findUnique.mockResolvedValue({
+        id: 'tpl-1',
+        agencyId: 'agency-2',
+      });
 
-      await expect(service.deleteTemplate('tpl-1', 'agency-1')).rejects.toMatchObject({
+      await expect(
+        service.deleteTemplate('tpl-1', 'agency-1'),
+      ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
       expect(prisma.smartReplyTemplate.delete).not.toHaveBeenCalled();
     });
 
     it('deleteTemplate deletes a template owned by the caller', async () => {
-      prisma.smartReplyTemplate.findUnique.mockResolvedValue({ id: 'tpl-1', agencyId: 'agency-1' });
+      prisma.smartReplyTemplate.findUnique.mockResolvedValue({
+        id: 'tpl-1',
+        agencyId: 'agency-1',
+      });
 
       await service.deleteTemplate('tpl-1', 'agency-1');
 
-      expect(prisma.smartReplyTemplate.delete).toHaveBeenCalledWith({ where: { id: 'tpl-1' } });
+      expect(prisma.smartReplyTemplate.delete).toHaveBeenCalledWith({
+        where: { id: 'tpl-1' },
+      });
     });
   });
 });

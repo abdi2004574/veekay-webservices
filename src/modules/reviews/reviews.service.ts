@@ -31,7 +31,9 @@ export class ReviewsService {
   }
 
   async create(agencyId: string, reviewerId: string, dto: CreateReviewDto) {
-    const agency = await this.prisma.agency.findUnique({ where: { id: agencyId } });
+    const agency = await this.prisma.agency.findUnique({
+      where: { id: agencyId },
+    });
     if (!agency || agency.status !== AgencyStatus.approved) {
       throw AppException.notFound('Agency not found.');
     }
@@ -59,7 +61,9 @@ export class ReviewsService {
   }
 
   private async findOwnedOrThrow(reviewId: string, reviewerId: string) {
-    const review = await this.prisma.agencyReview.findUnique({ where: { id: reviewId } });
+    const review = await this.prisma.agencyReview.findUnique({
+      where: { id: reviewId },
+    });
     if (!review) {
       throw AppException.notFound('Review not found.');
     }
@@ -121,7 +125,9 @@ export class ReviewsService {
     const reviews = await this.prisma.agencyReview.findMany({
       where: { reviewerId },
       orderBy: { createdAt: 'desc' },
-      include: { agency: { select: { id: true, agencyName: true, description: true } } },
+      include: {
+        agency: { select: { id: true, agencyName: true, description: true } },
+      },
     });
 
     return reviews.map((review) => ({

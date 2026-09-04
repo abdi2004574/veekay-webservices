@@ -59,7 +59,9 @@ describe('ReviewsService', () => {
       });
       prisma.agencyReview.findUnique.mockResolvedValue(null);
       prisma.agencyReview.create.mockResolvedValue({ id: 'review-1' });
-      prisma.agencyReview.aggregate.mockResolvedValue({ _avg: { rating: 4.5 } });
+      prisma.agencyReview.aggregate.mockResolvedValue({
+        _avg: { rating: 4.5 },
+      });
 
       await service.create('agency-1', 'user-1', { rating: 5, body: 'Great!' });
 
@@ -113,7 +115,10 @@ describe('ReviewsService', () => {
         agencyId: 'agency-1',
         editableUntil: new Date(Date.now() + 1000 * 60 * 60),
       });
-      prisma.agencyReview.update.mockResolvedValue({ id: 'review-1', rating: 3 });
+      prisma.agencyReview.update.mockResolvedValue({
+        id: 'review-1',
+        rating: 3,
+      });
       prisma.agencyReview.aggregate.mockResolvedValue({ _avg: { rating: 3 } });
 
       await service.update('review-1', 'user-1', { rating: 3 });
@@ -177,11 +182,15 @@ describe('ReviewsService', () => {
         agencyId: 'agency-1',
         editableUntil: new Date(Date.now() + 1000 * 60 * 60),
       });
-      prisma.agencyReview.aggregate.mockResolvedValue({ _avg: { rating: null } });
+      prisma.agencyReview.aggregate.mockResolvedValue({
+        _avg: { rating: null },
+      });
 
       await service.remove('review-1', 'user-1');
 
-      expect(prisma.agencyReview.delete).toHaveBeenCalledWith({ where: { id: 'review-1' } });
+      expect(prisma.agencyReview.delete).toHaveBeenCalledWith({
+        where: { id: 'review-1' },
+      });
       expect(prisma.agency.update).toHaveBeenCalledWith({
         where: { id: 'agency-1' },
         data: { reputationScore: null },

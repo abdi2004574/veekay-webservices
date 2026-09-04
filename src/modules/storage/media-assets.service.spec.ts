@@ -16,8 +16,12 @@ describe('MediaAssetsService', () => {
       },
     };
     storageService = {
-      createPresignedUploadUrl: jest.fn().mockResolvedValue('https://upload.example/put'),
-      createPresignedDownloadUrl: jest.fn().mockResolvedValue('https://download.example/get'),
+      createPresignedUploadUrl: jest
+        .fn()
+        .mockResolvedValue('https://upload.example/put'),
+      createPresignedDownloadUrl: jest
+        .fn()
+        .mockResolvedValue('https://download.example/get'),
       objectExists: jest.fn(),
       getObjectMetadata: jest.fn(),
       deleteObject: jest.fn(),
@@ -69,15 +73,22 @@ describe('MediaAssetsService', () => {
     it('throws not-found for a missing asset', async () => {
       prisma.mediaAsset.findUnique.mockResolvedValue(null);
 
-      await expect(service.confirmUpload('user-1', 'media-1')).rejects.toMatchObject({
+      await expect(
+        service.confirmUpload('user-1', 'media-1'),
+      ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
     });
 
     it('rejects confirming someone else’s upload', async () => {
-      prisma.mediaAsset.findUnique.mockResolvedValue({ ...pendingAsset, ownerId: 'user-2' });
+      prisma.mediaAsset.findUnique.mockResolvedValue({
+        ...pendingAsset,
+        ownerId: 'user-2',
+      });
 
-      await expect(service.confirmUpload('user-1', 'media-1')).rejects.toMatchObject({
+      await expect(
+        service.confirmUpload('user-1', 'media-1'),
+      ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
     });
@@ -88,7 +99,9 @@ describe('MediaAssetsService', () => {
         status: MediaStatus.uploaded,
       });
 
-      await expect(service.confirmUpload('user-1', 'media-1')).rejects.toMatchObject({
+      await expect(
+        service.confirmUpload('user-1', 'media-1'),
+      ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
     });
@@ -97,7 +110,9 @@ describe('MediaAssetsService', () => {
       prisma.mediaAsset.findUnique.mockResolvedValue(pendingAsset);
       storageService.getObjectMetadata.mockResolvedValue(null);
 
-      await expect(service.confirmUpload('user-1', 'media-1')).rejects.toMatchObject({
+      await expect(
+        service.confirmUpload('user-1', 'media-1'),
+      ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
     });
@@ -111,10 +126,14 @@ describe('MediaAssetsService', () => {
       });
       prisma.mediaAsset.update.mockResolvedValue({});
 
-      await expect(service.confirmUpload('user-1', 'media-1')).rejects.toMatchObject({
+      await expect(
+        service.confirmUpload('user-1', 'media-1'),
+      ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
-      expect(storageService.deleteObject).toHaveBeenCalledWith(pendingAsset.key);
+      expect(storageService.deleteObject).toHaveBeenCalledWith(
+        pendingAsset.key,
+      );
       expect(prisma.mediaAsset.update).toHaveBeenCalledWith({
         where: { id: 'media-1' },
         data: { status: MediaStatus.deleted },
@@ -128,7 +147,9 @@ describe('MediaAssetsService', () => {
         contentType: 'image/jpeg',
         lastModified: new Date(),
       });
-      prisma.mediaAsset.update.mockResolvedValue({ status: MediaStatus.uploaded });
+      prisma.mediaAsset.update.mockResolvedValue({
+        status: MediaStatus.uploaded,
+      });
 
       await service.confirmUpload('user-1', 'media-1');
 
@@ -141,9 +162,13 @@ describe('MediaAssetsService', () => {
 
   describe('getViewUrl', () => {
     it('throws not-found for an asset that is not uploaded', async () => {
-      prisma.mediaAsset.findUnique.mockResolvedValue({ status: MediaStatus.pending });
+      prisma.mediaAsset.findUnique.mockResolvedValue({
+        status: MediaStatus.pending,
+      });
 
-      await expect(service.getViewUrl('user-1', 'media-1')).rejects.toMatchObject({
+      await expect(
+        service.getViewUrl('user-1', 'media-1'),
+      ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
     });
@@ -156,7 +181,9 @@ describe('MediaAssetsService', () => {
         key: 'agency_document/agency-1/media-1.pdf',
       });
 
-      await expect(service.getViewUrl('user-2', 'media-1')).rejects.toMatchObject({
+      await expect(
+        service.getViewUrl('user-2', 'media-1'),
+      ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
     });
@@ -188,10 +215,17 @@ describe('MediaAssetsService', () => {
         { id: 'media-1', key: 'post_media/user-1/media-1.jpg' },
       ]);
 
-      const result = await service.resolveViewUrls(['media-1', 'media-1', 'media-2']);
+      const result = await service.resolveViewUrls([
+        'media-1',
+        'media-1',
+        'media-2',
+      ]);
 
       expect(prisma.mediaAsset.findMany).toHaveBeenCalledWith({
-        where: { id: { in: ['media-1', 'media-2'] }, status: MediaStatus.uploaded },
+        where: {
+          id: { in: ['media-1', 'media-2'] },
+          status: MediaStatus.uploaded,
+        },
       });
       expect(result.get('media-1')).toEqual('https://download.example/get');
       expect(result.has('media-2')).toBe(false);

@@ -80,7 +80,8 @@ export default (): AppConfig => ({
     // Presigned URLs are signed against this host instead, since S3_ENDPOINT
     // inside docker-compose is the internal `minio:9000` hostname, which is
     // unreachable from a browser/mobile client outside the compose network.
-    publicEndpoint: process.env.S3_PUBLIC_ENDPOINT ?? (process.env.S3_ENDPOINT as string),
+    publicEndpoint:
+      process.env.S3_PUBLIC_ENDPOINT ?? (process.env.S3_ENDPOINT as string),
     region: process.env.S3_REGION ?? 'us-east-1',
     bucket: process.env.S3_BUCKET as string,
     accessKey: process.env.S3_ACCESS_KEY as string,

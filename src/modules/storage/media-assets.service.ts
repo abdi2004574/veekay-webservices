@@ -4,7 +4,10 @@ import { randomUUID } from 'crypto';
 import { AppException } from '../../common/errors/app.exception';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from './storage.service';
-import { MEDIA_PURPOSE_RULES, extensionForContentType } from './media-purpose-rules';
+import {
+  MEDIA_PURPOSE_RULES,
+  extensionForContentType,
+} from './media-purpose-rules';
 import { CreateUploadUrlDto } from './dto/create-upload-url.dto';
 
 @Injectable()
@@ -41,7 +44,9 @@ export class MediaAssetsService {
   }
 
   async confirmUpload(ownerId: string, mediaId: string) {
-    const asset = await this.prisma.mediaAsset.findUnique({ where: { id: mediaId } });
+    const asset = await this.prisma.mediaAsset.findUnique({
+      where: { id: mediaId },
+    });
     if (!asset) {
       throw AppException.notFound('Media asset not found.');
     }
@@ -49,7 +54,9 @@ export class MediaAssetsService {
       throw AppException.forbidden('You can only confirm your own uploads.');
     }
     if (asset.status !== MediaStatus.pending) {
-      throw AppException.businessRule('This upload has already been confirmed.');
+      throw AppException.businessRule(
+        'This upload has already been confirmed.',
+      );
     }
 
     const metadata = await this.storageService.getObjectMetadata(asset.key);
@@ -78,11 +85,16 @@ export class MediaAssetsService {
   }
 
   async getViewUrl(viewerId: string, mediaId: string): Promise<string> {
-    const asset = await this.prisma.mediaAsset.findUnique({ where: { id: mediaId } });
+    const asset = await this.prisma.mediaAsset.findUnique({
+      where: { id: mediaId },
+    });
     if (!asset || asset.status !== MediaStatus.uploaded) {
       throw AppException.notFound('Media asset not found.');
     }
-    if (asset.purpose === MediaPurpose.agency_document && asset.ownerId !== viewerId) {
+    if (
+      asset.purpose === MediaPurpose.agency_document &&
+      asset.ownerId !== viewerId
+    ) {
       throw AppException.forbidden('You cannot view this document.');
     }
     return this.storageService.createPresignedDownloadUrl(asset.key);

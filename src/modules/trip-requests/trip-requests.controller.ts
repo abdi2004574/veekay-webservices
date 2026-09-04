@@ -3,6 +3,8 @@
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Patch,
   Post,
@@ -29,14 +31,22 @@ export class TripRequestsController {
 
   @Post()
   @RequireRole(UserRole.traveler)
-  @ApiOperation({ summary: '[Traveler] Create a trip request against an approved agency.' })
-  async create(@Body() dto: CreateTripRequestDto, @CurrentUser('userId') userId: string) {
+  @ApiOperation({
+    summary: '[Traveler] Create a trip request against an approved agency.',
+  })
+  async create(
+    @Body() dto: CreateTripRequestDto,
+    @CurrentUser('userId') userId: string,
+  ) {
     return this.tripRequestsService.create(userId, dto);
   }
 
   @Get('mine')
   @RequireRole(UserRole.traveler)
-  @ApiOperation({ summary: '[Traveler] List my trip requests, filterable by status, cursor-paginated.' })
+  @ApiOperation({
+    summary:
+      '[Traveler] List my trip requests, filterable by status, cursor-paginated.',
+  })
   async listMineForTraveler(
     @Query() filter: TripRequestFilterDto,
     @Query('cursor') cursor: string | undefined,
@@ -52,8 +62,12 @@ export class TripRequestsController {
   }
 
   @Post(':id/cancel')
+  @HttpCode(HttpStatus.OK)
   @RequireRole(UserRole.traveler)
-  @ApiOperation({ summary: '[Traveler] Cancel my own trip request (pending/in_discussion only).' })
+  @ApiOperation({
+    summary:
+      '[Traveler] Cancel my own trip request (pending/in_discussion only).',
+  })
   async cancel(@Param('id') id: string, @CurrentUser('userId') userId: string) {
     return this.tripRequestsService.cancel(id, userId);
   }
@@ -62,14 +76,17 @@ export class TripRequestsController {
 
   @Get()
   @RequireRole(UserRole.agency)
-  @ApiOperation({ summary: '[Agency] List incoming trip requests for my agency.' })
+  @ApiOperation({
+    summary: '[Agency] List incoming trip requests for my agency.',
+  })
   async listForAgency(
     @Query() filter: TripRequestFilterDto,
     @Query('cursor') cursor: string | undefined,
     @Query('limit') limit: string | undefined,
     @CurrentUser('userId') userId: string,
   ) {
-    const agencyId = await this.tripRequestsService.resolveAgencyIdOrThrow(userId);
+    const agencyId =
+      await this.tripRequestsService.resolveAgencyIdOrThrow(userId);
     return this.tripRequestsService.listForAgency(
       agencyId,
       filter.status,
@@ -80,7 +97,9 @@ export class TripRequestsController {
 
   @Patch(':id/status')
   @RequireRole(UserRole.agency)
-  @ApiOperation({ summary: '[Agency] Transition a trip request status per the lifecycle.' })
+  @ApiOperation({
+    summary: '[Agency] Transition a trip request status per the lifecycle.',
+  })
   async updateStatus(
     @Param('id') id: string,
     @Body() dto: UpdateTripRequestStatusDto,
@@ -92,7 +111,10 @@ export class TripRequestsController {
   // ──── Shared detail endpoint ────────────────────────────────────────────
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get a trip request detail (traveler must own; agency must own the request).' })
+  @ApiOperation({
+    summary:
+      'Get a trip request detail (traveler must own; agency must own the request).',
+  })
   async getDetail(
     @Param('id') id: string,
     @CurrentUser('userId') userId: string,
@@ -105,9 +127,10 @@ export class TripRequestsController {
 
   @Get('smart-replies/templates')
   @RequireRole(UserRole.agency)
-  @ApiOperation({ summary: '[Agency] List my agency\'s smart-reply templates.' })
+  @ApiOperation({ summary: "[Agency] List my agency's smart-reply templates." })
   async listTemplates(@CurrentUser('userId') userId: string) {
-    const agencyId = await this.tripRequestsService.resolveAgencyIdOrThrow(userId);
+    const agencyId =
+      await this.tripRequestsService.resolveAgencyIdOrThrow(userId);
     return this.tripRequestsService.listTemplates(agencyId);
   }
 
@@ -118,30 +141,37 @@ export class TripRequestsController {
     @Body() dto: CreateSmartReplyTemplateDto,
     @CurrentUser('userId') userId: string,
   ) {
-    const agencyId = await this.tripRequestsService.resolveAgencyIdOrThrow(userId);
+    const agencyId =
+      await this.tripRequestsService.resolveAgencyIdOrThrow(userId);
     return this.tripRequestsService.createTemplate(agencyId, dto);
   }
 
   @Patch('smart-replies/templates/:id')
   @RequireRole(UserRole.agency)
-  @ApiOperation({ summary: '[Agency] Update my agency\'s smart-reply template.' })
+  @ApiOperation({
+    summary: "[Agency] Update my agency's smart-reply template.",
+  })
   async updateTemplate(
     @Param('id') id: string,
     @Body() dto: UpdateSmartReplyTemplateDto,
     @CurrentUser('userId') userId: string,
   ) {
-    const agencyId = await this.tripRequestsService.resolveAgencyIdOrThrow(userId);
+    const agencyId =
+      await this.tripRequestsService.resolveAgencyIdOrThrow(userId);
     return this.tripRequestsService.updateTemplate(id, agencyId, dto);
   }
 
   @Delete('smart-replies/templates/:id')
   @RequireRole(UserRole.agency)
-  @ApiOperation({ summary: '[Agency] Delete my agency\'s smart-reply template.' })
+  @ApiOperation({
+    summary: "[Agency] Delete my agency's smart-reply template.",
+  })
   async deleteTemplate(
     @Param('id') id: string,
     @CurrentUser('userId') userId: string,
   ) {
-    const agencyId = await this.tripRequestsService.resolveAgencyIdOrThrow(userId);
+    const agencyId =
+      await this.tripRequestsService.resolveAgencyIdOrThrow(userId);
     await this.tripRequestsService.deleteTemplate(id, agencyId);
   }
 }

@@ -29,7 +29,11 @@ describe('Users profile: GET /me and GET /users/:id/profile (e2e)', () => {
   const server = () => app.getHttpServer();
 
   it('returns the current user’s own profile via GET /me, including a generated username', async () => {
-    const alice = await registerAndVerifyTraveler(server, 'alice@e2e.test', 'Alice');
+    const alice = await registerAndVerifyTraveler(
+      server,
+      'alice@e2e.test',
+      'Alice',
+    );
 
     const res = await request(server())
       .get('/api/v1/me')
@@ -44,7 +48,11 @@ describe('Users profile: GET /me and GET /users/:id/profile (e2e)', () => {
   });
 
   it('counts campaigns for real — including your own private ones, but hiding others’ private ones from strangers', async () => {
-    const alice = await registerAndVerifyTraveler(server, 'alice5@e2e.test', 'Alice');
+    const alice = await registerAndVerifyTraveler(
+      server,
+      'alice5@e2e.test',
+      'Alice',
+    );
     const bob = await registerAndVerifyTraveler(server, 'bob5@e2e.test', 'Bob');
 
     const campaignPayload = {
@@ -80,7 +88,11 @@ describe('Users profile: GET /me and GET /users/:id/profile (e2e)', () => {
   });
 
   it('returns another traveler’s public profile with isFriend and mutualFriendsCount', async () => {
-    const alice = await registerAndVerifyTraveler(server, 'alice2@e2e.test', 'Alice');
+    const alice = await registerAndVerifyTraveler(
+      server,
+      'alice2@e2e.test',
+      'Alice',
+    );
     const bob = await registerAndVerifyTraveler(server, 'bob2@e2e.test', 'Bob');
 
     const beforeRes = await request(server())
@@ -111,8 +123,16 @@ describe('Users profile: GET /me and GET /users/:id/profile (e2e)', () => {
   });
 
   it('searches travelers by username/display name, excluding self and annotating connection status', async () => {
-    const alice = await registerAndVerifyTraveler(server, 'alice4@e2e.test', 'Alice');
-    const bob = await registerAndVerifyTraveler(server, 'bob4@e2e.test', 'BobSearchable');
+    const alice = await registerAndVerifyTraveler(
+      server,
+      'alice4@e2e.test',
+      'Alice',
+    );
+    const bob = await registerAndVerifyTraveler(
+      server,
+      'bob4@e2e.test',
+      'BobSearchable',
+    );
 
     const emptyRes = await request(server())
       .get('/api/v1/users/search?q=')
@@ -145,11 +165,17 @@ describe('Users profile: GET /me and GET /users/:id/profile (e2e)', () => {
       .get('/api/v1/users/search?q=alice')
       .set('Authorization', `Bearer ${alice.accessToken}`)
       .expect(200);
-    expect(selfSearchRes.body.data.map((u: any) => u.id)).not.toContain(alice.userId);
+    expect(selfSearchRes.body.data.map((u: any) => u.id)).not.toContain(
+      alice.userId,
+    );
   });
 
   it('returns 404 for a profile that does not exist', async () => {
-    const alice = await registerAndVerifyTraveler(server, 'alice3@e2e.test', 'Alice');
+    const alice = await registerAndVerifyTraveler(
+      server,
+      'alice3@e2e.test',
+      'Alice',
+    );
 
     const res = await request(server())
       .get('/api/v1/users/00000000-0000-0000-0000-000000000000/profile')

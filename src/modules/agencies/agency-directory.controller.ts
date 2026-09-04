@@ -15,7 +15,11 @@ export class AgencyDirectoryController {
     @Query('limit') limit: string | undefined,
     @Query('search') search: string | undefined,
   ) {
-    return this.agenciesService.listDirectory(cursor, limit ? Number(limit) : undefined, search);
+    return this.agenciesService.listDirectory(
+      cursor,
+      limit ? Number(limit) : undefined,
+      search,
+    );
   }
 
   @Get(':id')

@@ -30,7 +30,10 @@ export class FriendsController {
 
   @Post('friend-requests/:id/decline')
   @ApiOperation({ summary: 'Decline an incoming friend request.' })
-  async decline(@Param('id') id: string, @CurrentUser('userId') userId: string) {
+  async decline(
+    @Param('id') id: string,
+    @CurrentUser('userId') userId: string,
+  ) {
     return this.friendsService.decline(id, userId);
   }
 

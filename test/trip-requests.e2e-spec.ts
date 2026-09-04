@@ -5,7 +5,11 @@ import { createTestApp } from './utils/create-test-app';
 import { resetDb, disconnectDb } from './utils/reset-db';
 import { resetRedis, disconnectRedis } from './utils/reset-redis';
 import { clearMailhog } from './utils/mailhog';
-import { registerAndVerifyAgency, approveAgency } from './utils/register-agency';
+import {
+  registerAndVerifyAgency,
+  approveAgency,
+  registerApprovedAgency,
+} from './utils/register-agency';
 import { registerAndVerifyTraveler } from './utils/register-traveler';
 
 describe('Trip requests (e2e)', () => {
@@ -51,7 +55,10 @@ describe('Trip requests (e2e)', () => {
     return mediaId;
   }
 
-  async function registerApprovedAgencyWithPackage(): Promise<{ agencyAccessToken: string; agencyId: string }> {
+  async function registerApprovedAgencyWithPackage(): Promise<{
+    agencyAccessToken: string;
+    agencyId: string;
+  }> {
     const { agencyId, accessToken } = await registerAndVerifyAgency(
       server,
       'agency-e2e-pkg@test.com',
@@ -68,17 +75,9 @@ describe('Trip requests (e2e)', () => {
     return { agencyAccessToken: accessToken, agencyId };
   }
 
-  async function registerApprovedAgency(): Promise<{ agencyAccessToken: string; agencyId: string }> {
-    const { agencyId, accessToken } = await registerAndVerifyAgency(
-      server,
-      'agency-e2e@test.com',
-      'Test Agency',
-    );
-    await approveAgency(agencyId);
-    return { agencyAccessToken: accessToken, agencyId };
-  }
-
-  async function createCampaignForTraveler(travelerAccessToken: string): Promise<string> {
+  async function createCampaignForTraveler(
+    travelerAccessToken: string,
+  ): Promise<string> {
     const photoMediaId = await uploadCampaignPhoto(travelerAccessToken);
     const campaignRes = await request(server())
       .post('/api/v1/campaigns')
@@ -98,8 +97,12 @@ describe('Trip requests (e2e)', () => {
 
   describe('Trip request creation', () => {
     it('creates a request as a traveler, returns 201 with status=pending and a conversationId', async () => {
-      const { agencyId } = await registerApprovedAgency();
-      const traveler = await registerAndVerifyTraveler(server, 'traveler-create@test.com', 'Traveler');
+      const { agencyId } = await registerApprovedAgency(server);
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        'traveler-create@test.com',
+        'Traveler',
+      );
 
       const res = await request(server())
         .post('/api/v1/trip-requests')
@@ -115,8 +118,12 @@ describe('Trip requests (e2e)', () => {
     });
 
     it('the created conversation is of type agency and the auto-posted initial message is in the message history', async () => {
-      const { agencyId } = await registerApprovedAgency();
-      const traveler = await registerAndVerifyTraveler(server, 'traveler-convo@test.com', 'Traveler');
+      const { agencyId } = await registerApprovedAgency(server);
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        'traveler-convo@test.com',
+        'Traveler',
+      );
 
       const createRes = await request(server())
         .post('/api/v1/trip-requests')
@@ -134,12 +141,22 @@ describe('Trip requests (e2e)', () => {
         .set('Authorization', `Bearer ${traveler.accessToken}`)
         .expect(200);
 
-      expect(messagesRes.body.data.items[0].body).toBe('Initial inquiry message');
+      expect(messagesRes.body.data.items[0].body).toBe(
+        'Initial inquiry message',
+      );
     });
 
     it('rejects a traveler creating a request against a non-approved (pending) agency with 404', async () => {
-      const { agencyId } = await registerAndVerifyAgency(server, 'pending-agency@test.com', 'Pending Agency');
-      const traveler = await registerAndVerifyTraveler(server, 'traveler-pending@test.com', 'Traveler');
+      const { agencyId } = await registerAndVerifyAgency(
+        server,
+        'pending-agency@test.com',
+        'Pending Agency',
+      );
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        'traveler-pending@test.com',
+        'Traveler',
+      );
 
       await request(server())
         .post('/api/v1/trip-requests')
@@ -149,8 +166,10 @@ describe('Trip requests (e2e)', () => {
     });
 
     it('rejects when packageId refers to a package owned by another agency (404)', async () => {
-      const { agencyId: agencyId1, agencyAccessToken: token1 } = await registerApprovedAgencyWithPackage();
-      const { agencyId: agencyId2, agencyAccessToken: token2 } = await registerApprovedAgency();
+      const { agencyId: agencyId1, agencyAccessToken: token1 } =
+        await registerApprovedAgencyWithPackage();
+      const { agencyId: agencyId2, agencyAccessToken: token2 } =
+        await registerApprovedAgency(server);
 
       const pkgRes = await request(server())
         .get('/api/v1/packages/mine')
@@ -158,7 +177,11 @@ describe('Trip requests (e2e)', () => {
         .expect(200);
       const foreignPkgId = pkgRes.body.data[0].id;
 
-      const traveler = await registerAndVerifyTraveler(server, 'traveler-pkg-other@test.com', 'Traveler');
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        'traveler-pkg-other@test.com',
+        'Traveler',
+      );
 
       await request(server())
         .post('/api/v1/trip-requests')
@@ -168,11 +191,21 @@ describe('Trip requests (e2e)', () => {
     });
 
     it('rejects when campaignId refers to a campaign owned by another traveler (404)', async () => {
-      const { agencyId } = await registerApprovedAgency();
-      const otherTraveler = await registerAndVerifyTraveler(server, 'other-traveler-camp@test.com', 'Other');
-      const otherCampaignId = await createCampaignForTraveler(otherTraveler.accessToken);
+      const { agencyId } = await registerApprovedAgency(server);
+      const otherTraveler = await registerAndVerifyTraveler(
+        server,
+        'other-traveler-camp@test.com',
+        'Other',
+      );
+      const otherCampaignId = await createCampaignForTraveler(
+        otherTraveler.accessToken,
+      );
 
-      const traveler = await registerAndVerifyTraveler(server, 'traveler-camp-other@test.com', 'Traveler');
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        'traveler-camp-other@test.com',
+        'Traveler',
+      );
 
       await request(server())
         .post('/api/v1/trip-requests')
@@ -182,7 +215,8 @@ describe('Trip requests (e2e)', () => {
     });
 
     it('rejects creating a request as an agency user (403)', async () => {
-      const { agencyId, agencyAccessToken } = await registerApprovedAgency();
+      const { agencyId, agencyAccessToken } =
+        await registerApprovedAgency(server);
 
       await request(server())
         .post('/api/v1/trip-requests')
@@ -193,10 +227,18 @@ describe('Trip requests (e2e)', () => {
   });
 
   describe('List endpoints', () => {
-    it('traveler\'s GET /trip-requests/mine returns only their requests', async () => {
-      const { agencyId } = await registerApprovedAgency();
-      const traveler1 = await registerAndVerifyTraveler(server, 'traveler-list-1@test.com', 'T1');
-      const traveler2 = await registerAndVerifyTraveler(server, 'traveler-list-2@test.com', 'T2');
+    it("traveler's GET /trip-requests/mine returns only their requests", async () => {
+      const { agencyId } = await registerApprovedAgency(server);
+      const traveler1 = await registerAndVerifyTraveler(
+        server,
+        'traveler-list-1@test.com',
+        'T1',
+      );
+      const traveler2 = await registerAndVerifyTraveler(
+        server,
+        'traveler-list-2@test.com',
+        'T2',
+      );
 
       await request(server())
         .post('/api/v1/trip-requests')
@@ -220,15 +262,19 @@ describe('Trip requests (e2e)', () => {
         .set('Authorization', `Bearer ${traveler2.accessToken}`)
         .expect(200);
 
-      expect(res1.body.data).toHaveLength(1);
-      expect(res1.body.data[0].message).toBe('Req 1');
-      expect(res2.body.data).toHaveLength(1);
-      expect(res2.body.data[0].message).toBe('Req 2');
+      expect(res1.body.data.items).toHaveLength(1);
+      expect(res1.body.data.items[0].initialMessage).toBe('Req 1');
+      expect(res2.body.data.items).toHaveLength(1);
+      expect(res2.body.data.items[0].initialMessage).toBe('Req 2');
     });
 
-    it('traveler\'s list filters by status', async () => {
-      const { agencyId } = await registerApprovedAgency();
-      const traveler = await registerAndVerifyTraveler(server, 'traveler-list-status@test.com', 'T1');
+    it("traveler's list filters by status", async () => {
+      const { agencyId } = await registerApprovedAgency(server);
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        'traveler-list-status@test.com',
+        'T1',
+      );
 
       await request(server())
         .post('/api/v1/trip-requests')
@@ -241,14 +287,20 @@ describe('Trip requests (e2e)', () => {
         .set('Authorization', `Bearer ${traveler.accessToken}`)
         .expect(200);
 
-      expect(res.body.data).toHaveLength(1);
-      expect(res.body.data[0].status).toBe('pending');
+      expect(res.body.data.items).toHaveLength(1);
+      expect(res.body.data.items[0].status).toBe('pending');
     });
 
-    it('agency\'s GET /trip-requests returns only incoming requests for that agency', async () => {
-      const { agencyId: agencyId1 } = await registerApprovedAgency();
-      const { agencyId: agencyId2 } = await registerApprovedAgency();
-      const traveler = await registerAndVerifyTraveler(server, 'traveler-agency-list@test.com', 'T1');
+    it("agency's GET /trip-requests returns only incoming requests for that agency", async () => {
+      const { agencyId: agencyId1, agencyAccessToken: token1 } =
+        await registerApprovedAgency(server, 'agency-a1@test.com', 'Agency A1');
+      const { agencyId: agencyId2, agencyAccessToken: token2 } =
+        await registerApprovedAgency(server, 'agency-a2@test.com', 'Agency A2');
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        'traveler-agency-list@test.com',
+        'T1',
+      );
 
       await request(server())
         .post('/api/v1/trip-requests')
@@ -264,23 +316,28 @@ describe('Trip requests (e2e)', () => {
 
       const agency1Res = await request(server())
         .get('/api/v1/trip-requests')
-        .set('Authorization', `Bearer ${(await registerAndVerifyAgency(server, 'agency-resolver-1@test.com', 'A1')).accessToken}`)
+        .set('Authorization', `Bearer ${token1}`)
         .expect(200);
 
       const agency2Res = await request(server())
         .get('/api/v1/trip-requests')
-        .set('Authorization', `Bearer ${(await registerAndVerifyAgency(server, 'agency-resolver-2@test.com', 'A2')).accessToken}`)
+        .set('Authorization', `Bearer ${token2}`)
         .expect(200);
 
-      expect(agency1Res.body.data).toHaveLength(1);
-      expect(agency1Res.body.data[0].message).toBe('For agency 1');
-      expect(agency2Res.body.data).toHaveLength(1);
-      expect(agency2Res.body.data[0].message).toBe('For agency 2');
+      expect(agency1Res.body.data.items).toHaveLength(1);
+      expect(agency1Res.body.data.items[0].initialMessage).toBe('For agency 1');
+      expect(agency2Res.body.data.items).toHaveLength(1);
+      expect(agency2Res.body.data.items[0].initialMessage).toBe('For agency 2');
     });
 
-    it('agency\'s list filters by status', async () => {
-      const { agencyId } = await registerApprovedAgency();
-      const traveler = await registerAndVerifyTraveler(server, 'traveler-agency-list-status@test.com', 'T1');
+    it("agency's list filters by status", async () => {
+      const { agencyId, agencyAccessToken } =
+        await registerApprovedAgency(server);
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        'traveler-agency-list-status@test.com',
+        'T1',
+      );
 
       await request(server())
         .post('/api/v1/trip-requests')
@@ -290,18 +347,23 @@ describe('Trip requests (e2e)', () => {
 
       const res = await request(server())
         .get('/api/v1/trip-requests?status=pending')
-        .set('Authorization', `Bearer ${(await registerAndVerifyAgency(server, 'agency-resolver-status@test.com', 'A1')).accessToken}`)
+        .set('Authorization', `Bearer ${agencyAccessToken}`)
         .expect(200);
 
-      expect(res.body.data).toHaveLength(1);
-      expect(res.body.data[0].status).toBe('pending');
+      expect(res.body.data.items).toHaveLength(1);
+      expect(res.body.data.items[0].status).toBe('pending');
     });
   });
 
   describe('Status transitions', () => {
     it('agency can transition pending -> in_discussion -> confirmed -> completed', async () => {
-      const { agencyId } = await registerApprovedAgency();
-      const traveler = await registerAndVerifyTraveler(server, 'traveler-transitions@test.com', 'T1');
+      const { agencyId, agencyAccessToken: agencyToken } =
+        await registerApprovedAgency(server);
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        'traveler-transitions@test.com',
+        'T1',
+      );
 
       const createRes = await request(server())
         .post('/api/v1/trip-requests')
@@ -310,11 +372,6 @@ describe('Trip requests (e2e)', () => {
         .expect(201);
 
       const requestId = createRes.body.data.id;
-
-      const agencyData = await registerAndVerifyAgency(server, 'agency-transitions@test.com', 'Trans Agency');
-      await approveAgency(agencyData.agencyId);
-
-      const agencyToken = agencyData.accessToken;
 
       await request(server())
         .patch(`/api/v1/trip-requests/${requestId}/status`)
@@ -336,8 +393,13 @@ describe('Trip requests (e2e)', () => {
     });
 
     it('agency can transition pending -> declined', async () => {
-      const { agencyId } = await registerApprovedAgency();
-      const traveler = await registerAndVerifyTraveler(server, 'traveler-decline@test.com', 'T1');
+      const { agencyId, agencyAccessToken } =
+        await registerApprovedAgency(server);
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        'traveler-decline@test.com',
+        'T1',
+      );
 
       const createRes = await request(server())
         .post('/api/v1/trip-requests')
@@ -347,19 +409,21 @@ describe('Trip requests (e2e)', () => {
 
       const requestId = createRes.body.data.id;
 
-      const agencyData = await registerAndVerifyAgency(server, 'agency-decline@test.com', 'Decline Agency');
-      await approveAgency(agencyData.agencyId);
-
       await request(server())
         .patch(`/api/v1/trip-requests/${requestId}/status`)
-        .set('Authorization', `Bearer ${agencyData.accessToken}`)
+        .set('Authorization', `Bearer ${agencyAccessToken}`)
         .send({ status: 'declined' })
         .expect(200);
     });
 
     it('rejected legal transition: trying pending -> confirmed returns 422 BUSINESS_RULE', async () => {
-      const { agencyId } = await registerApprovedAgency();
-      const traveler = await registerAndVerifyTraveler(server, 'traveler-illegal@test.com', 'T1');
+      const { agencyId, agencyAccessToken } =
+        await registerApprovedAgency(server);
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        'traveler-illegal@test.com',
+        'T1',
+      );
 
       const createRes = await request(server())
         .post('/api/v1/trip-requests')
@@ -369,12 +433,9 @@ describe('Trip requests (e2e)', () => {
 
       const requestId = createRes.body.data.id;
 
-      const agencyData = await registerAndVerifyAgency(server, 'agency-illegal@test.com', 'Illegal Agency');
-      await approveAgency(agencyData.agencyId);
-
       const res = await request(server())
         .patch(`/api/v1/trip-requests/${requestId}/status`)
-        .set('Authorization', `Bearer ${agencyData.accessToken}`)
+        .set('Authorization', `Bearer ${agencyAccessToken}`)
         .send({ status: 'confirmed' })
         .expect(422);
 
@@ -382,8 +443,13 @@ describe('Trip requests (e2e)', () => {
     });
 
     it('rejected legal transition: trying declined -> pending returns 422', async () => {
-      const { agencyId } = await registerApprovedAgency();
-      const traveler = await registerAndVerifyTraveler(server, 'traveler-declined-back@test.com', 'T1');
+      const { agencyId, agencyAccessToken } =
+        await registerApprovedAgency(server);
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        'traveler-declined-back@test.com',
+        'T1',
+      );
 
       const createRes = await request(server())
         .post('/api/v1/trip-requests')
@@ -393,18 +459,15 @@ describe('Trip requests (e2e)', () => {
 
       const requestId = createRes.body.data.id;
 
-      const agencyData = await registerAndVerifyAgency(server, 'agency-declined-back@test.com', 'Declined Back Agency');
-      await approveAgency(agencyData.agencyId);
-
       await request(server())
         .patch(`/api/v1/trip-requests/${requestId}/status`)
-        .set('Authorization', `Bearer ${agencyData.accessToken}`)
+        .set('Authorization', `Bearer ${agencyAccessToken}`)
         .send({ status: 'declined' })
         .expect(200);
 
       const res = await request(server())
         .patch(`/api/v1/trip-requests/${requestId}/status`)
-        .set('Authorization', `Bearer ${agencyData.accessToken}`)
+        .set('Authorization', `Bearer ${agencyAccessToken}`)
         .send({ status: 'pending' })
         .expect(422);
 
@@ -412,8 +475,12 @@ describe('Trip requests (e2e)', () => {
     });
 
     it('status update by a different agency returns 404', async () => {
-      const { agencyId } = await registerApprovedAgency();
-      const traveler = await registerAndVerifyTraveler(server, 'traveler-diff-agency@test.com', 'T1');
+      const { agencyId } = await registerApprovedAgency(server);
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        'traveler-diff-agency@test.com',
+        'T1',
+      );
 
       const createRes = await request(server())
         .post('/api/v1/trip-requests')
@@ -423,7 +490,11 @@ describe('Trip requests (e2e)', () => {
 
       const requestId = createRes.body.data.id;
 
-      const otherAgency = await registerAndVerifyAgency(server, 'other-agency-status@test.com', 'Other Agency');
+      const otherAgency = await registerAndVerifyAgency(
+        server,
+        'other-agency-status@test.com',
+        'Other Agency',
+      );
       await approveAgency(otherAgency.agencyId);
 
       await request(server())
@@ -436,8 +507,12 @@ describe('Trip requests (e2e)', () => {
 
   describe('Traveler cancel', () => {
     it('traveler cancels a pending request, status becomes cancelled', async () => {
-      const { agencyId } = await registerApprovedAgency();
-      const traveler = await registerAndVerifyTraveler(server, 'traveler-cancel-pending@test.com', 'T1');
+      const { agencyId } = await registerApprovedAgency(server);
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        'traveler-cancel-pending@test.com',
+        'T1',
+      );
 
       const createRes = await request(server())
         .post('/api/v1/trip-requests')
@@ -461,8 +536,13 @@ describe('Trip requests (e2e)', () => {
     });
 
     it('traveler cancels an in_discussion request', async () => {
-      const { agencyId } = await registerApprovedAgency();
-      const traveler = await registerAndVerifyTraveler(server, 'traveler-cancel-discussion@test.com', 'T1');
+      const { agencyId, agencyAccessToken } =
+        await registerApprovedAgency(server);
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        'traveler-cancel-discussion@test.com',
+        'T1',
+      );
 
       const createRes = await request(server())
         .post('/api/v1/trip-requests')
@@ -472,12 +552,9 @@ describe('Trip requests (e2e)', () => {
 
       const requestId = createRes.body.data.id;
 
-      const agencyData = await registerAndVerifyAgency(server, 'agency-cancel-discussion@test.com', 'Discussion Agency');
-      await approveAgency(agencyData.agencyId);
-
       await request(server())
         .patch(`/api/v1/trip-requests/${requestId}/status`)
-        .set('Authorization', `Bearer ${agencyData.accessToken}`)
+        .set('Authorization', `Bearer ${agencyAccessToken}`)
         .send({ status: 'in_discussion' })
         .expect(200);
 
@@ -495,8 +572,13 @@ describe('Trip requests (e2e)', () => {
     });
 
     it('traveler cannot cancel a confirmed request (422)', async () => {
-      const { agencyId } = await registerApprovedAgency();
-      const traveler = await registerAndVerifyTraveler(server, 'traveler-cancel-confirmed@test.com', 'T1');
+      const { agencyId, agencyAccessToken } =
+        await registerApprovedAgency(server);
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        'traveler-cancel-confirmed@test.com',
+        'T1',
+      );
 
       const createRes = await request(server())
         .post('/api/v1/trip-requests')
@@ -506,18 +588,15 @@ describe('Trip requests (e2e)', () => {
 
       const requestId = createRes.body.data.id;
 
-      const agencyData = await registerAndVerifyAgency(server, 'agency-cancel-confirmed@test.com', 'Confirm Agency');
-      await approveAgency(agencyData.agencyId);
-
       await request(server())
         .patch(`/api/v1/trip-requests/${requestId}/status`)
-        .set('Authorization', `Bearer ${agencyData.accessToken}`)
+        .set('Authorization', `Bearer ${agencyAccessToken}`)
         .send({ status: 'in_discussion' })
         .expect(200);
 
       await request(server())
         .patch(`/api/v1/trip-requests/${requestId}/status`)
-        .set('Authorization', `Bearer ${agencyData.accessToken}`)
+        .set('Authorization', `Bearer ${agencyAccessToken}`)
         .send({ status: 'confirmed' })
         .expect(200);
 
@@ -529,10 +608,18 @@ describe('Trip requests (e2e)', () => {
       expect(res.body.error.code).toBe('BUSINESS_RULE');
     });
 
-    it('traveler cannot cancel another traveler\'s request (404)', async () => {
-      const { agencyId } = await registerApprovedAgency();
-      const traveler1 = await registerAndVerifyTraveler(server, 'traveler-cancel-other-1@test.com', 'T1');
-      const traveler2 = await registerAndVerifyTraveler(server, 'traveler-cancel-other-2@test.com', 'T2');
+    it("traveler cannot cancel another traveler's request (404)", async () => {
+      const { agencyId } = await registerApprovedAgency(server);
+      const traveler1 = await registerAndVerifyTraveler(
+        server,
+        'traveler-cancel-other-1@test.com',
+        'T1',
+      );
+      const traveler2 = await registerAndVerifyTraveler(
+        server,
+        'traveler-cancel-other-2@test.com',
+        'T2',
+      );
 
       const createRes = await request(server())
         .post('/api/v1/trip-requests')
@@ -551,7 +638,7 @@ describe('Trip requests (e2e)', () => {
 
   describe('Smart-reply templates', () => {
     it('agency creates a template and lists it back', async () => {
-      const { agencyAccessToken } = await registerApprovedAgency();
+      const { agencyAccessToken } = await registerApprovedAgency(server);
 
       await request(server())
         .post('/api/v1/trip-requests/smart-replies/templates')
@@ -569,7 +656,7 @@ describe('Trip requests (e2e)', () => {
     });
 
     it('agency updates a template they own', async () => {
-      const { agencyAccessToken } = await registerApprovedAgency();
+      const { agencyAccessToken } = await registerApprovedAgency(server);
 
       const createRes = await request(server())
         .post('/api/v1/trip-requests/smart-replies/templates')
@@ -595,8 +682,16 @@ describe('Trip requests (e2e)', () => {
     });
 
     it('agency cannot update a template owned by another agency (404)', async () => {
-      const { agencyAccessToken: token1 } = await registerApprovedAgency();
-      const { agencyAccessToken: token2 } = await registerApprovedAgency();
+      const { agencyAccessToken: token1 } = await registerApprovedAgency(
+        server,
+        'sr-template-1@test.com',
+        'Template Agency 1',
+      );
+      const { agencyAccessToken: token2 } = await registerApprovedAgency(
+        server,
+        'sr-template-2@test.com',
+        'Template Agency 2',
+      );
 
       const createRes = await request(server())
         .post('/api/v1/trip-requests/smart-replies/templates')
@@ -614,7 +709,7 @@ describe('Trip requests (e2e)', () => {
     });
 
     it('agency deletes their own template; subsequent list returns empty', async () => {
-      const { agencyAccessToken } = await registerApprovedAgency();
+      const { agencyAccessToken } = await registerApprovedAgency(server);
 
       const createRes = await request(server())
         .post('/api/v1/trip-requests/smart-replies/templates')
@@ -640,8 +735,12 @@ describe('Trip requests (e2e)', () => {
 
   describe('Detail endpoint', () => {
     it('traveler can fetch their own request', async () => {
-      const { agencyId } = await registerApprovedAgency();
-      const traveler = await registerAndVerifyTraveler(server, 'traveler-detail-own@test.com', 'T1');
+      const { agencyId } = await registerApprovedAgency(server);
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        'traveler-detail-own@test.com',
+        'T1',
+      );
 
       const createRes = await request(server())
         .post('/api/v1/trip-requests')
@@ -659,10 +758,18 @@ describe('Trip requests (e2e)', () => {
       expect(detailRes.body.data.id).toBe(requestId);
     });
 
-    it('traveler cannot fetch a request they don\'t own (404)', async () => {
-      const { agencyId } = await registerApprovedAgency();
-      const traveler1 = await registerAndVerifyTraveler(server, 'traveler-detail-1@test.com', 'T1');
-      const traveler2 = await registerAndVerifyTraveler(server, 'traveler-detail-2@test.com', 'T2');
+    it("traveler cannot fetch a request they don't own (404)", async () => {
+      const { agencyId } = await registerApprovedAgency(server);
+      const traveler1 = await registerAndVerifyTraveler(
+        server,
+        'traveler-detail-1@test.com',
+        'T1',
+      );
+      const traveler2 = await registerAndVerifyTraveler(
+        server,
+        'traveler-detail-2@test.com',
+        'T2',
+      );
 
       const createRes = await request(server())
         .post('/api/v1/trip-requests')
@@ -679,8 +786,13 @@ describe('Trip requests (e2e)', () => {
     });
 
     it('agency can fetch their own incoming request', async () => {
-      const { agencyId } = await registerApprovedAgency();
-      const traveler = await registerAndVerifyTraveler(server, 'traveler-detail-agency@test.com', 'T1');
+      const { agencyId, agencyAccessToken: agencyToken } =
+        await registerApprovedAgency(server);
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        'traveler-detail-agency@test.com',
+        'T1',
+      );
 
       const createRes = await request(server())
         .post('/api/v1/trip-requests')
@@ -690,20 +802,21 @@ describe('Trip requests (e2e)', () => {
 
       const requestId = createRes.body.data.id;
 
-      const agencyData = await registerAndVerifyAgency(server, 'agency-detail-own@test.com', 'Detail Agency');
-      await approveAgency(agencyData.agencyId);
-
       const detailRes = await request(server())
         .get(`/api/v1/trip-requests/${requestId}`)
-        .set('Authorization', `Bearer ${agencyData.accessToken}`)
+        .set('Authorization', `Bearer ${agencyToken}`)
         .expect(200);
 
       expect(detailRes.body.data.id).toBe(requestId);
     });
 
     it('agency cannot fetch a request for another agency (404)', async () => {
-      const { agencyId } = await registerApprovedAgency();
-      const traveler = await registerAndVerifyTraveler(server, 'traveler-detail-other-agency@test.com', 'T1');
+      const { agencyId } = await registerApprovedAgency(server);
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        'traveler-detail-other-agency@test.com',
+        'T1',
+      );
 
       const createRes = await request(server())
         .post('/api/v1/trip-requests')
@@ -713,7 +826,11 @@ describe('Trip requests (e2e)', () => {
 
       const requestId = createRes.body.data.id;
 
-      const otherAgency = await registerAndVerifyAgency(server, 'other-agency-detail@test.com', 'Other Agency');
+      const otherAgency = await registerAndVerifyAgency(
+        server,
+        'other-agency-detail@test.com',
+        'Other Agency',
+      );
       await approveAgency(otherAgency.agencyId);
 
       await request(server())

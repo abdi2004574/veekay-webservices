@@ -13,7 +13,9 @@ describe('StoriesService', () => {
       storyLike: { findUnique: jest.fn(), create: jest.fn() },
     };
     friendsService = { getFriendIds: jest.fn().mockResolvedValue([]) };
-    mediaAssetsService = { resolveViewUrls: jest.fn().mockResolvedValue(new Map()) };
+    mediaAssetsService = {
+      resolveViewUrls: jest.fn().mockResolvedValue(new Map()),
+    };
     service = new StoriesService(prisma, friendsService, mediaAssetsService);
   });
 
@@ -65,7 +67,9 @@ describe('StoriesService', () => {
         expiresAt: new Date(Date.now() - 1000),
       });
 
-      await expect(service.findActiveByIdOrThrow('story-1')).rejects.toMatchObject({
+      await expect(
+        service.findActiveByIdOrThrow('story-1'),
+      ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
     });
@@ -74,7 +78,9 @@ describe('StoriesService', () => {
       const story = { id: 'story-1', expiresAt: new Date(Date.now() + 1000) };
       prisma.story.findUnique.mockResolvedValue(story);
 
-      await expect(service.findActiveByIdOrThrow('story-1')).resolves.toEqual(story);
+      await expect(service.findActiveByIdOrThrow('story-1')).resolves.toEqual(
+        story,
+      );
     });
   });
 

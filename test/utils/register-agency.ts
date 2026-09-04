@@ -39,9 +39,25 @@ export async function registerAndVerifyAgency(
     .send({
       businessContactDetails: '+1 555 010 2000',
       businessAddress: '123 Market St, San Francisco, CA',
-      documents: [{ type: AgencyDocumentType.business_license, mediaId: 'media-doc-1' }],
+      documents: [
+        { type: AgencyDocumentType.business_license, mediaId: 'media-doc-1' },
+      ],
     })
     .expect(201);
 
   return { userId, agencyId: registrationRes.body.data.id, accessToken };
+}
+
+export async function registerApprovedAgency(
+  server: () => App,
+  email = 'agency-e2e@test.com',
+  agencyName = 'Test Agency',
+): Promise<{ agencyAccessToken: string; agencyId: string }> {
+  const { agencyId, accessToken } = await registerAndVerifyAgency(
+    server,
+    email,
+    agencyName,
+  );
+  await approveAgency(agencyId);
+  return { agencyAccessToken: accessToken, agencyId };
 }

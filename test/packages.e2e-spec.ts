@@ -5,7 +5,10 @@ import { createTestApp } from './utils/create-test-app';
 import { resetDb, disconnectDb } from './utils/reset-db';
 import { resetRedis, disconnectRedis } from './utils/reset-redis';
 import { clearMailhog } from './utils/mailhog';
-import { registerAndVerifyAgency, approveAgency } from './utils/register-agency';
+import {
+  registerAndVerifyAgency,
+  approveAgency,
+} from './utils/register-agency';
 import { registerAndVerifyTraveler } from './utils/register-traveler';
 
 describe('Packages (e2e)', () => {
@@ -123,7 +126,12 @@ describe('Packages (e2e)', () => {
       await request(server())
         .post('/api/v1/packages')
         .set('Authorization', `Bearer ${accessToken}`)
-        .send({ title: 'Pkg 2', basePrice: 200, status: 'inactive', currency: 'USD' })
+        .send({
+          title: 'Pkg 2',
+          basePrice: 200,
+          status: 'inactive',
+          currency: 'USD',
+        })
         .expect(201);
 
       const res = await request(server())
@@ -132,11 +140,18 @@ describe('Packages (e2e)', () => {
         .expect(200);
 
       expect(res.body.data).toHaveLength(2);
-      expect(res.body.data.map((p: any) => p.title).sort()).toEqual(['Pkg 1', 'Pkg 2']);
+      expect(res.body.data.map((p: any) => p.title).sort()).toEqual([
+        'Pkg 1',
+        'Pkg 2',
+      ]);
     });
 
     it('rejects a traveler creating a package', async () => {
-      const traveler = await registerAndVerifyTraveler(server, 'traveler1@e2e.test', 'Traveler');
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        'traveler1@e2e.test',
+        'Traveler',
+      );
 
       await request(server())
         .post('/api/v1/packages')
@@ -218,20 +233,36 @@ describe('Packages (e2e)', () => {
       const activeRes = await request(server())
         .post('/api/v1/packages')
         .set('Authorization', `Bearer ${agencyAccessToken}`)
-        .send({ title: 'Active Pkg', basePrice: 300, currency: 'USD', destinationType: 'beach', season: 'summer', theme: 'family' })
+        .send({
+          title: 'Active Pkg',
+          basePrice: 300,
+          currency: 'USD',
+          destinationType: 'beach',
+          season: 'summer',
+          theme: 'family',
+        })
         .expect(201);
       activePkgId = activeRes.body.data.id;
 
       const inactiveRes = await request(server())
         .post('/api/v1/packages')
         .set('Authorization', `Bearer ${agencyAccessToken}`)
-        .send({ title: 'Inactive Pkg', basePrice: 400, status: 'inactive', currency: 'USD' })
+        .send({
+          title: 'Inactive Pkg',
+          basePrice: 400,
+          status: 'inactive',
+          currency: 'USD',
+        })
         .expect(201);
       inactivePkgId = inactiveRes.body.data.id;
     });
 
     it('returns only active packages in public browse', async () => {
-      const traveler = await registerAndVerifyTraveler(server, 'traveler2@e2e.test', 'Traveler');
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        'traveler2@e2e.test',
+        'Traveler',
+      );
 
       const res = await request(server())
         .get('/api/v1/packages')
@@ -244,10 +275,16 @@ describe('Packages (e2e)', () => {
     });
 
     it('filters by destinationType, season, and theme', async () => {
-      const traveler = await registerAndVerifyTraveler(server, 'traveler3@e2e.test', 'Traveler');
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        'traveler3@e2e.test',
+        'Traveler',
+      );
 
       const res = await request(server())
-        .get('/api/v1/packages?destinationType=beach&season=summer&theme=family')
+        .get(
+          '/api/v1/packages?destinationType=beach&season=summer&theme=family',
+        )
         .set('Authorization', `Bearer ${traveler.accessToken}`)
         .expect(200);
 
@@ -256,7 +293,11 @@ describe('Packages (e2e)', () => {
     });
 
     it('returns 404 for a non-active package to a non-owner', async () => {
-      const traveler = await registerAndVerifyTraveler(server, 'traveler4@e2e.test', 'Traveler');
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        'traveler4@e2e.test',
+        'Traveler',
+      );
 
       await request(server())
         .get(`/api/v1/packages/${inactivePkgId}`)
@@ -296,7 +337,11 @@ describe('Packages (e2e)', () => {
         .expect(201);
       pkgId = pkgRes.body.data.id;
 
-      const traveler = await registerAndVerifyTraveler(server, 'traveler5@e2e.test', 'Traveler');
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        'traveler5@e2e.test',
+        'Traveler',
+      );
       travelerAccessToken = traveler.accessToken;
 
       const photoMediaId = await uploadCampaignPhoto(traveler.accessToken);
@@ -316,7 +361,7 @@ describe('Packages (e2e)', () => {
       campaignId = campaignRes.body.data.id;
     });
 
-    it('links an active package to a traveler\'s campaign', async () => {
+    it("links an active package to a traveler's campaign", async () => {
       await request(server())
         .post(`/api/v1/packages/${pkgId}/campaigns/${campaignId}/link`)
         .set('Authorization', `Bearer ${travelerAccessToken}`)
@@ -327,7 +372,12 @@ describe('Packages (e2e)', () => {
       const inactiveRes = await request(server())
         .post('/api/v1/packages')
         .set('Authorization', `Bearer ${agencyAccessToken}`)
-        .send({ title: 'Inactive Linkable', basePrice: 500, status: 'inactive', currency: 'USD' })
+        .send({
+          title: 'Inactive Linkable',
+          basePrice: 500,
+          status: 'inactive',
+          currency: 'USD',
+        })
         .expect(201);
       const inactiveId = inactiveRes.body.data.id;
 
@@ -367,8 +417,14 @@ describe('Packages (e2e)', () => {
     });
 
     it('rejects linking to a campaign owned by another traveler', async () => {
-      const otherTraveler = await registerAndVerifyTraveler(server, 'traveler6@e2e.test', 'Other');
-      const otherPhotoMediaId = await uploadCampaignPhoto(otherTraveler.accessToken);
+      const otherTraveler = await registerAndVerifyTraveler(
+        server,
+        'traveler6@e2e.test',
+        'Other',
+      );
+      const otherPhotoMediaId = await uploadCampaignPhoto(
+        otherTraveler.accessToken,
+      );
       const otherCampaignRes = await request(server())
         .post('/api/v1/campaigns')
         .set('Authorization', `Bearer ${otherTraveler.accessToken}`)
@@ -384,7 +440,9 @@ describe('Packages (e2e)', () => {
         .expect(201);
 
       await request(server())
-        .post(`/api/v1/packages/${pkgId}/campaigns/${otherCampaignRes.body.data.id}/link`)
+        .post(
+          `/api/v1/packages/${pkgId}/campaigns/${otherCampaignRes.body.data.id}/link`,
+        )
         .set('Authorization', `Bearer ${travelerAccessToken}`)
         .expect(404);
     });

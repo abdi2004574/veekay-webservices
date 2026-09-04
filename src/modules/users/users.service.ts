@@ -53,8 +53,12 @@ export class UsersService {
       badge: user.travelerProfile?.badge ?? null,
       gender: user.travelerProfile?.gender ?? null,
       dateOfBirth: user.travelerProfile?.dateOfBirth ?? null,
-      destinationTypes: (user.travelerProfile?.destinationTypes ?? []).map((d) => d.destinationType),
-      travelStyles: (user.travelerProfile?.travelStyles ?? []).map((t) => t.travelStyle),
+      destinationTypes: (user.travelerProfile?.destinationTypes ?? []).map(
+        (d) => d.destinationType,
+      ),
+      travelStyles: (user.travelerProfile?.travelStyles ?? []).map(
+        (t) => t.travelStyle,
+      ),
       friendsCount,
       postsCount,
       campaignsCount,
@@ -71,32 +75,46 @@ export class UsersService {
     }
 
     const isSelf = viewerId === targetUserId;
-    const [friendsCount, postsCount, campaignsCount, connectionStatus, mutualFriendsCount, privacySetting] =
-      await Promise.all([
-        this.friendsService.getFriendIds(targetUserId).then((ids) => ids.length),
-        this.prisma.post.count({ where: { authorId: targetUserId } }),
-        this.prisma.campaign.count({
-          where: {
-            creatorId: targetUserId,
-            ...(isSelf ? {} : { privacy: CampaignPrivacy.public }),
-          },
-        }),
-        isSelf
-          ? Promise.resolve({ isFriend: false, requestSent: false, requestReceived: false })
-          : this.friendsService.getConnectionStatus(viewerId, targetUserId),
-        isSelf
-          ? Promise.resolve(0)
-          : this.friendsService.getMutualFriendsCount(viewerId, targetUserId),
-        isSelf
-          ? Promise.resolve(null)
-          : this.prisma.privacySetting.findUnique({ where: { userId: targetUserId } }),
-      ]);
+    const [
+      friendsCount,
+      postsCount,
+      campaignsCount,
+      connectionStatus,
+      mutualFriendsCount,
+      privacySetting,
+    ] = await Promise.all([
+      this.friendsService.getFriendIds(targetUserId).then((ids) => ids.length),
+      this.prisma.post.count({ where: { authorId: targetUserId } }),
+      this.prisma.campaign.count({
+        where: {
+          creatorId: targetUserId,
+          ...(isSelf ? {} : { privacy: CampaignPrivacy.public }),
+        },
+      }),
+      isSelf
+        ? Promise.resolve({
+            isFriend: false,
+            requestSent: false,
+            requestReceived: false,
+          })
+        : this.friendsService.getConnectionStatus(viewerId, targetUserId),
+      isSelf
+        ? Promise.resolve(0)
+        : this.friendsService.getMutualFriendsCount(viewerId, targetUserId),
+      isSelf
+        ? Promise.resolve(null)
+        : this.prisma.privacySetting.findUnique({
+            where: { userId: targetUserId },
+          }),
+    ]);
 
-    const visibility = privacySetting?.profileVisibility ?? ProfileVisibility.public;
+    const visibility =
+      privacySetting?.profileVisibility ?? ProfileVisibility.public;
     if (
       !isSelf &&
       (visibility === ProfileVisibility.private ||
-        (visibility === ProfileVisibility.friends && !connectionStatus.isFriend))
+        (visibility === ProfileVisibility.friends &&
+          !connectionStatus.isFriend))
     ) {
       throw AppException.notFound('Traveler not found.');
     }
@@ -140,7 +158,10 @@ export class UsersService {
 
     return Promise.all(
       users.map(async (user) => {
-        const status = await this.friendsService.getConnectionStatus(viewerId, user.id);
+        const status = await this.friendsService.getConnectionStatus(
+          viewerId,
+          user.id,
+        );
         return {
           id: user.id,
           username: user.username,
@@ -251,7 +272,9 @@ export class UsersService {
       await this.prisma.user.update({
         where: { id: userId },
         data: {
-          ...(dto.displayName !== undefined ? { displayName: dto.displayName } : {}),
+          ...(dto.displayName !== undefined
+            ? { displayName: dto.displayName }
+            : {}),
           ...(dto.username !== undefined ? { username: dto.username } : {}),
         },
       });
@@ -268,24 +291,42 @@ export class UsersService {
         gender: dto.gender,
         dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : undefined,
         ...(dto.destinationTypes
-          ? { destinationTypes: { create: dto.destinationTypes.map((destinationType) => ({ destinationType })) } }
+          ? {
+              destinationTypes: {
+                create: dto.destinationTypes.map((destinationType) => ({
+                  destinationType,
+                })),
+              },
+            }
           : {}),
         ...(dto.travelStyles
-          ? { travelStyles: { create: dto.travelStyles.map((travelStyle) => ({ travelStyle })) } }
+          ? {
+              travelStyles: {
+                create: dto.travelStyles.map((travelStyle) => ({
+                  travelStyle,
+                })),
+              },
+            }
           : {}),
       },
       update: {
-        ...(dto.photoMediaId !== undefined ? { photoMediaId: dto.photoMediaId } : {}),
+        ...(dto.photoMediaId !== undefined
+          ? { photoMediaId: dto.photoMediaId }
+          : {}),
         ...(dto.bio !== undefined ? { bio: dto.bio } : {}),
         ...(dto.location !== undefined ? { location: dto.location } : {}),
         ...(dto.phone !== undefined ? { phone: dto.phone } : {}),
         ...(dto.gender !== undefined ? { gender: dto.gender } : {}),
-        ...(dto.dateOfBirth !== undefined ? { dateOfBirth: new Date(dto.dateOfBirth) } : {}),
+        ...(dto.dateOfBirth !== undefined
+          ? { dateOfBirth: new Date(dto.dateOfBirth) }
+          : {}),
         ...(dto.destinationTypes
           ? {
               destinationTypes: {
                 deleteMany: {},
-                create: dto.destinationTypes.map((destinationType) => ({ destinationType })),
+                create: dto.destinationTypes.map((destinationType) => ({
+                  destinationType,
+                })),
               },
             }
           : {}),
@@ -293,7 +334,9 @@ export class UsersService {
           ? {
               travelStyles: {
                 deleteMany: {},
-                create: dto.travelStyles.map((travelStyle) => ({ travelStyle })),
+                create: dto.travelStyles.map((travelStyle) => ({
+                  travelStyle,
+                })),
               },
             }
           : {}),
@@ -304,7 +347,9 @@ export class UsersService {
   }
 
   async getNotificationPreferences(userId: string) {
-    const prefs = await this.prisma.notificationPreference.findUnique({ where: { userId } });
+    const prefs = await this.prisma.notificationPreference.findUnique({
+      where: { userId },
+    });
     return {
       donationAlerts: prefs?.donationAlerts ?? true,
       campaignUpdates: prefs?.campaignUpdates ?? true,
@@ -312,7 +357,10 @@ export class UsersService {
     };
   }
 
-  async updateNotificationPreferences(userId: string, dto: UpdateNotificationPreferencesDto) {
+  async updateNotificationPreferences(
+    userId: string,
+    dto: UpdateNotificationPreferencesDto,
+  ) {
     const prefs = await this.prisma.notificationPreference.upsert({
       where: { userId },
       create: {
@@ -331,9 +379,12 @@ export class UsersService {
   }
 
   async getPrivacySettings(userId: string) {
-    const settings = await this.prisma.privacySetting.findUnique({ where: { userId } });
+    const settings = await this.prisma.privacySetting.findUnique({
+      where: { userId },
+    });
     return {
-      profileVisibility: settings?.profileVisibility ?? ProfileVisibility.public,
+      profileVisibility:
+        settings?.profileVisibility ?? ProfileVisibility.public,
       activityStatusVisible: settings?.activityStatusVisible ?? true,
       readReceiptsEnabled: settings?.readReceiptsEnabled ?? true,
     };

@@ -17,13 +17,19 @@ export class GroupCampaignsController {
 
   @Get('overview')
   @ApiOperation({ summary: "Get a group trip's overview (member-only)." })
-  async getOverview(@Param('id') id: string, @CurrentUser('userId') userId: string) {
+  async getOverview(
+    @Param('id') id: string,
+    @CurrentUser('userId') userId: string,
+  ) {
     return this.groupCampaignsService.getOverview(id, userId);
   }
 
   @Get('members')
   @ApiOperation({ summary: 'List group trip members (member-only).' })
-  async listMembers(@Param('id') id: string, @CurrentUser('userId') userId: string) {
+  async listMembers(
+    @Param('id') id: string,
+    @CurrentUser('userId') userId: string,
+  ) {
     return this.groupCampaignsService.listMembers(id, userId);
   }
 
@@ -38,7 +44,9 @@ export class GroupCampaignsController {
   }
 
   @Delete('members/:userId')
-  @ApiOperation({ summary: 'Remove a member from the group trip (admin-only).' })
+  @ApiOperation({
+    summary: 'Remove a member from the group trip (admin-only).',
+  })
   async removeMember(
     @Param('id') id: string,
     @Param('userId') targetUserId: string,
@@ -49,7 +57,10 @@ export class GroupCampaignsController {
 
   @Get('contributions')
   @ApiOperation({ summary: 'List group trip contributions (member-only).' })
-  async listContributions(@Param('id') id: string, @CurrentUser('userId') userId: string) {
+  async listContributions(
+    @Param('id') id: string,
+    @CurrentUser('userId') userId: string,
+  ) {
     return this.groupCampaignsService.listContributions(id, userId);
   }
 
@@ -65,7 +76,10 @@ export class GroupCampaignsController {
 
   @Get('expenses')
   @ApiOperation({ summary: 'List group trip expenses (member-only).' })
-  async listExpenses(@Param('id') id: string, @CurrentUser('userId') userId: string) {
+  async listExpenses(
+    @Param('id') id: string,
+    @CurrentUser('userId') userId: string,
+  ) {
     return this.groupCampaignsService.listExpenses(id, userId);
   }
 

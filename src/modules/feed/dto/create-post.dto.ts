@@ -15,7 +15,10 @@ export class CreatePostDto {
   @MaxLength(2200)
   text: string;
 
-  @ApiProperty({ required: false, description: 'Media asset id from a prior presigned upload.' })
+  @ApiProperty({
+    required: false,
+    description: 'Media asset id from a prior presigned upload.',
+  })
   @IsOptional()
   @IsString()
   imageMediaId?: string;

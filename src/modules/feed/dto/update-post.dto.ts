@@ -16,7 +16,11 @@ export class UpdatePostDto {
   @MaxLength(2200)
   text?: string;
 
-  @ApiProperty({ required: false, nullable: true, description: 'Pass null to remove the existing photo.' })
+  @ApiProperty({
+    required: false,
+    nullable: true,
+    description: 'Pass null to remove the existing photo.',
+  })
   @IsOptional()
   @IsString()
   imageMediaId?: string | null;

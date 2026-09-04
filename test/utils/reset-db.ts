@@ -14,6 +14,8 @@ export async function resetDb(): Promise<void> {
     prisma.agencyDocument.deleteMany(),
     prisma.agencyStaff.deleteMany(),
     prisma.agency.deleteMany(),
+    prisma.tripRequest.deleteMany(),
+    prisma.smartReplyTemplate.deleteMany(),
     prisma.travelerPreviousTripPhoto.deleteMany(),
     prisma.travelerDestinationPreference.deleteMany(),
     prisma.travelerTravelStylePreference.deleteMany(),

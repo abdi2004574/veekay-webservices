@@ -50,7 +50,9 @@ export class AuthService {
 
     for (let attempt = 0; attempt < 20; attempt++) {
       const candidate =
-        attempt === 0 ? base : `${base}${Math.floor(1000 + Math.random() * 9000)}`;
+        attempt === 0
+          ? base
+          : `${base}${Math.floor(1000 + Math.random() * 9000)}`;
       const existing = await this.prisma.user.findUnique({
         where: { username: candidate },
       });
@@ -58,7 +60,9 @@ export class AuthService {
         return candidate;
       }
     }
-    throw AppException.businessRule('Could not generate a unique username, please try again.');
+    throw AppException.businessRule(
+      'Could not generate a unique username, please try again.',
+    );
   }
 
   private async createUnverifiedUser(
@@ -73,7 +77,9 @@ export class AuthService {
     }
 
     const passwordHash = await this.passwordService.hash(password);
-    const username = await this.generateUsername(displayName ?? email.split('@')[0]);
+    const username = await this.generateUsername(
+      displayName ?? email.split('@')[0],
+    );
     return this.prisma.user.create({
       data: { email, username, passwordHash, role, displayName },
     });
@@ -305,7 +311,9 @@ export class AuthService {
               data: { isEmailVerified: true },
             });
       } else {
-        const username = await this.generateUsername(profile.email.split('@')[0]);
+        const username = await this.generateUsername(
+          profile.email.split('@')[0],
+        );
         user = await this.prisma.user.create({
           data: {
             email: profile.email,

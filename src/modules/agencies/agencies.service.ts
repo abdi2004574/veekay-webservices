@@ -25,7 +25,8 @@ function toDirectoryEntry(agency: {
     id: agency.id,
     agencyName: agency.agencyName,
     description: agency.description,
-    reputationScore: agency.reputationScore === null ? null : Number(agency.reputationScore),
+    reputationScore:
+      agency.reputationScore === null ? null : Number(agency.reputationScore),
     reviewCount: agency._count.reviews,
   };
 }
@@ -38,7 +39,9 @@ export class AgenciesService {
     const agencies = await this.prisma.agency.findMany({
       where: {
         status: AgencyStatus.approved,
-        ...(search ? { agencyName: { contains: search, mode: 'insensitive' } } : {}),
+        ...(search
+          ? { agencyName: { contains: search, mode: 'insensitive' } }
+          : {}),
       },
       orderBy: [{ reputationScore: 'desc' }, { createdAt: 'desc' }],
       take: limit + 1,

@@ -29,7 +29,10 @@ describe('Chat: conversations & messages (e2e)', () => {
 
   const server = () => app.getHttpServer();
 
-  async function befriend(a: { accessToken: string }, b: { userId: string; accessToken: string }) {
+  async function befriend(
+    a: { accessToken: string },
+    b: { userId: string; accessToken: string },
+  ) {
     const sendRes = await request(server())
       .post('/api/v1/friend-requests')
       .set('Authorization', `Bearer ${a.accessToken}`)
@@ -43,8 +46,16 @@ describe('Chat: conversations & messages (e2e)', () => {
 
   describe('Direct conversations', () => {
     it('rejects starting a direct conversation with a non-friend', async () => {
-      const alice = await registerAndVerifyTraveler(server, 'alice1@e2e.test', 'Alice');
-      const bob = await registerAndVerifyTraveler(server, 'bob1@e2e.test', 'Bob');
+      const alice = await registerAndVerifyTraveler(
+        server,
+        'alice1@e2e.test',
+        'Alice',
+      );
+      const bob = await registerAndVerifyTraveler(
+        server,
+        'bob1@e2e.test',
+        'Bob',
+      );
 
       const res = await request(server())
         .post('/api/v1/conversations')
@@ -55,8 +66,16 @@ describe('Chat: conversations & messages (e2e)', () => {
     });
 
     it('creates a direct conversation between friends and reuses it on a second call', async () => {
-      const alice = await registerAndVerifyTraveler(server, 'alice2@e2e.test', 'Alice');
-      const bob = await registerAndVerifyTraveler(server, 'bob2@e2e.test', 'Bob');
+      const alice = await registerAndVerifyTraveler(
+        server,
+        'alice2@e2e.test',
+        'Alice',
+      );
+      const bob = await registerAndVerifyTraveler(
+        server,
+        'bob2@e2e.test',
+        'Bob',
+      );
       await befriend(alice, bob);
 
       const firstRes = await request(server())
@@ -75,8 +94,16 @@ describe('Chat: conversations & messages (e2e)', () => {
     });
 
     it('sends messages, marks them delivered/read, and reflects unread counts', async () => {
-      const alice = await registerAndVerifyTraveler(server, 'alice3@e2e.test', 'Alice');
-      const bob = await registerAndVerifyTraveler(server, 'bob3@e2e.test', 'Bob');
+      const alice = await registerAndVerifyTraveler(
+        server,
+        'alice3@e2e.test',
+        'Alice',
+      );
+      const bob = await registerAndVerifyTraveler(
+        server,
+        'bob3@e2e.test',
+        'Bob',
+      );
       await befriend(alice, bob);
 
       const convoRes = await request(server())
@@ -131,8 +158,16 @@ describe('Chat: conversations & messages (e2e)', () => {
     });
 
     it('sends a real uploaded photo as an image message and resolves mediaUrl', async () => {
-      const alice = await registerAndVerifyTraveler(server, 'alice4@e2e.test', 'Alice');
-      const bob = await registerAndVerifyTraveler(server, 'bob4@e2e.test', 'Bob');
+      const alice = await registerAndVerifyTraveler(
+        server,
+        'alice4@e2e.test',
+        'Alice',
+      );
+      const bob = await registerAndVerifyTraveler(
+        server,
+        'bob4@e2e.test',
+        'Bob',
+      );
       await befriend(alice, bob);
 
       const convoRes = await request(server())
@@ -175,9 +210,21 @@ describe('Chat: conversations & messages (e2e)', () => {
     });
 
     it('rejects a stranger from accessing a conversation they are not part of', async () => {
-      const alice = await registerAndVerifyTraveler(server, 'alice5@e2e.test', 'Alice');
-      const bob = await registerAndVerifyTraveler(server, 'bob5@e2e.test', 'Bob');
-      const stranger = await registerAndVerifyTraveler(server, 'stranger5@e2e.test', 'Stranger');
+      const alice = await registerAndVerifyTraveler(
+        server,
+        'alice5@e2e.test',
+        'Alice',
+      );
+      const bob = await registerAndVerifyTraveler(
+        server,
+        'bob5@e2e.test',
+        'Bob',
+      );
+      const stranger = await registerAndVerifyTraveler(
+        server,
+        'stranger5@e2e.test',
+        'Stranger',
+      );
       await befriend(alice, bob);
 
       const convoRes = await request(server())
@@ -196,28 +243,56 @@ describe('Chat: conversations & messages (e2e)', () => {
 
   describe('Group conversations', () => {
     it('rejects creating a group with a non-friend member', async () => {
-      const alice = await registerAndVerifyTraveler(server, 'alice6@e2e.test', 'Alice');
-      const stranger = await registerAndVerifyTraveler(server, 'stranger6@e2e.test', 'Stranger');
+      const alice = await registerAndVerifyTraveler(
+        server,
+        'alice6@e2e.test',
+        'Alice',
+      );
+      const stranger = await registerAndVerifyTraveler(
+        server,
+        'stranger6@e2e.test',
+        'Stranger',
+      );
 
       const res = await request(server())
         .post('/api/v1/conversations')
         .set('Authorization', `Bearer ${alice.accessToken}`)
-        .send({ type: 'group', title: 'Bali Trip', participantIds: [stranger.userId] })
+        .send({
+          type: 'group',
+          title: 'Bali Trip',
+          participantIds: [stranger.userId],
+        })
         .expect(403);
       expect(res.body.error.code).toEqual('FORBIDDEN');
     });
 
     it('creates a group, lets an admin add/remove members, and lets a member leave', async () => {
-      const alice = await registerAndVerifyTraveler(server, 'alice7@e2e.test', 'Alice');
-      const bob = await registerAndVerifyTraveler(server, 'bob7@e2e.test', 'Bob');
-      const carol = await registerAndVerifyTraveler(server, 'carol7@e2e.test', 'Carol');
+      const alice = await registerAndVerifyTraveler(
+        server,
+        'alice7@e2e.test',
+        'Alice',
+      );
+      const bob = await registerAndVerifyTraveler(
+        server,
+        'bob7@e2e.test',
+        'Bob',
+      );
+      const carol = await registerAndVerifyTraveler(
+        server,
+        'carol7@e2e.test',
+        'Carol',
+      );
       await befriend(alice, bob);
       await befriend(alice, carol);
 
       const createRes = await request(server())
         .post('/api/v1/conversations')
         .set('Authorization', `Bearer ${alice.accessToken}`)
-        .send({ type: 'group', title: 'Bali Trip 2026', participantIds: [bob.userId] })
+        .send({
+          type: 'group',
+          title: 'Bali Trip 2026',
+          participantIds: [bob.userId],
+        })
         .expect(201);
       const conversationId = createRes.body.data.id;
 
@@ -249,13 +324,17 @@ describe('Chat: conversations & messages (e2e)', () => {
 
       // Bob leaves on his own.
       await request(server())
-        .delete(`/api/v1/conversations/${conversationId}/participants/${bob.userId}`)
+        .delete(
+          `/api/v1/conversations/${conversationId}/participants/${bob.userId}`,
+        )
         .set('Authorization', `Bearer ${bob.accessToken}`)
         .expect(200);
 
       // Carol (not an admin) cannot remove Alice.
       await request(server())
-        .delete(`/api/v1/conversations/${conversationId}/participants/${alice.userId}`)
+        .delete(
+          `/api/v1/conversations/${conversationId}/participants/${alice.userId}`,
+        )
         .set('Authorization', `Bearer ${carol.accessToken}`)
         .expect(403);
 
@@ -269,8 +348,16 @@ describe('Chat: conversations & messages (e2e)', () => {
 
   describe('Agency conversations (shared staff inbox)', () => {
     it('lets a traveler message an agency and any staff member reply from the shared inbox', async () => {
-      const alice = await registerAndVerifyTraveler(server, 'alice8@e2e.test', 'Alice');
-      const agency = await registerAndVerifyAgency(server, 'agency8@e2e.test', 'Dream Travel Co.');
+      const alice = await registerAndVerifyTraveler(
+        server,
+        'alice8@e2e.test',
+        'Alice',
+      );
+      const agency = await registerAndVerifyAgency(
+        server,
+        'agency8@e2e.test',
+        'Dream Travel Co.',
+      );
 
       const convoRes = await request(server())
         .post('/api/v1/conversations')
@@ -317,8 +404,16 @@ describe('Chat: conversations & messages (e2e)', () => {
     });
 
     it('reuses an existing agency conversation for the same traveler instead of duplicating it', async () => {
-      const alice = await registerAndVerifyTraveler(server, 'alice9@e2e.test', 'Alice');
-      const agency = await registerAndVerifyAgency(server, 'agency9@e2e.test', 'Wanderlust Co.');
+      const alice = await registerAndVerifyTraveler(
+        server,
+        'alice9@e2e.test',
+        'Alice',
+      );
+      const agency = await registerAndVerifyAgency(
+        server,
+        'agency9@e2e.test',
+        'Wanderlust Co.',
+      );
 
       const firstRes = await request(server())
         .post('/api/v1/conversations')

@@ -1,4 +1,13 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -16,7 +25,10 @@ export class CampaignsController {
 
   @Post()
   @ApiOperation({ summary: 'Create a campaign.' })
-  async create(@Body() dto: CreateCampaignDto, @CurrentUser('userId') userId: string) {
+  async create(
+    @Body() dto: CreateCampaignDto,
+    @CurrentUser('userId') userId: string,
+  ) {
     return this.campaignsService.create(userId, dto);
   }
 
@@ -27,7 +39,10 @@ export class CampaignsController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Browse public campaigns (Explore), optionally filtered by creator.' })
+  @ApiOperation({
+    summary:
+      'Browse public campaigns (Explore), optionally filtered by creator.',
+  })
   async listPublic(
     @Query('cursor') cursor: string | undefined,
     @Query('limit') limit: string | undefined,
@@ -43,14 +58,24 @@ export class CampaignsController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get a campaign (public, or private if you created it).' })
-  async getDetail(@Param('id') id: string, @CurrentUser('userId') userId: string) {
+  @ApiOperation({
+    summary: 'Get a campaign (public, or private if you created it).',
+  })
+  async getDetail(
+    @Param('id') id: string,
+    @CurrentUser('userId') userId: string,
+  ) {
     return this.campaignsService.getDetail(id, userId);
   }
 
   @Get(':id/top-contributors')
-  @ApiOperation({ summary: "List a campaign's top contributors (empty until Payments ships)." })
-  async listTopContributors(@Param('id') id: string, @CurrentUser('userId') userId: string) {
+  @ApiOperation({
+    summary: "List a campaign's top contributors (empty until Payments ships).",
+  })
+  async listTopContributors(
+    @Param('id') id: string,
+    @CurrentUser('userId') userId: string,
+  ) {
     return this.campaignsService.listTopContributors(id, userId);
   }
 

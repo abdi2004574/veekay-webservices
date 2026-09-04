@@ -1,4 +1,8 @@
-import { CampaignPrivacy, CampaignStatus, GroupMemberRole } from '@prisma/client';
+import {
+  CampaignPrivacy,
+  CampaignStatus,
+  GroupMemberRole,
+} from '@prisma/client';
 import { CampaignsService } from './campaigns.service';
 
 describe('CampaignsService', () => {
@@ -8,11 +12,19 @@ describe('CampaignsService', () => {
 
   beforeEach(() => {
     prisma = {
-      campaign: { create: jest.fn(), update: jest.fn(), delete: jest.fn(), findMany: jest.fn(), findUnique: jest.fn() },
+      campaign: {
+        create: jest.fn(),
+        update: jest.fn(),
+        delete: jest.fn(),
+        findMany: jest.fn(),
+        findUnique: jest.fn(),
+      },
       campaignPhoto: { deleteMany: jest.fn(), createMany: jest.fn() },
       $transaction: jest.fn((cb: any) => cb(prisma)),
     };
-    mediaAssetsService = { resolveViewUrls: jest.fn().mockResolvedValue(new Map()) };
+    mediaAssetsService = {
+      resolveViewUrls: jest.fn().mockResolvedValue(new Map()),
+    };
     service = new CampaignsService(prisma, mediaAssetsService);
   });
 
@@ -56,15 +68,25 @@ describe('CampaignsService', () => {
     });
 
     it('forces privacy to private and seeds the creator as group admin when isGroup is true', async () => {
-      prisma.campaign.create.mockResolvedValue({ id: 'c-1', creatorId: 'user-1', photos: [] });
+      prisma.campaign.create.mockResolvedValue({
+        id: 'c-1',
+        creatorId: 'user-1',
+        photos: [],
+      });
 
-      await service.create('user-1', { ...baseDto, privacy: CampaignPrivacy.public, isGroup: true });
+      await service.create('user-1', {
+        ...baseDto,
+        privacy: CampaignPrivacy.public,
+        isGroup: true,
+      });
 
       expect(prisma.campaign.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           privacy: CampaignPrivacy.private,
           isGroup: true,
-          groupMembers: { create: { userId: 'user-1', role: GroupMemberRole.admin } },
+          groupMembers: {
+            create: { userId: 'user-1', role: GroupMemberRole.admin },
+          },
         }),
         include: { photos: true },
       });
@@ -73,21 +95,33 @@ describe('CampaignsService', () => {
 
   describe('update', () => {
     it('rejects editing a campaign you do not own', async () => {
-      prisma.campaign.findUnique.mockResolvedValue({ id: 'c-1', creatorId: 'someone-else' });
+      prisma.campaign.findUnique.mockResolvedValue({
+        id: 'c-1',
+        creatorId: 'someone-else',
+      });
 
-      await expect(service.update('c-1', 'user-1', { title: 'New' })).rejects.toMatchObject({
+      await expect(
+        service.update('c-1', 'user-1', { title: 'New' }),
+      ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
       expect(prisma.campaign.update).not.toHaveBeenCalled();
     });
 
     it('replaces the full photo set when photoMediaIds is provided', async () => {
-      prisma.campaign.findUnique.mockResolvedValue({ id: 'c-1', creatorId: 'user-1' });
+      prisma.campaign.findUnique.mockResolvedValue({
+        id: 'c-1',
+        creatorId: 'user-1',
+      });
       prisma.campaign.update.mockResolvedValue({ id: 'c-1', photos: [] });
 
-      await service.update('c-1', 'user-1', { photoMediaIds: ['media-2', 'media-3'] });
+      await service.update('c-1', 'user-1', {
+        photoMediaIds: ['media-2', 'media-3'],
+      });
 
-      expect(prisma.campaignPhoto.deleteMany).toHaveBeenCalledWith({ where: { campaignId: 'c-1' } });
+      expect(prisma.campaignPhoto.deleteMany).toHaveBeenCalledWith({
+        where: { campaignId: 'c-1' },
+      });
       expect(prisma.campaignPhoto.createMany).toHaveBeenCalledWith({
         data: [
           { campaignId: 'c-1', mediaId: 'media-2', position: 0 },
@@ -99,7 +133,10 @@ describe('CampaignsService', () => {
 
   describe('remove', () => {
     it('rejects deleting a campaign you do not own', async () => {
-      prisma.campaign.findUnique.mockResolvedValue({ id: 'c-1', creatorId: 'someone-else' });
+      prisma.campaign.findUnique.mockResolvedValue({
+        id: 'c-1',
+        creatorId: 'someone-else',
+      });
 
       await expect(service.remove('c-1', 'user-1')).rejects.toMatchObject({
         getStatus: expect.any(Function),
@@ -108,11 +145,16 @@ describe('CampaignsService', () => {
     });
 
     it('deletes an owned campaign with no donation guard (none exist yet)', async () => {
-      prisma.campaign.findUnique.mockResolvedValue({ id: 'c-1', creatorId: 'user-1' });
+      prisma.campaign.findUnique.mockResolvedValue({
+        id: 'c-1',
+        creatorId: 'user-1',
+      });
 
       await service.remove('c-1', 'user-1');
 
-      expect(prisma.campaign.delete).toHaveBeenCalledWith({ where: { id: 'c-1' } });
+      expect(prisma.campaign.delete).toHaveBeenCalledWith({
+        where: { id: 'c-1' },
+      });
     });
   });
 
@@ -173,7 +215,9 @@ describe('CampaignsService', () => {
         privacy: CampaignPrivacy.public,
       });
 
-      await expect(service.listTopContributors('c-1', 'viewer-1')).resolves.toEqual({ items: [] });
+      await expect(
+        service.listTopContributors('c-1', 'viewer-1'),
+      ).resolves.toEqual({ items: [] });
     });
 
     it('hides a private campaign from a non-creator', async () => {
@@ -183,7 +227,9 @@ describe('CampaignsService', () => {
         privacy: CampaignPrivacy.private,
       });
 
-      await expect(service.listTopContributors('c-1', 'viewer-1')).rejects.toMatchObject({
+      await expect(
+        service.listTopContributors('c-1', 'viewer-1'),
+      ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
     });
@@ -209,7 +255,11 @@ describe('CampaignsService', () => {
 
       expect(prisma.campaign.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { privacy: CampaignPrivacy.public, isGroup: false, creatorId: 'creator-1' },
+          where: {
+            privacy: CampaignPrivacy.public,
+            isGroup: false,
+            creatorId: 'creator-1',
+          },
         }),
       );
     });
@@ -234,7 +284,10 @@ describe('CampaignsService', () => {
     });
 
     it('paginates with a cursor when there are more results than the limit', async () => {
-      const page = Array.from({ length: 3 }, (_, i) => ({ id: `c-${i}`, photos: [] }));
+      const page = Array.from({ length: 3 }, (_, i) => ({
+        id: `c-${i}`,
+        photos: [],
+      }));
       prisma.campaign.findMany.mockResolvedValue(page);
 
       const result = await service.listPublic(undefined, 2);

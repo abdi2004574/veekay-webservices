@@ -1,4 +1,13 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RequireVerifiedEmail } from '../../common/decorators/require-verified-email.decorator';
@@ -48,7 +57,9 @@ export class UsersController {
   }
 
   @Patch('notification-preferences')
-  @ApiOperation({ summary: "Update the current user's notification preferences." })
+  @ApiOperation({
+    summary: "Update the current user's notification preferences.",
+  })
   async updateNotificationPreferences(
     @Body() dto: UpdateNotificationPreferencesDto,
     @CurrentUser('userId') userId: string,
@@ -73,7 +84,9 @@ export class UsersController {
 
   @Delete()
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Deactivate (soft-delete) the current user account.' })
+  @ApiOperation({
+    summary: 'Deactivate (soft-delete) the current user account.',
+  })
   async deactivateAccount(@CurrentUser('userId') userId: string) {
     await this.usersService.deactivateAccount(userId);
   }

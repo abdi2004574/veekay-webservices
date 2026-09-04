@@ -16,9 +16,10 @@ async function bootstrap() {
   app.use(compression());
 
   app.enableCors({
-    origin: process.env.NODE_ENV === 'production'
-      ? (process.env.CORS_ORIGINS ?? '').split(',').filter(Boolean)
-      : true,
+    origin:
+      process.env.NODE_ENV === 'production'
+        ? (process.env.CORS_ORIGINS ?? '').split(',').filter(Boolean)
+        : true,
     credentials: true,
   });
 

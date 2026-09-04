@@ -1,4 +1,8 @@
-import { GroupContributionType, GroupExpenseCategory, GroupMemberRole } from '@prisma/client';
+import {
+  GroupContributionType,
+  GroupExpenseCategory,
+  GroupMemberRole,
+} from '@prisma/client';
 import { GroupCampaignsService } from './group-campaigns.service';
 
 describe('GroupCampaignsService', () => {
@@ -20,7 +24,11 @@ describe('GroupCampaignsService', () => {
 
   beforeEach(() => {
     prisma = {
-      campaign: { findUnique: jest.fn(), update: jest.fn(), findMany: jest.fn() },
+      campaign: {
+        findUnique: jest.fn(),
+        update: jest.fn(),
+        findMany: jest.fn(),
+      },
       groupMember: {
         findUnique: jest.fn(),
         findMany: jest.fn().mockResolvedValue([]),
@@ -46,7 +54,9 @@ describe('GroupCampaignsService', () => {
       addParticipants: jest.fn().mockResolvedValue(undefined),
       removeParticipant: jest.fn().mockResolvedValue(undefined),
     };
-    mediaAssetsService = { resolveViewUrls: jest.fn().mockResolvedValue(new Map()) };
+    mediaAssetsService = {
+      resolveViewUrls: jest.fn().mockResolvedValue(new Map()),
+    };
     service = new GroupCampaignsService(
       prisma,
       friendsService,
@@ -62,7 +72,10 @@ describe('GroupCampaignsService', () => {
         getStatus: expect.any(Function),
       });
 
-      prisma.campaign.findUnique.mockResolvedValue({ ...groupCampaign, isGroup: false });
+      prisma.campaign.findUnique.mockResolvedValue({
+        ...groupCampaign,
+        isGroup: false,
+      });
       await expect(service.getOverview('c-1', 'user-1')).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
@@ -72,7 +85,9 @@ describe('GroupCampaignsService', () => {
       prisma.campaign.findUnique.mockResolvedValue(groupCampaign);
       prisma.groupMember.findUnique.mockResolvedValue(null);
 
-      await expect(service.getOverview('c-1', 'stranger')).rejects.toMatchObject({
+      await expect(
+        service.getOverview('c-1', 'stranger'),
+      ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
     });
@@ -81,27 +96,49 @@ describe('GroupCampaignsService', () => {
   describe('getOverview', () => {
     it('computes total raised, total spent, and each member percentage', async () => {
       prisma.campaign.findUnique.mockResolvedValue(groupCampaign);
-      prisma.groupMember.findUnique.mockResolvedValue({ role: GroupMemberRole.member });
+      prisma.groupMember.findUnique.mockResolvedValue({
+        role: GroupMemberRole.member,
+      });
       prisma.groupMember.findMany.mockResolvedValue([
-        { userId: 'admin-1', role: GroupMemberRole.admin, user: { id: 'admin-1', username: 'a', displayName: 'A' } },
-        { userId: 'member-1', role: GroupMemberRole.member, user: { id: 'member-1', username: 'm', displayName: 'M' } },
+        {
+          userId: 'admin-1',
+          role: GroupMemberRole.admin,
+          user: { id: 'admin-1', username: 'a', displayName: 'A' },
+        },
+        {
+          userId: 'member-1',
+          role: GroupMemberRole.member,
+          user: { id: 'member-1', username: 'm', displayName: 'M' },
+        },
       ]);
       prisma.groupContribution.groupBy.mockResolvedValue([
-        { memberUserId: 'admin-1', _sum: { amount: { toString: () => '750' } } },
-        { memberUserId: 'member-1', _sum: { amount: { toString: () => '250' } } },
+        {
+          memberUserId: 'admin-1',
+          _sum: { amount: { toString: () => '750' } },
+        },
+        {
+          memberUserId: 'member-1',
+          _sum: { amount: { toString: () => '250' } },
+        },
       ]);
-      prisma.groupExpense.aggregate.mockResolvedValue({ _sum: { amount: { toString: () => '400' } } });
+      prisma.groupExpense.aggregate.mockResolvedValue({
+        _sum: { amount: { toString: () => '400' } },
+      });
 
       const overview = await service.getOverview('c-1', 'member-1');
 
       expect(overview.totalRaised).toBe(1000);
       expect(overview.totalSpent).toBe(400);
-      expect(overview.members.find((m) => m.userId === 'admin-1')).toMatchObject({
+      expect(
+        overview.members.find((m) => m.userId === 'admin-1'),
+      ).toMatchObject({
         contributed: 750,
         percentage: 75,
         isCreator: true,
       });
-      expect(overview.members.find((m) => m.userId === 'member-1')).toMatchObject({
+      expect(
+        overview.members.find((m) => m.userId === 'member-1'),
+      ).toMatchObject({
         contributed: 250,
         percentage: 25,
         isCreator: false,
@@ -119,7 +156,9 @@ describe('GroupCampaignsService', () => {
 
     it('rejects a non-admin caller', async () => {
       prisma.groupMember.findUnique.mockReset();
-      prisma.groupMember.findUnique.mockResolvedValue({ role: GroupMemberRole.member });
+      prisma.groupMember.findUnique.mockResolvedValue({
+        role: GroupMemberRole.member,
+      });
 
       await expect(
         service.addMember('c-1', 'member-1', { userId: 'friend-1' }),
@@ -151,7 +190,11 @@ describe('GroupCampaignsService', () => {
       await service.addMember('c-1', 'admin-1', { userId: 'friend-1' });
 
       expect(prisma.groupMember.create).toHaveBeenCalledWith({
-        data: { campaignId: 'c-1', userId: 'friend-1', role: GroupMemberRole.member },
+        data: {
+          campaignId: 'c-1',
+          userId: 'friend-1',
+          role: GroupMemberRole.member,
+        },
       });
       expect(conversationsService.create).toHaveBeenCalledWith('admin-1', {
         type: 'group',
@@ -166,13 +209,18 @@ describe('GroupCampaignsService', () => {
     });
 
     it('appends to an existing group conversation on subsequent adds', async () => {
-      prisma.campaign.findUnique.mockResolvedValue({ ...groupCampaign, groupConversationId: 'conv-1' });
+      prisma.campaign.findUnique.mockResolvedValue({
+        ...groupCampaign,
+        groupConversationId: 'conv-1',
+      });
 
       await service.addMember('c-1', 'admin-1', { userId: 'friend-2' });
 
-      expect(conversationsService.addParticipants).toHaveBeenCalledWith('conv-1', 'admin-1', [
-        'friend-2',
-      ]);
+      expect(conversationsService.addParticipants).toHaveBeenCalledWith(
+        'conv-1',
+        'admin-1',
+        ['friend-2'],
+      );
       expect(conversationsService.create).not.toHaveBeenCalled();
     });
   });
@@ -180,23 +228,32 @@ describe('GroupCampaignsService', () => {
   describe('removeMember', () => {
     it('blocks removing the campaign creator', async () => {
       prisma.campaign.findUnique.mockResolvedValue(groupCampaign);
-      prisma.groupMember.findUnique.mockResolvedValue({ role: GroupMemberRole.admin });
+      prisma.groupMember.findUnique.mockResolvedValue({
+        role: GroupMemberRole.admin,
+      });
 
-      await expect(service.removeMember('c-1', 'admin-1', 'admin-1')).rejects.toMatchObject({
+      await expect(
+        service.removeMember('c-1', 'admin-1', 'admin-1'),
+      ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
       expect(prisma.groupMember.delete).not.toHaveBeenCalled();
     });
 
     it('removes a member and syncs the conversation', async () => {
-      prisma.campaign.findUnique.mockResolvedValue({ ...groupCampaign, groupConversationId: 'conv-1' });
+      prisma.campaign.findUnique.mockResolvedValue({
+        ...groupCampaign,
+        groupConversationId: 'conv-1',
+      });
       prisma.groupMember.findUnique
         .mockResolvedValueOnce({ role: GroupMemberRole.admin }) // assertAdmin
         .mockResolvedValueOnce({ id: 'gm-1', role: GroupMemberRole.member }); // target lookup
 
       await service.removeMember('c-1', 'admin-1', 'member-1');
 
-      expect(prisma.groupMember.delete).toHaveBeenCalledWith({ where: { id: 'gm-1' } });
+      expect(prisma.groupMember.delete).toHaveBeenCalledWith({
+        where: { id: 'gm-1' },
+      });
       expect(conversationsService.removeParticipant).toHaveBeenCalledWith(
         'conv-1',
         'admin-1',
@@ -208,9 +265,14 @@ describe('GroupCampaignsService', () => {
   describe('addContribution', () => {
     it('always attributes the contribution to the caller, never a selectable member', async () => {
       prisma.campaign.findUnique.mockResolvedValue(groupCampaign);
-      prisma.groupMember.findUnique.mockResolvedValue({ role: GroupMemberRole.member });
+      prisma.groupMember.findUnique.mockResolvedValue({
+        role: GroupMemberRole.member,
+      });
 
-      await service.addContribution('c-1', 'member-1', { amount: 100, note: 'Hotel' });
+      await service.addContribution('c-1', 'member-1', {
+        amount: 100,
+        note: 'Hotel',
+      });
 
       expect(prisma.groupContribution.create).toHaveBeenCalledWith({
         data: {
@@ -270,9 +332,13 @@ describe('GroupCampaignsService', () => {
   describe('removeExpense', () => {
     it('rejects a non-admin caller', async () => {
       prisma.campaign.findUnique.mockResolvedValue(groupCampaign);
-      prisma.groupMember.findUnique.mockResolvedValue({ role: GroupMemberRole.member });
+      prisma.groupMember.findUnique.mockResolvedValue({
+        role: GroupMemberRole.member,
+      });
 
-      await expect(service.removeExpense('c-1', 'expense-1', 'member-1')).rejects.toMatchObject({
+      await expect(
+        service.removeExpense('c-1', 'expense-1', 'member-1'),
+      ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
       expect(prisma.groupExpense.delete).not.toHaveBeenCalled();
@@ -280,12 +346,19 @@ describe('GroupCampaignsService', () => {
 
     it('deletes when the caller is an admin and the expense belongs to the campaign', async () => {
       prisma.campaign.findUnique.mockResolvedValue(groupCampaign);
-      prisma.groupMember.findUnique.mockResolvedValue({ role: GroupMemberRole.admin });
-      prisma.groupExpense.findUnique.mockResolvedValue({ id: 'expense-1', campaignId: 'c-1' });
+      prisma.groupMember.findUnique.mockResolvedValue({
+        role: GroupMemberRole.admin,
+      });
+      prisma.groupExpense.findUnique.mockResolvedValue({
+        id: 'expense-1',
+        campaignId: 'c-1',
+      });
 
       await service.removeExpense('c-1', 'expense-1', 'admin-1');
 
-      expect(prisma.groupExpense.delete).toHaveBeenCalledWith({ where: { id: 'expense-1' } });
+      expect(prisma.groupExpense.delete).toHaveBeenCalledWith({
+        where: { id: 'expense-1' },
+      });
     });
   });
 
@@ -299,7 +372,10 @@ describe('GroupCampaignsService', () => {
         expect.objectContaining({
           where: {
             isGroup: true,
-            OR: [{ creatorId: 'user-1' }, { groupMembers: { some: { userId: 'user-1' } } }],
+            OR: [
+              { creatorId: 'user-1' },
+              { groupMembers: { some: { userId: 'user-1' } } },
+            ],
           },
         }),
       );

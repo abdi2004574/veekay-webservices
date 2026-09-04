@@ -14,13 +14,21 @@ export class StoriesController {
   constructor(private readonly storiesService: StoriesService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Post a story (photo, or text with a background color).' })
-  async create(@Body() dto: CreateStoryDto, @CurrentUser('userId') userId: string) {
+  @ApiOperation({
+    summary: 'Post a story (photo, or text with a background color).',
+  })
+  async create(
+    @Body() dto: CreateStoryDto,
+    @CurrentUser('userId') userId: string,
+  ) {
     return this.storiesService.create(userId, dto);
   }
 
   @Get()
-  @ApiOperation({ summary: 'List active (non-expired) stories from yourself and your friends.' })
+  @ApiOperation({
+    summary:
+      'List active (non-expired) stories from yourself and your friends.',
+  })
   async list(@CurrentUser('userId') userId: string) {
     return this.storiesService.listActive(userId);
   }

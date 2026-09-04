@@ -29,7 +29,11 @@ describe('Stories (e2e)', () => {
   const server = () => app.getHttpServer();
 
   it('rejects a story with neither photo nor text', async () => {
-    const alice = await registerAndVerifyTraveler(server, 'alice@e2e.test', 'Alice');
+    const alice = await registerAndVerifyTraveler(
+      server,
+      'alice@e2e.test',
+      'Alice',
+    );
 
     const res = await request(server())
       .post('/api/v1/stories')
@@ -40,7 +44,11 @@ describe('Stories (e2e)', () => {
   });
 
   it('creates a text story, lists it for a friend, records a view, and likes it', async () => {
-    const alice = await registerAndVerifyTraveler(server, 'alice2@e2e.test', 'Alice');
+    const alice = await registerAndVerifyTraveler(
+      server,
+      'alice2@e2e.test',
+      'Alice',
+    );
     const bob = await registerAndVerifyTraveler(server, 'bob2@e2e.test', 'Bob');
 
     const sendRes = await request(server())
@@ -56,7 +64,11 @@ describe('Stories (e2e)', () => {
     const storyRes = await request(server())
       .post('/api/v1/stories')
       .set('Authorization', `Bearer ${alice.accessToken}`)
-      .send({ text: 'On the road!', backgroundColor: '#D701A8', textSize: 'medium' })
+      .send({
+        text: 'On the road!',
+        backgroundColor: '#D701A8',
+        textSize: 'medium',
+      })
       .expect(201);
     const storyId = storyRes.body.data.id;
 
@@ -84,7 +96,11 @@ describe('Stories (e2e)', () => {
   });
 
   it('excludes an expired story from the active list', async () => {
-    const alice = await registerAndVerifyTraveler(server, 'alice3@e2e.test', 'Alice');
+    const alice = await registerAndVerifyTraveler(
+      server,
+      'alice3@e2e.test',
+      'Alice',
+    );
 
     const storyRes = await request(server())
       .post('/api/v1/stories')
@@ -101,7 +117,9 @@ describe('Stories (e2e)', () => {
       .get('/api/v1/stories')
       .set('Authorization', `Bearer ${alice.accessToken}`)
       .expect(200);
-    expect(listRes.body.data.map((s: any) => s.id)).not.toContain(storyRes.body.data.id);
+    expect(listRes.body.data.map((s: any) => s.id)).not.toContain(
+      storyRes.body.data.id,
+    );
 
     await request(server())
       .post(`/api/v1/stories/${storyRes.body.data.id}/view`)

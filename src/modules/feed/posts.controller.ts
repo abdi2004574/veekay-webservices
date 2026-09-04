@@ -25,7 +25,10 @@ export class PostsController {
 
   @Post('posts')
   @ApiOperation({ summary: 'Create a post.' })
-  async create(@Body() dto: CreatePostDto, @CurrentUser('userId') userId: string) {
+  async create(
+    @Body() dto: CreatePostDto,
+    @CurrentUser('userId') userId: string,
+  ) {
     return this.postsService.create(userId, dto);
   }
 
@@ -68,12 +71,18 @@ export class PostsController {
   }
 
   @Get('feed')
-  @ApiOperation({ summary: 'Chronological feed of your own and your friends’ posts.' })
+  @ApiOperation({
+    summary: 'Chronological feed of your own and your friends’ posts.',
+  })
   async getFeed(
     @Query('cursor') cursor: string | undefined,
     @Query('limit') limit: string | undefined,
     @CurrentUser('userId') userId: string,
   ) {
-    return this.postsService.getFeed(userId, cursor, limit ? Number(limit) : undefined);
+    return this.postsService.getFeed(
+      userId,
+      cursor,
+      limit ? Number(limit) : undefined,
+    );
   }
 }

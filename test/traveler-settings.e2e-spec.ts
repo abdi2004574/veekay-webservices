@@ -30,7 +30,11 @@ describe('Traveler Settings (e2e)', () => {
 
   describe('PATCH /me/profile', () => {
     it('updates the fields sent and persists them', async () => {
-      const alice = await registerAndVerifyTraveler(server, 'alice@e2e.test', 'Alice');
+      const alice = await registerAndVerifyTraveler(
+        server,
+        'alice@e2e.test',
+        'Alice',
+      );
 
       const updateRes = await request(server())
         .patch('/api/v1/me/profile')
@@ -59,13 +63,20 @@ describe('Traveler Settings (e2e)', () => {
       expect(meRes.body.data.phone).toEqual('+1 555 0100');
       expect(meRes.body.data.location).toEqual('Lisbon, Portugal');
       expect(meRes.body.data.displayName).toEqual('Alice T.');
-      expect(meRes.body.data.destinationTypes.sort()).toEqual(['beach', 'city']);
+      expect(meRes.body.data.destinationTypes.sort()).toEqual([
+        'beach',
+        'city',
+      ]);
       expect(meRes.body.data.travelStyles).toEqual(['solo']);
     });
 
     it('rejects a username already taken by someone else', async () => {
       await registerAndVerifyTraveler(server, 'alice@e2e.test', 'Alice');
-      const bob = await registerAndVerifyTraveler(server, 'bob@e2e.test', 'Bob');
+      const bob = await registerAndVerifyTraveler(
+        server,
+        'bob@e2e.test',
+        'Bob',
+      );
 
       await request(server())
         .patch('/api/v1/me/profile')
@@ -77,7 +88,11 @@ describe('Traveler Settings (e2e)', () => {
 
   describe('notification preferences', () => {
     it('defaults to all-enabled and round-trips a partial update', async () => {
-      const alice = await registerAndVerifyTraveler(server, 'alice@e2e.test', 'Alice');
+      const alice = await registerAndVerifyTraveler(
+        server,
+        'alice@e2e.test',
+        'Alice',
+      );
 
       const defaultsRes = await request(server())
         .get('/api/v1/me/notification-preferences')
@@ -109,8 +124,16 @@ describe('Traveler Settings (e2e)', () => {
 
   describe('privacy settings and profile-visibility enforcement', () => {
     it('a private profile is hidden from strangers but always visible to its owner', async () => {
-      const alice = await registerAndVerifyTraveler(server, 'alice@e2e.test', 'Alice');
-      const bob = await registerAndVerifyTraveler(server, 'bob@e2e.test', 'Bob');
+      const alice = await registerAndVerifyTraveler(
+        server,
+        'alice@e2e.test',
+        'Alice',
+      );
+      const bob = await registerAndVerifyTraveler(
+        server,
+        'bob@e2e.test',
+        'Bob',
+      );
 
       await request(server())
         .patch('/api/v1/me/privacy-settings')
@@ -130,8 +153,16 @@ describe('Traveler Settings (e2e)', () => {
     });
 
     it('a friends-only profile is hidden from strangers, visible once friends', async () => {
-      const alice = await registerAndVerifyTraveler(server, 'alice@e2e.test', 'Alice');
-      const bob = await registerAndVerifyTraveler(server, 'bob@e2e.test', 'Bob');
+      const alice = await registerAndVerifyTraveler(
+        server,
+        'alice@e2e.test',
+        'Alice',
+      );
+      const bob = await registerAndVerifyTraveler(
+        server,
+        'bob@e2e.test',
+        'Bob',
+      );
 
       await request(server())
         .patch('/api/v1/me/privacy-settings')
@@ -164,12 +195,19 @@ describe('Traveler Settings (e2e)', () => {
 
   describe('change-password and logout-all (regression — no behavior change, still reusable from Settings)', () => {
     it('changes the password and logs in with the new one, rejecting the old', async () => {
-      const alice = await registerAndVerifyTraveler(server, 'alice@e2e.test', 'Alice');
+      const alice = await registerAndVerifyTraveler(
+        server,
+        'alice@e2e.test',
+        'Alice',
+      );
 
       await request(server())
         .post('/api/v1/auth/change-password')
         .set('Authorization', `Bearer ${alice.accessToken}`)
-        .send({ currentPassword: 'StrongPassword123!', newPassword: 'NewStrongPassword456!' })
+        .send({
+          currentPassword: 'StrongPassword123!',
+          newPassword: 'NewStrongPassword456!',
+        })
         .expect(201);
 
       await request(server())
@@ -184,7 +222,11 @@ describe('Traveler Settings (e2e)', () => {
     });
 
     it('logout-all revokes the existing refresh token', async () => {
-      const alice = await registerAndVerifyTraveler(server, 'alice@e2e.test', 'Alice');
+      const alice = await registerAndVerifyTraveler(
+        server,
+        'alice@e2e.test',
+        'Alice',
+      );
 
       await request(server())
         .post('/api/v1/auth/logout-all')
@@ -200,7 +242,11 @@ describe('Traveler Settings (e2e)', () => {
 
   describe('DELETE /me (soft-delete)', () => {
     it('deactivates the account, blocking further requests and future logins', async () => {
-      const alice = await registerAndVerifyTraveler(server, 'alice@e2e.test', 'Alice');
+      const alice = await registerAndVerifyTraveler(
+        server,
+        'alice@e2e.test',
+        'Alice',
+      );
 
       await request(server())
         .delete('/api/v1/me')

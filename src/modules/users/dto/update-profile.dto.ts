@@ -17,13 +17,19 @@ export class UpdateProfileDto {
   @MaxLength(60)
   displayName?: string;
 
-  @ApiProperty({ required: false, description: 'Lowercase letters and numbers only.' })
+  @ApiProperty({
+    required: false,
+    description: 'Lowercase letters and numbers only.',
+  })
   @IsOptional()
   @IsString()
   @Matches(/^[a-z0-9]+$/)
   username?: string;
 
-  @ApiProperty({ required: false, description: 'Media asset id from a prior presigned upload.' })
+  @ApiProperty({
+    required: false,
+    description: 'Media asset id from a prior presigned upload.',
+  })
   @IsOptional()
   @IsString()
   photoMediaId?: string;

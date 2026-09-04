@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { CampaignPrivacy, CampaignStatus, GroupMemberRole } from '@prisma/client';
+import {
+  CampaignPrivacy,
+  CampaignStatus,
+  GroupMemberRole,
+} from '@prisma/client';
 import { AppException } from '../../common/errors/app.exception';
 import { PrismaService } from '../prisma/prisma.service';
 import { MediaAssetsService } from '../storage/media-assets.service';
@@ -18,25 +22,39 @@ export class CampaignsService {
   ) {}
 
   private async attachViewUrls(campaigns: any[]) {
-    const mediaIds = campaigns.flatMap((c) => c.photos.map((p: { mediaId: string }) => p.mediaId));
-    const urlsByMediaId = await this.mediaAssetsService.resolveViewUrls(mediaIds);
+    const mediaIds = campaigns.flatMap((c) =>
+      c.photos.map((p: { mediaId: string }) => p.mediaId),
+    );
+    const urlsByMediaId =
+      await this.mediaAssetsService.resolveViewUrls(mediaIds);
 
     return campaigns.map((campaign) => ({
       ...campaign,
       goalAmount: Number(campaign.goalAmount),
-      photos: campaign.photos.map((photo: { mediaId: string; position: number }) => ({
-        mediaId: photo.mediaId,
-        position: photo.position,
-        url: urlsByMediaId.get(photo.mediaId) ?? null,
-      })),
+      photos: campaign.photos.map(
+        (photo: { mediaId: string; position: number }) => ({
+          mediaId: photo.mediaId,
+          position: photo.position,
+          url: urlsByMediaId.get(photo.mediaId) ?? null,
+        }),
+      ),
       // No Donation model yet (#6) — always 0/empty, never faked.
       contributorsCount: 0,
     }));
   }
 
-  private validateDateRange(tripStartDate?: string, tripEndDate?: string | null) {
-    if (tripStartDate && tripEndDate && new Date(tripEndDate) < new Date(tripStartDate)) {
-      throw AppException.badRequest('Trip end date cannot be before the start date.');
+  private validateDateRange(
+    tripStartDate?: string,
+    tripEndDate?: string | null,
+  ) {
+    if (
+      tripStartDate &&
+      tripEndDate &&
+      new Date(tripEndDate) < new Date(tripStartDate)
+    ) {
+      throw AppException.badRequest(
+        'Trip end date cannot be before the start date.',
+      );
     }
   }
 
@@ -64,10 +82,17 @@ export class CampaignsService {
         status: CampaignStatus.active,
         isGroup,
         photos: {
-          create: dto.photoMediaIds.map((mediaId, position) => ({ mediaId, position })),
+          create: dto.photoMediaIds.map((mediaId, position) => ({
+            mediaId,
+            position,
+          })),
         },
         ...(isGroup
-          ? { groupMembers: { create: { userId: creatorId, role: GroupMemberRole.admin } } }
+          ? {
+              groupMembers: {
+                create: { userId: creatorId, role: GroupMemberRole.admin },
+              },
+            }
           : {}),
       },
       include: { photos: true },
@@ -78,7 +103,9 @@ export class CampaignsService {
   }
 
   private async findOwnedOrThrow(campaignId: string, creatorId: string) {
-    const campaign = await this.prisma.campaign.findUnique({ where: { id: campaignId } });
+    const campaign = await this.prisma.campaign.findUnique({
+      where: { id: campaignId },
+    });
     if (!campaign) {
       throw AppException.notFound('Campaign not found.');
     }
@@ -111,7 +138,9 @@ export class CampaignsService {
           destination: dto.destination,
           goalAmount: dto.goalAmount,
           story: dto.story,
-          tripStartDate: dto.tripStartDate ? new Date(dto.tripStartDate) : undefined,
+          tripStartDate: dto.tripStartDate
+            ? new Date(dto.tripStartDate)
+            : undefined,
           tripEndDate:
             dto.tripEndDate === undefined
               ? undefined
@@ -149,7 +178,12 @@ export class CampaignsService {
   }
 
   /** Public browse/search — mirrors AgenciesService.listDirectory's cursor+search shape. */
-  async listPublic(cursor?: string, limit = 20, search?: string, creatorId?: string) {
+  async listPublic(
+    cursor?: string,
+    limit = 20,
+    search?: string,
+    creatorId?: string,
+  ) {
     const campaigns = await this.prisma.campaign.findMany({
       where: {
         privacy: CampaignPrivacy.public,
@@ -159,7 +193,12 @@ export class CampaignsService {
           ? {
               OR: [
                 { title: { contains: search, mode: 'insensitive' as const } },
-                { destination: { contains: search, mode: 'insensitive' as const } },
+                {
+                  destination: {
+                    contains: search,
+                    mode: 'insensitive' as const,
+                  },
+                },
               ],
             }
           : {}),
@@ -167,7 +206,10 @@ export class CampaignsService {
       orderBy: { createdAt: 'desc' },
       take: limit + 1,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-      include: { photos: { orderBy: { position: 'asc' } }, creator: CREATOR_SELECT },
+      include: {
+        photos: { orderBy: { position: 'asc' } },
+        creator: CREATOR_SELECT,
+      },
     });
 
     const hasMore = campaigns.length > limit;
@@ -180,7 +222,10 @@ export class CampaignsService {
   async getDetail(campaignId: string, viewerId: string) {
     const campaign = await this.prisma.campaign.findUnique({
       where: { id: campaignId },
-      include: { photos: { orderBy: { position: 'asc' } }, creator: CREATOR_SELECT },
+      include: {
+        photos: { orderBy: { position: 'asc' } },
+        creator: CREATOR_SELECT,
+      },
     });
     if (!campaign) {
       throw AppException.notFound('Campaign not found.');
@@ -204,11 +249,16 @@ export class CampaignsService {
 
   /** Always empty until #6 (Payments/Donations) exists — never faked. */
   async listTopContributors(campaignId: string, viewerId: string) {
-    const campaign = await this.prisma.campaign.findUnique({ where: { id: campaignId } });
+    const campaign = await this.prisma.campaign.findUnique({
+      where: { id: campaignId },
+    });
     if (!campaign) {
       throw AppException.notFound('Campaign not found.');
     }
-    if (campaign.privacy === CampaignPrivacy.private && campaign.creatorId !== viewerId) {
+    if (
+      campaign.privacy === CampaignPrivacy.private &&
+      campaign.creatorId !== viewerId
+    ) {
       throw AppException.notFound('Campaign not found.');
     }
     return { items: [] };

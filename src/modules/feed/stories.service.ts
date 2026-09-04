@@ -43,7 +43,9 @@ export class StoriesService {
   }
 
   async findActiveByIdOrThrow(storyId: string) {
-    const story = await this.prisma.story.findUnique({ where: { id: storyId } });
+    const story = await this.prisma.story.findUnique({
+      where: { id: storyId },
+    });
     if (!story || story.expiresAt < new Date()) {
       throw AppException.notFound('Story not found or has expired.');
     }
@@ -63,12 +65,17 @@ export class StoriesService {
       },
     });
 
-    const mediaIds = stories.map((s) => s.imageMediaId).filter((id): id is string => !!id);
-    const urlsByMediaId = await this.mediaAssetsService.resolveViewUrls(mediaIds);
+    const mediaIds = stories
+      .map((s) => s.imageMediaId)
+      .filter((id): id is string => !!id);
+    const urlsByMediaId =
+      await this.mediaAssetsService.resolveViewUrls(mediaIds);
 
     return stories.map((story) => ({
       ...story,
-      imageUrl: story.imageMediaId ? (urlsByMediaId.get(story.imageMediaId) ?? null) : null,
+      imageUrl: story.imageMediaId
+        ? (urlsByMediaId.get(story.imageMediaId) ?? null)
+        : null,
     }));
   }
 

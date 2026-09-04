@@ -1,4 +1,13 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -15,7 +24,9 @@ export class ReviewsController {
 
   @Post('agencies/:agencyId/reviews')
   @RequireRole(UserRole.traveler)
-  @ApiOperation({ summary: 'Review an agency (one review per traveler per agency).' })
+  @ApiOperation({
+    summary: 'Review an agency (one review per traveler per agency).',
+  })
   async create(
     @Param('agencyId') agencyId: string,
     @Body() dto: CreateReviewDto,
@@ -31,7 +42,11 @@ export class ReviewsController {
     @Query('cursor') cursor: string | undefined,
     @Query('limit') limit: string | undefined,
   ) {
-    return this.reviewsService.listForAgency(agencyId, cursor, limit ? Number(limit) : undefined);
+    return this.reviewsService.listForAgency(
+      agencyId,
+      cursor,
+      limit ? Number(limit) : undefined,
+    );
   }
 
   @Get('reviews/mine')
@@ -43,7 +58,9 @@ export class ReviewsController {
 
   @Patch('reviews/:id')
   @RequireRole(UserRole.traveler)
-  @ApiOperation({ summary: 'Edit your own review (within 7 days of submission).' })
+  @ApiOperation({
+    summary: 'Edit your own review (within 7 days of submission).',
+  })
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateReviewDto,
@@ -54,8 +71,13 @@ export class ReviewsController {
 
   @Delete('reviews/:id')
   @RequireRole(UserRole.traveler)
-  @ApiOperation({ summary: 'Delete your own review (within 7 days of submission).' })
-  async remove(@Param('id') id: string, @CurrentUser('userId') reviewerId: string) {
+  @ApiOperation({
+    summary: 'Delete your own review (within 7 days of submission).',
+  })
+  async remove(
+    @Param('id') id: string,
+    @CurrentUser('userId') reviewerId: string,
+  ) {
     await this.reviewsService.remove(id, reviewerId);
   }
 }

@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { ConversationType, MediaStatus, MessageReceiptStatus } from '@prisma/client';
+import {
+  ConversationType,
+  MediaStatus,
+  MessageReceiptStatus,
+} from '@prisma/client';
 import { AppException } from '../../common/errors/app.exception';
 import { PrismaService } from '../prisma/prisma.service';
 import { MediaAssetsService } from '../storage/media-assets.service';
@@ -28,15 +32,27 @@ export class MessagesService {
       }
     } else {
       if (!dto.mediaId) {
-        throw AppException.badRequest(`mediaId is required for a ${type} message.`);
+        throw AppException.badRequest(
+          `mediaId is required for a ${type} message.`,
+        );
       }
-      const asset = await this.prisma.mediaAsset.findUnique({ where: { id: dto.mediaId } });
-      if (!asset || asset.ownerId !== senderId || asset.status !== MediaStatus.uploaded) {
-        throw AppException.badRequest('Attach a photo/file you\'ve already uploaded first.');
+      const asset = await this.prisma.mediaAsset.findUnique({
+        where: { id: dto.mediaId },
+      });
+      if (
+        !asset ||
+        asset.ownerId !== senderId ||
+        asset.status !== MediaStatus.uploaded
+      ) {
+        throw AppException.badRequest(
+          "Attach a photo/file you've already uploaded first.",
+        );
       }
       const expectedPurpose = type === 'image' ? 'chat_image' : 'chat_document';
       if (asset.purpose !== expectedPurpose) {
-        throw AppException.badRequest(`This media asset isn't a ${type} upload.`);
+        throw AppException.badRequest(
+          `This media asset isn't a ${type} upload.`,
+        );
       }
     }
 
@@ -60,15 +76,24 @@ export class MessagesService {
     return this.attachMediaUrl(message);
   }
 
-  private async attachMediaUrl<T extends { mediaId: string | null }>(message: T) {
+  private async attachMediaUrl<T extends { mediaId: string | null }>(
+    message: T,
+  ) {
     if (!message.mediaId) {
       return { ...message, mediaUrl: null };
     }
-    const urls = await this.mediaAssetsService.resolveViewUrls([message.mediaId]);
+    const urls = await this.mediaAssetsService.resolveViewUrls([
+      message.mediaId,
+    ]);
     return { ...message, mediaUrl: urls.get(message.mediaId) ?? null };
   }
 
-  async list(conversationId: string, viewerId: string, cursor?: string, limit = 30) {
+  async list(
+    conversationId: string,
+    viewerId: string,
+    cursor?: string,
+    limit = 30,
+  ) {
     await this.conversationsService.assertAccess(conversationId, viewerId);
 
     const messages = await this.prisma.message.findMany({
@@ -83,7 +108,9 @@ export class MessagesService {
     const page = hasMore ? messages.slice(0, limit) : messages;
 
     // Fetching messages counts as delivery for anything not already delivered/read.
-    const othersMessageIds = page.filter((m) => m.senderId !== viewerId).map((m) => m.id);
+    const othersMessageIds = page
+      .filter((m) => m.senderId !== viewerId)
+      .map((m) => m.id);
     if (othersMessageIds.length > 0) {
       await Promise.all(
         othersMessageIds.map((messageId) =>
@@ -101,10 +128,15 @@ export class MessagesService {
       );
     }
 
-    const mediaIds = page.map((m) => m.mediaId).filter((id): id is string => !!id);
-    const urlsByMediaId = await this.mediaAssetsService.resolveViewUrls(mediaIds);
+    const mediaIds = page
+      .map((m) => m.mediaId)
+      .filter((id): id is string => !!id);
+    const urlsByMediaId =
+      await this.mediaAssetsService.resolveViewUrls(mediaIds);
 
-    const myMessageIds = page.filter((m) => m.senderId === viewerId).map((m) => m.id);
+    const myMessageIds = page
+      .filter((m) => m.senderId === viewerId)
+      .map((m) => m.id);
     const receipts =
       myMessageIds.length > 0
         ? await this.prisma.messageReceipt.findMany({
@@ -113,17 +145,24 @@ export class MessagesService {
         : [];
     const receiptsByMessage = new Map<string, typeof receipts>();
     for (const r of receipts) {
-      receiptsByMessage.set(r.messageId, [...(receiptsByMessage.get(r.messageId) ?? []), r]);
+      receiptsByMessage.set(r.messageId, [
+        ...(receiptsByMessage.get(r.messageId) ?? []),
+        r,
+      ]);
     }
 
     const items = page.map((message) => {
       const mine = message.senderId === viewerId;
-      const messageReceipts = mine ? (receiptsByMessage.get(message.id) ?? []) : [];
+      const messageReceipts = mine
+        ? (receiptsByMessage.get(message.id) ?? [])
+        : [];
       const status = !mine
         ? undefined
         : messageReceipts.some((r) => r.status === MessageReceiptStatus.read)
           ? 'read'
-          : messageReceipts.some((r) => r.status === MessageReceiptStatus.delivered)
+          : messageReceipts.some(
+                (r) => r.status === MessageReceiptStatus.delivered,
+              )
             ? 'delivered'
             : 'sent';
 
@@ -134,7 +173,9 @@ export class MessagesService {
         type: message.type,
         body: message.body,
         fileName: message.fileName,
-        mediaUrl: message.mediaId ? (urlsByMediaId.get(message.mediaId) ?? null) : null,
+        mediaUrl: message.mediaId
+          ? (urlsByMediaId.get(message.mediaId) ?? null)
+          : null,
         createdAt: message.createdAt,
         status,
       };
@@ -147,10 +188,8 @@ export class MessagesService {
   }
 
   async markRead(conversationId: string, viewerId: string) {
-    const { conversation, participant, isAgencyStaff } = await this.conversationsService.assertAccess(
-      conversationId,
-      viewerId,
-    );
+    const { conversation, participant, isAgencyStaff } =
+      await this.conversationsService.assertAccess(conversationId, viewerId);
 
     const unreadMessages = await this.prisma.message.findMany({
       where: { conversationId, senderId: { not: viewerId } },

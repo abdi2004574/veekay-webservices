@@ -1,4 +1,15 @@
-﻿import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -16,20 +27,28 @@ export class PackagesController {
   @Post()
   @RequireRole(UserRole.agency)
   @ApiOperation({ summary: 'Create a package.' })
-  async create(@Body() dto: CreatePackageDto, @CurrentUser('userId') userId: string) {
+  async create(
+    @Body() dto: CreatePackageDto,
+    @CurrentUser('userId') userId: string,
+  ) {
     return this.packagesService.create(userId, dto);
   }
 
   @Get('mine')
   @RequireRole(UserRole.agency)
-  @ApiOperation({ summary: 'List your agency\'s packages (all statuses).' })
+  @ApiOperation({ summary: "List your agency's packages (all statuses)." })
   async listMine(@CurrentUser('userId') userId: string) {
     return this.packagesService.listMine(userId);
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get a package (public if active, owner sees any status).' })
-  async getDetail(@Param('id') id: string, @CurrentUser('userId') userId: string) {
+  @ApiOperation({
+    summary: 'Get a package (public if active, owner sees any status).',
+  })
+  async getDetail(
+    @Param('id') id: string,
+    @CurrentUser('userId') userId: string,
+  ) {
     return this.packagesService.getDetail(id, userId);
   }
 
@@ -52,7 +71,9 @@ export class PackagesController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Browse active packages, filter by destination/season/theme.' })
+  @ApiOperation({
+    summary: 'Browse active packages, filter by destination/season/theme.',
+  })
   async listPublic(
     @Query('cursor') cursor: string | undefined,
     @Query('limit') limit: string | undefined,
@@ -70,6 +91,7 @@ export class PackagesController {
   }
 
   @Post(':packageId/campaigns/:campaignId/link')
+  @HttpCode(HttpStatus.OK)
   @RequireRole(UserRole.traveler)
   @ApiOperation({ summary: 'Link an active package to your campaign.' })
   async link(
@@ -88,6 +110,10 @@ export class PackagesController {
     @Param('campaignId') campaignId: string,
     @CurrentUser('userId') userId: string,
   ) {
-    await this.packagesService.unlinkFromCampaign(packageId, campaignId, userId);
+    await this.packagesService.unlinkFromCampaign(
+      packageId,
+      campaignId,
+      userId,
+    );
   }
 }

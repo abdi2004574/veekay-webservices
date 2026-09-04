@@ -23,7 +23,9 @@ describe('PostsService', () => {
       },
     };
     friendsService = { getFriendIds: jest.fn().mockResolvedValue([]) };
-    mediaAssetsService = { resolveViewUrls: jest.fn().mockResolvedValue(new Map()) };
+    mediaAssetsService = {
+      resolveViewUrls: jest.fn().mockResolvedValue(new Map()),
+    };
     service = new PostsService(prisma, friendsService, mediaAssetsService);
   });
 
@@ -31,7 +33,7 @@ describe('PostsService', () => {
     it('creates a post with default empty tags', async () => {
       prisma.post.create.mockResolvedValue({ id: 'post-1' });
 
-      await service.create('user-1', { text: 'hello' } as any);
+      await service.create('user-1', { text: 'hello' });
 
       expect(prisma.post.create).toHaveBeenCalledWith({
         data: {
@@ -47,7 +49,10 @@ describe('PostsService', () => {
 
   describe('update', () => {
     it('rejects editing a post you do not own', async () => {
-      prisma.post.findUnique.mockResolvedValue({ id: 'post-1', authorId: 'user-2' });
+      prisma.post.findUnique.mockResolvedValue({
+        id: 'post-1',
+        authorId: 'user-2',
+      });
 
       await expect(
         service.update('post-1', 'user-1', { text: 'edited' } as any),
@@ -63,10 +68,13 @@ describe('PostsService', () => {
     });
 
     it('updates a post you own', async () => {
-      prisma.post.findUnique.mockResolvedValue({ id: 'post-1', authorId: 'user-1' });
+      prisma.post.findUnique.mockResolvedValue({
+        id: 'post-1',
+        authorId: 'user-1',
+      });
       prisma.post.update.mockResolvedValue({ id: 'post-1', text: 'edited' });
 
-      await service.update('post-1', 'user-1', { text: 'edited' } as any);
+      await service.update('post-1', 'user-1', { text: 'edited' });
 
       expect(prisma.post.update).toHaveBeenCalledWith({
         where: { id: 'post-1' },
@@ -82,7 +90,10 @@ describe('PostsService', () => {
 
   describe('remove', () => {
     it('rejects deleting a post you do not own', async () => {
-      prisma.post.findUnique.mockResolvedValue({ id: 'post-1', authorId: 'user-2' });
+      prisma.post.findUnique.mockResolvedValue({
+        id: 'post-1',
+        authorId: 'user-2',
+      });
 
       await expect(service.remove('post-1', 'user-1')).rejects.toMatchObject({
         getStatus: expect.any(Function),
@@ -90,11 +101,16 @@ describe('PostsService', () => {
     });
 
     it('deletes a post you own', async () => {
-      prisma.post.findUnique.mockResolvedValue({ id: 'post-1', authorId: 'user-1' });
+      prisma.post.findUnique.mockResolvedValue({
+        id: 'post-1',
+        authorId: 'user-1',
+      });
 
       await service.remove('post-1', 'user-1');
 
-      expect(prisma.post.delete).toHaveBeenCalledWith({ where: { id: 'post-1' } });
+      expect(prisma.post.delete).toHaveBeenCalledWith({
+        where: { id: 'post-1' },
+      });
     });
   });
 
@@ -132,19 +148,28 @@ describe('PostsService', () => {
 
       await service.unlike('post-1', 'user-1');
 
-      expect(prisma.postLike.delete).toHaveBeenCalledWith({ where: { id: 'like-1' } });
+      expect(prisma.postLike.delete).toHaveBeenCalledWith({
+        where: { id: 'like-1' },
+      });
     });
   });
 
   describe('repost', () => {
     it('creates a new post referencing the original via repostOfId', async () => {
       prisma.post.findUnique.mockResolvedValue({ id: 'post-1' });
-      prisma.post.create.mockResolvedValue({ id: 'post-2', repostOfId: 'post-1' });
+      prisma.post.create.mockResolvedValue({
+        id: 'post-2',
+        repostOfId: 'post-1',
+      });
 
       await service.repost('post-1', 'user-2', 'check this out');
 
       expect(prisma.post.create).toHaveBeenCalledWith({
-        data: { authorId: 'user-2', text: 'check this out', repostOfId: 'post-1' },
+        data: {
+          authorId: 'user-2',
+          text: 'check this out',
+          repostOfId: 'post-1',
+        },
       });
     });
   });
@@ -153,7 +178,11 @@ describe('PostsService', () => {
     it('scopes the feed to self and friends, and flags liked-by-me posts', async () => {
       friendsService.getFriendIds.mockResolvedValue(['friend-1']);
       prisma.post.findMany.mockResolvedValue([
-        { id: 'post-1', authorId: 'friend-1', _count: { likes: 2, comments: 1 } },
+        {
+          id: 'post-1',
+          authorId: 'friend-1',
+          _count: { likes: 2, comments: 1 },
+        },
       ]);
       prisma.postLike.findMany.mockResolvedValue([{ postId: 'post-1' }]);
 

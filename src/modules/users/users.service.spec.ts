@@ -1,4 +1,10 @@
-import { DestinationType, Gender, ProfileVisibility, TravelStyle, UserRole } from '@prisma/client';
+import {
+  DestinationType,
+  Gender,
+  ProfileVisibility,
+  TravelStyle,
+  UserRole,
+} from '@prisma/client';
 import { UsersService } from './users.service';
 
 describe('UsersService', () => {
@@ -23,9 +29,11 @@ describe('UsersService', () => {
       getFriendIds: jest.fn().mockResolvedValue([]),
       areFriends: jest.fn().mockResolvedValue(false),
       getMutualFriendsCount: jest.fn().mockResolvedValue(0),
-      getConnectionStatus: jest
-        .fn()
-        .mockResolvedValue({ isFriend: false, requestSent: false, requestReceived: false }),
+      getConnectionStatus: jest.fn().mockResolvedValue({
+        isFriend: false,
+        requestSent: false,
+        requestReceived: false,
+      }),
     };
     tokenService = {
       revokeAllRefreshTokensForUser: jest.fn().mockResolvedValue(undefined),
@@ -182,7 +190,8 @@ describe('UsersService', () => {
     it('rejects when the chosen username is already taken by someone else', async () => {
       prisma.user.findUnique.mockImplementation(({ where }: any) => {
         if (where.id) return Promise.resolve(baseUser);
-        if (where.username === 'bob') return Promise.resolve({ id: 'user-2', username: 'bob' });
+        if (where.username === 'bob')
+          return Promise.resolve({ id: 'user-2', username: 'bob' });
         return Promise.resolve(null);
       });
 
@@ -200,7 +209,10 @@ describe('UsersService', () => {
       prisma.travelerProfile.upsert.mockResolvedValue({});
       prisma.post.count.mockResolvedValue(0);
 
-      await service.updateProfile('user-1', { username: 'newname', displayName: 'New Name' });
+      await service.updateProfile('user-1', {
+        username: 'newname',
+        displayName: 'New Name',
+      });
 
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: 'user-1' },
@@ -213,7 +225,9 @@ describe('UsersService', () => {
       prisma.travelerProfile.upsert.mockResolvedValue({});
       prisma.post.count.mockResolvedValue(0);
 
-      await service.updateProfile('user-1', { destinationTypes: [DestinationType.city] });
+      await service.updateProfile('user-1', {
+        destinationTypes: [DestinationType.city],
+      });
 
       const upsertArgs = prisma.travelerProfile.upsert.mock.calls[0][0];
       expect(upsertArgs.update.destinationTypes).toEqual({
@@ -230,7 +244,11 @@ describe('UsersService', () => {
 
       const prefs = await service.getNotificationPreferences('user-1');
 
-      expect(prefs).toEqual({ donationAlerts: true, campaignUpdates: true, agencyMessages: true });
+      expect(prefs).toEqual({
+        donationAlerts: true,
+        campaignUpdates: true,
+        agencyMessages: true,
+      });
     });
 
     it('upserts and returns the updated values', async () => {
@@ -240,7 +258,9 @@ describe('UsersService', () => {
         agencyMessages: true,
       });
 
-      const prefs = await service.updateNotificationPreferences('user-1', { donationAlerts: false });
+      const prefs = await service.updateNotificationPreferences('user-1', {
+        donationAlerts: false,
+      });
 
       expect(prefs.donationAlerts).toBe(false);
       expect(prisma.notificationPreference.upsert).toHaveBeenCalledWith(
@@ -285,7 +305,9 @@ describe('UsersService', () => {
         where: { id: 'user-1' },
         data: { isActive: false, deactivatedAt: expect.any(Date) },
       });
-      expect(tokenService.revokeAllRefreshTokensForUser).toHaveBeenCalledWith('user-1');
+      expect(tokenService.revokeAllRefreshTokensForUser).toHaveBeenCalledWith(
+        'user-1',
+      );
     });
   });
 
@@ -329,7 +351,9 @@ describe('UsersService', () => {
       expect(me.badge).toBe('dreamer');
       expect(me.gender).toBe(Gender.female);
       expect(me.dateOfBirth).toEqual(new Date('1995-04-12'));
-      expect(prisma.campaign.count).toHaveBeenCalledWith({ where: { creatorId: 'user-1' } });
+      expect(prisma.campaign.count).toHaveBeenCalledWith({
+        where: { creatorId: 'user-1' },
+      });
     });
 
     it('does not resolve friend ids for a non-traveler account', async () => {
@@ -349,9 +373,14 @@ describe('UsersService', () => {
 
   describe('getPublicProfile', () => {
     it('throws not-found for a non-traveler or missing user', async () => {
-      prisma.user.findUnique.mockResolvedValue({ id: 'agency-1', role: UserRole.agency });
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'agency-1',
+        role: UserRole.agency,
+      });
 
-      await expect(service.getPublicProfile('user-1', 'agency-1')).rejects.toMatchObject({
+      await expect(
+        service.getPublicProfile('user-1', 'agency-1'),
+      ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
     });
@@ -416,7 +445,9 @@ describe('UsersService', () => {
       const profile = await service.getPublicProfile('user-1', 'user-1');
 
       expect(profile.campaignsCount).toBe(3);
-      expect(prisma.campaign.count).toHaveBeenCalledWith({ where: { creatorId: 'user-1' } });
+      expect(prisma.campaign.count).toHaveBeenCalledWith({
+        where: { creatorId: 'user-1' },
+      });
     });
 
     it('blocks a stranger from viewing a private profile', async () => {
@@ -432,7 +463,9 @@ describe('UsersService', () => {
         profileVisibility: ProfileVisibility.private,
       });
 
-      await expect(service.getPublicProfile('user-1', 'user-2')).rejects.toMatchObject({
+      await expect(
+        service.getPublicProfile('user-1', 'user-2'),
+      ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
     });
@@ -455,7 +488,9 @@ describe('UsersService', () => {
         requestReceived: false,
       });
 
-      await expect(service.getPublicProfile('user-1', 'user-2')).rejects.toMatchObject({
+      await expect(
+        service.getPublicProfile('user-1', 'user-2'),
+      ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
 

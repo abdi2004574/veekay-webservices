@@ -6,7 +6,10 @@ import { resetDb, disconnectDb } from './utils/reset-db';
 import { resetRedis, disconnectRedis } from './utils/reset-redis';
 import { clearMailhog } from './utils/mailhog';
 import { registerAndVerifyTraveler } from './utils/register-traveler';
-import { registerAndVerifyAgency, approveAgency } from './utils/register-agency';
+import {
+  registerAndVerifyAgency,
+  approveAgency,
+} from './utils/register-agency';
 
 describe('Agency directory & reviews (e2e)', () => {
   let app: INestApplication<App>;
@@ -31,7 +34,11 @@ describe('Agency directory & reviews (e2e)', () => {
 
   describe('Agency directory', () => {
     it('excludes agencies still pending verification', async () => {
-      const alice = await registerAndVerifyTraveler(server, 'alice1@e2e.test', 'Alice');
+      const alice = await registerAndVerifyTraveler(
+        server,
+        'alice1@e2e.test',
+        'Alice',
+      );
       await registerAndVerifyAgency(server, 'pending1@e2e.test', 'Pending Co.');
 
       const res = await request(server())
@@ -42,15 +49,25 @@ describe('Agency directory & reviews (e2e)', () => {
     });
 
     it('lists an approved agency and rejects fetching a pending one directly', async () => {
-      const alice = await registerAndVerifyTraveler(server, 'alice2@e2e.test', 'Alice');
-      const agency = await registerAndVerifyAgency(server, 'agency2@e2e.test', 'Dream Travel Co.');
+      const alice = await registerAndVerifyTraveler(
+        server,
+        'alice2@e2e.test',
+        'Alice',
+      );
+      const agency = await registerAndVerifyAgency(
+        server,
+        'agency2@e2e.test',
+        'Dream Travel Co.',
+      );
       await approveAgency(agency.agencyId);
 
       const listRes = await request(server())
         .get('/api/v1/agencies')
         .set('Authorization', `Bearer ${alice.accessToken}`)
         .expect(200);
-      expect(listRes.body.data.items.map((a: any) => a.id)).toContain(agency.agencyId);
+      expect(listRes.body.data.items.map((a: any) => a.id)).toContain(
+        agency.agencyId,
+      );
 
       const detailRes = await request(server())
         .get(`/api/v1/agencies/${agency.agencyId}`)
@@ -60,7 +77,11 @@ describe('Agency directory & reviews (e2e)', () => {
       expect(detailRes.body.data.reviewCount).toEqual(0);
       expect(detailRes.body.data.reputationScore).toBeNull();
 
-      const pending = await registerAndVerifyAgency(server, 'pending2@e2e.test', 'Pending Co.');
+      const pending = await registerAndVerifyAgency(
+        server,
+        'pending2@e2e.test',
+        'Pending Co.',
+      );
       await request(server())
         .get(`/api/v1/agencies/${pending.agencyId}`)
         .set('Authorization', `Bearer ${alice.accessToken}`)
@@ -68,9 +89,21 @@ describe('Agency directory & reviews (e2e)', () => {
     });
 
     it('filters the directory by search text', async () => {
-      const alice = await registerAndVerifyTraveler(server, 'alice3@e2e.test', 'Alice');
-      const dream = await registerAndVerifyAgency(server, 'dream3@e2e.test', 'Dream Travel Co.');
-      const wander = await registerAndVerifyAgency(server, 'wander3@e2e.test', 'Wanderlust Co.');
+      const alice = await registerAndVerifyTraveler(
+        server,
+        'alice3@e2e.test',
+        'Alice',
+      );
+      const dream = await registerAndVerifyAgency(
+        server,
+        'dream3@e2e.test',
+        'Dream Travel Co.',
+      );
+      const wander = await registerAndVerifyAgency(
+        server,
+        'wander3@e2e.test',
+        'Wanderlust Co.',
+      );
       await approveAgency(dream.agencyId);
       await approveAgency(wander.agencyId);
 
@@ -86,8 +119,16 @@ describe('Agency directory & reviews (e2e)', () => {
 
   describe('Reviews', () => {
     it('rejects reviewing an agency still pending verification', async () => {
-      const alice = await registerAndVerifyTraveler(server, 'alice4@e2e.test', 'Alice');
-      const pending = await registerAndVerifyAgency(server, 'pending4@e2e.test', 'Pending Co.');
+      const alice = await registerAndVerifyTraveler(
+        server,
+        'alice4@e2e.test',
+        'Alice',
+      );
+      const pending = await registerAndVerifyAgency(
+        server,
+        'pending4@e2e.test',
+        'Pending Co.',
+      );
 
       const res = await request(server())
         .post(`/api/v1/agencies/${pending.agencyId}/reviews`)
@@ -98,9 +139,21 @@ describe('Agency directory & reviews (e2e)', () => {
     });
 
     it('creates a review, updates the agency reputation score, and rejects a duplicate', async () => {
-      const alice = await registerAndVerifyTraveler(server, 'alice5@e2e.test', 'Alice');
-      const bob = await registerAndVerifyTraveler(server, 'bob5@e2e.test', 'Bob');
-      const agency = await registerAndVerifyAgency(server, 'agency5@e2e.test', 'Dream Travel Co.');
+      const alice = await registerAndVerifyTraveler(
+        server,
+        'alice5@e2e.test',
+        'Alice',
+      );
+      const bob = await registerAndVerifyTraveler(
+        server,
+        'bob5@e2e.test',
+        'Bob',
+      );
+      const agency = await registerAndVerifyAgency(
+        server,
+        'agency5@e2e.test',
+        'Dream Travel Co.',
+      );
       await approveAgency(agency.agencyId);
 
       await request(server())
@@ -131,9 +184,21 @@ describe('Agency directory & reviews (e2e)', () => {
     });
 
     it('lists reviews for an agency, newest first', async () => {
-      const alice = await registerAndVerifyTraveler(server, 'alice6@e2e.test', 'Alice');
-      const bob = await registerAndVerifyTraveler(server, 'bob6@e2e.test', 'Bob');
-      const agency = await registerAndVerifyAgency(server, 'agency6@e2e.test', 'Dream Travel Co.');
+      const alice = await registerAndVerifyTraveler(
+        server,
+        'alice6@e2e.test',
+        'Alice',
+      );
+      const bob = await registerAndVerifyTraveler(
+        server,
+        'bob6@e2e.test',
+        'Bob',
+      );
+      const agency = await registerAndVerifyAgency(
+        server,
+        'agency6@e2e.test',
+        'Dream Travel Co.',
+      );
       await approveAgency(agency.agencyId);
 
       await request(server())
@@ -157,8 +222,16 @@ describe('Agency directory & reviews (e2e)', () => {
     });
 
     it('edits and deletes a review within the 7-day window, recomputing reputation each time', async () => {
-      const alice = await registerAndVerifyTraveler(server, 'alice7@e2e.test', 'Alice');
-      const agency = await registerAndVerifyAgency(server, 'agency7@e2e.test', 'Dream Travel Co.');
+      const alice = await registerAndVerifyTraveler(
+        server,
+        'alice7@e2e.test',
+        'Alice',
+      );
+      const agency = await registerAndVerifyAgency(
+        server,
+        'agency7@e2e.test',
+        'Dream Travel Co.',
+      );
       await approveAgency(agency.agencyId);
 
       const createRes = await request(server())
@@ -195,9 +268,21 @@ describe('Agency directory & reviews (e2e)', () => {
     });
 
     it('rejects editing or deleting someone else’s review', async () => {
-      const alice = await registerAndVerifyTraveler(server, 'alice8@e2e.test', 'Alice');
-      const bob = await registerAndVerifyTraveler(server, 'bob8@e2e.test', 'Bob');
-      const agency = await registerAndVerifyAgency(server, 'agency8@e2e.test', 'Dream Travel Co.');
+      const alice = await registerAndVerifyTraveler(
+        server,
+        'alice8@e2e.test',
+        'Alice',
+      );
+      const bob = await registerAndVerifyTraveler(
+        server,
+        'bob8@e2e.test',
+        'Bob',
+      );
+      const agency = await registerAndVerifyAgency(
+        server,
+        'agency8@e2e.test',
+        'Dream Travel Co.',
+      );
       await approveAgency(agency.agencyId);
 
       const createRes = await request(server())
@@ -220,8 +305,16 @@ describe('Agency directory & reviews (e2e)', () => {
     });
 
     it('lists my own reviews across agencies with canEdit reflecting the edit window', async () => {
-      const alice = await registerAndVerifyTraveler(server, 'alice9@e2e.test', 'Alice');
-      const agency = await registerAndVerifyAgency(server, 'agency9@e2e.test', 'Dream Travel Co.');
+      const alice = await registerAndVerifyTraveler(
+        server,
+        'alice9@e2e.test',
+        'Alice',
+      );
+      const agency = await registerAndVerifyAgency(
+        server,
+        'agency9@e2e.test',
+        'Dream Travel Co.',
+      );
       await approveAgency(agency.agencyId);
 
       await request(server())

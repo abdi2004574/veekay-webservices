@@ -18,37 +18,56 @@ export class ConversationsController {
   ) {}
 
   @Post()
-  @ApiOperation({ summary: 'Start (or reuse) a direct, group, or agency conversation.' })
-  async create(@Body() dto: CreateConversationDto, @CurrentUser('userId') userId: string) {
+  @ApiOperation({
+    summary: 'Start (or reuse) a direct, group, or agency conversation.',
+  })
+  async create(
+    @Body() dto: CreateConversationDto,
+    @CurrentUser('userId') userId: string,
+  ) {
     return this.conversationsService.create(userId, dto);
   }
 
   @Get()
-  @ApiOperation({ summary: 'List your conversations, most recently active first.' })
+  @ApiOperation({
+    summary: 'List your conversations, most recently active first.',
+  })
   async list(@CurrentUser('userId') userId: string) {
     return this.conversationsService.listForUser(userId);
   }
 
   @Get('unread-count')
-  @ApiOperation({ summary: 'Total unread message count across all your conversations.' })
+  @ApiOperation({
+    summary: 'Total unread message count across all your conversations.',
+  })
   async unreadCount(@CurrentUser('userId') userId: string) {
     return { count: await this.conversationsService.unreadCount(userId) };
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Conversation detail (participants for group chats).' })
-  async getById(@Param('id') id: string, @CurrentUser('userId') userId: string) {
+  @ApiOperation({
+    summary: 'Conversation detail (participants for group chats).',
+  })
+  async getById(
+    @Param('id') id: string,
+    @CurrentUser('userId') userId: string,
+  ) {
     return this.conversationsService.getById(id, userId);
   }
 
   @Post(':id/read')
   @ApiOperation({ summary: 'Mark all messages in this conversation read.' })
-  async markRead(@Param('id') id: string, @CurrentUser('userId') userId: string) {
+  async markRead(
+    @Param('id') id: string,
+    @CurrentUser('userId') userId: string,
+  ) {
     await this.messagesService.markRead(id, userId);
   }
 
   @Post(':id/participants')
-  @ApiOperation({ summary: 'Add friends to a group conversation (admin only).' })
+  @ApiOperation({
+    summary: 'Add friends to a group conversation (admin only).',
+  })
   async addParticipants(
     @Param('id') id: string,
     @Body('userIds') userIds: string[],
@@ -58,7 +77,9 @@ export class ConversationsController {
   }
 
   @Delete(':id/participants/:userId')
-  @ApiOperation({ summary: 'Leave a group, or (admin only) remove another member.' })
+  @ApiOperation({
+    summary: 'Leave a group, or (admin only) remove another member.',
+  })
   async removeParticipant(
     @Param('id') id: string,
     @Param('userId') targetUserId: string,

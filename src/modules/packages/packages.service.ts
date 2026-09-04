@@ -17,16 +17,18 @@ export class PackagesService {
     const mediaIds = packages.flatMap(
       (p) => p.media?.map((m: { mediaId: string }) => m.mediaId) ?? [],
     );
-    const urlsByMediaId = await this.mediaAssetsService.resolveViewUrls(mediaIds);
+    const urlsByMediaId =
+      await this.mediaAssetsService.resolveViewUrls(mediaIds);
 
     return packages.map((pkg) => ({
       ...pkg,
       basePrice: Number(pkg.basePrice),
-      media: pkg.media?.map((m: { mediaId: string; displayOrder: number }) => ({
-        mediaId: m.mediaId,
-        displayOrder: m.displayOrder,
-        url: urlsByMediaId.get(m.mediaId) ?? null,
-      })) ?? [],
+      media:
+        pkg.media?.map((m: { mediaId: string; displayOrder: number }) => ({
+          mediaId: m.mediaId,
+          displayOrder: m.displayOrder,
+          url: urlsByMediaId.get(m.mediaId) ?? null,
+        })) ?? [],
       agency: pkg.agency
         ? {
             id: pkg.agency.id,
@@ -78,17 +80,20 @@ export class PackagesService {
       select: { status: true },
     });
     if (!agency || agency.status !== AgencyStatus.approved) {
-      throw AppException.forbidden('Your agency must be approved to manage packages.');
+      throw AppException.forbidden(
+        'Your agency must be approved to manage packages.',
+      );
     }
   }
 
   async create(userId: string, dto: CreatePackageDto) {
     const agencyId = await this.resolveAgencyId(userId);
     await this.assertAgencyApproved(agencyId);
-    const mediaData = dto.mediaMediaIds?.map((mediaId, displayOrder) => ({
-      mediaId,
-      displayOrder,
-    })) ?? [];
+    const mediaData =
+      dto.mediaMediaIds?.map((mediaId, displayOrder) => ({
+        mediaId,
+        displayOrder,
+      })) ?? [];
 
     const pkg = await this.prisma.package.create({
       data: {
@@ -106,7 +111,14 @@ export class PackagesService {
       },
       include: {
         media: { orderBy: { displayOrder: 'asc' } },
-        agency: { select: { id: true, agencyName: true, reputationScore: true, status: true } },
+        agency: {
+          select: {
+            id: true,
+            agencyName: true,
+            reputationScore: true,
+            status: true,
+          },
+        },
       },
     });
 
@@ -121,7 +133,14 @@ export class PackagesService {
       orderBy: { createdAt: 'desc' },
       include: {
         media: { orderBy: { displayOrder: 'asc' } },
-        agency: { select: { id: true, agencyName: true, reputationScore: true, status: true } },
+        agency: {
+          select: {
+            id: true,
+            agencyName: true,
+            reputationScore: true,
+            status: true,
+          },
+        },
       },
     });
     return this.attachViewUrls(packages);
@@ -132,7 +151,14 @@ export class PackagesService {
       where: { id: packageId },
       include: {
         media: { orderBy: { displayOrder: 'asc' } },
-        agency: { select: { id: true, agencyName: true, reputationScore: true, status: true } },
+        agency: {
+          select: {
+            id: true,
+            agencyName: true,
+            reputationScore: true,
+            status: true,
+          },
+        },
       },
     });
     if (!pkg) {
@@ -201,7 +227,14 @@ export class PackagesService {
         data: updateData,
         include: {
           media: { orderBy: { displayOrder: 'asc' } },
-          agency: { select: { id: true, agencyName: true, reputationScore: true, status: true } },
+          agency: {
+            select: {
+              id: true,
+              agencyName: true,
+              reputationScore: true,
+              status: true,
+            },
+          },
         },
       });
     });
@@ -243,7 +276,14 @@ export class PackagesService {
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
       include: {
         media: { orderBy: { displayOrder: 'asc' } },
-        agency: { select: { id: true, agencyName: true, reputationScore: true, status: true } },
+        agency: {
+          select: {
+            id: true,
+            agencyName: true,
+            reputationScore: true,
+            status: true,
+          },
+        },
       },
     });
 
@@ -257,7 +297,11 @@ export class PackagesService {
     };
   }
 
-  async linkToCampaign(packageId: string, campaignId: string, travelerId: string) {
+  async linkToCampaign(
+    packageId: string,
+    campaignId: string,
+    travelerId: string,
+  ) {
     const pkg = await this.prisma.package.findUnique({
       where: { id: packageId },
       select: { id: true, status: true },
@@ -278,7 +322,9 @@ export class PackagesService {
       where: { packageId, campaignId },
     });
     if (existing) {
-      throw AppException.conflict('This package is already linked to your campaign.');
+      throw AppException.conflict(
+        'This package is already linked to your campaign.',
+      );
     }
 
     await this.prisma.packageCampaignLink.create({
@@ -286,7 +332,11 @@ export class PackagesService {
     });
   }
 
-  async unlinkFromCampaign(packageId: string, campaignId: string, travelerId: string) {
+  async unlinkFromCampaign(
+    packageId: string,
+    campaignId: string,
+    travelerId: string,
+  ) {
     const campaign = await this.prisma.campaign.findUnique({
       where: { id: campaignId },
       select: { id: true, creatorId: true },
@@ -299,7 +349,9 @@ export class PackagesService {
       where: { packageId, campaignId },
     });
     if (!link) {
-      throw AppException.notFound('This package is not linked to your campaign.');
+      throw AppException.notFound(
+        'This package is not linked to your campaign.',
+      );
     }
 
     await this.prisma.packageCampaignLink.delete({ where: { id: link.id } });

@@ -23,7 +23,9 @@ export class GroupCampaignsService {
   ) {}
 
   private async assertMember(campaignId: string, userId: string) {
-    const campaign = await this.prisma.campaign.findUnique({ where: { id: campaignId } });
+    const campaign = await this.prisma.campaign.findUnique({
+      where: { id: campaignId },
+    });
     if (!campaign || !campaign.isGroup) {
       throw AppException.notFound('Group trip not found.');
     }
@@ -67,7 +69,10 @@ export class GroupCampaignsService {
     const contributedByMember = new Map(
       contributionSums.map((c) => [c.memberUserId, Number(c._sum.amount ?? 0)]),
     );
-    const totalRaised = [...contributedByMember.values()].reduce((sum, v) => sum + v, 0);
+    const totalRaised = [...contributedByMember.values()].reduce(
+      (sum, v) => sum + v,
+      0,
+    );
     const totalSpent = Number(expenseSum._sum.amount ?? 0);
 
     return {
@@ -89,7 +94,8 @@ export class GroupCampaignsService {
           role: m.role,
           isCreator: m.userId === campaign.creatorId,
           contributed,
-          percentage: totalRaised > 0 ? Math.round((contributed / totalRaised) * 100) : 0,
+          percentage:
+            totalRaised > 0 ? Math.round((contributed / totalRaised) * 100) : 0,
         };
       }),
     };
@@ -114,7 +120,10 @@ export class GroupCampaignsService {
       throw AppException.conflict('This user is already a group member.');
     }
 
-    const areFriends = await this.friendsService.areFriends(adminId, dto.userId);
+    const areFriends = await this.friendsService.areFriends(
+      adminId,
+      dto.userId,
+    );
     if (!areFriends) {
       throw AppException.forbidden('You can only add friends to a group trip.');
     }
@@ -127,9 +136,11 @@ export class GroupCampaignsService {
     // caller, so the group chat can't exist until this first add — create
     // it lazily here, then just append participants from then on.
     if (campaign.groupConversationId) {
-      await this.conversationsService.addParticipants(campaign.groupConversationId, adminId, [
-        dto.userId,
-      ]);
+      await this.conversationsService.addParticipants(
+        campaign.groupConversationId,
+        adminId,
+        [dto.userId],
+      );
     } else {
       const conversation = await this.conversationsService.create(adminId, {
         type: 'group',
@@ -143,7 +154,11 @@ export class GroupCampaignsService {
     }
   }
 
-  async removeMember(campaignId: string, adminId: string, targetUserId: string) {
+  async removeMember(
+    campaignId: string,
+    adminId: string,
+    targetUserId: string,
+  ) {
     const { campaign } = await this.assertAdmin(campaignId, adminId);
 
     if (targetUserId === campaign.creatorId) {
@@ -177,7 +192,11 @@ export class GroupCampaignsService {
     });
   }
 
-  async addContribution(campaignId: string, userId: string, dto: CreateGroupContributionDto) {
+  async addContribution(
+    campaignId: string,
+    userId: string,
+    dto: CreateGroupContributionDto,
+  ) {
     await this.assertMember(campaignId, userId);
     return this.prisma.groupContribution.create({
       data: {
@@ -199,14 +218,20 @@ export class GroupCampaignsService {
     });
   }
 
-  async addExpense(campaignId: string, userId: string, dto: CreateGroupExpenseDto) {
+  async addExpense(
+    campaignId: string,
+    userId: string,
+    dto: CreateGroupExpenseDto,
+  ) {
     await this.assertMember(campaignId, userId);
 
     const paidByMembership = await this.prisma.groupMember.findUnique({
       where: { campaignId_userId: { campaignId, userId: dto.paidByUserId } },
     });
     if (!paidByMembership) {
-      throw AppException.badRequest('paidByUserId must be a current group member.');
+      throw AppException.badRequest(
+        'paidByUserId must be a current group member.',
+      );
     }
 
     return this.prisma.groupExpense.create({
@@ -223,7 +248,9 @@ export class GroupCampaignsService {
 
   async removeExpense(campaignId: string, expenseId: string, adminId: string) {
     await this.assertAdmin(campaignId, adminId);
-    const expense = await this.prisma.groupExpense.findUnique({ where: { id: expenseId } });
+    const expense = await this.prisma.groupExpense.findUnique({
+      where: { id: expenseId },
+    });
     if (!expense || expense.campaignId !== campaignId) {
       throw AppException.notFound('Expense not found.');
     }
@@ -247,10 +274,15 @@ export class GroupCampaignsService {
         where: { campaignId: { in: campaignIds } },
         _sum: { amount: true },
       }),
-      campaigns.map((c) => c.photos[0]?.mediaId).filter((id): id is string => !!id),
+      campaigns
+        .map((c) => c.photos[0]?.mediaId)
+        .filter((id): id is string => !!id),
     ];
-    const raisedByCampaign = new Map(sums.map((s) => [s.campaignId, Number(s._sum.amount ?? 0)]));
-    const urlsByMediaId = await this.mediaAssetsService.resolveViewUrls(mediaIds);
+    const raisedByCampaign = new Map(
+      sums.map((s) => [s.campaignId, Number(s._sum.amount ?? 0)]),
+    );
+    const urlsByMediaId =
+      await this.mediaAssetsService.resolveViewUrls(mediaIds);
 
     return campaigns.map((c) => ({
       id: c.id,
@@ -259,7 +291,9 @@ export class GroupCampaignsService {
       goalAmount: Number(c.goalAmount),
       memberCount: c.groupMembers.length,
       raised: raisedByCampaign.get(c.id) ?? 0,
-      photoUrl: c.photos[0] ? (urlsByMediaId.get(c.photos[0].mediaId) ?? null) : null,
+      photoUrl: c.photos[0]
+        ? (urlsByMediaId.get(c.photos[0].mediaId) ?? null)
+        : null,
     }));
   }
 }

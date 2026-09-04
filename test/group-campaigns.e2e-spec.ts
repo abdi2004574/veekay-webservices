@@ -50,7 +50,10 @@ describe('Group Campaigns (e2e)', () => {
     return mediaId;
   }
 
-  async function befriend(a: { accessToken: string; userId: string }, b: { accessToken: string; userId: string }) {
+  async function befriend(
+    a: { accessToken: string; userId: string },
+    b: { accessToken: string; userId: string },
+  ) {
     const sendRes = await request(server())
       .post('/api/v1/friend-requests')
       .set('Authorization', `Bearer ${a.accessToken}`)
@@ -62,7 +65,10 @@ describe('Group Campaigns (e2e)', () => {
       .expect(201);
   }
 
-  async function createGroupCampaign(accessToken: string, overrides: Record<string, unknown> = {}) {
+  async function createGroupCampaign(
+    accessToken: string,
+    overrides: Record<string, unknown> = {},
+  ) {
     const mediaId = await uploadPhoto(accessToken);
     const res = await request(server())
       .post('/api/v1/campaigns')
@@ -83,7 +89,11 @@ describe('Group Campaigns (e2e)', () => {
   }
 
   it('forces privacy to private and seeds the creator as admin', async () => {
-    const alice = await registerAndVerifyTraveler(server, 'alice@e2e.test', 'Alice');
+    const alice = await registerAndVerifyTraveler(
+      server,
+      'alice@e2e.test',
+      'Alice',
+    );
     const campaign = await createGroupCampaign(alice.accessToken);
 
     expect(campaign.privacy).toEqual('private');
@@ -93,11 +103,18 @@ describe('Group Campaigns (e2e)', () => {
       .set('Authorization', `Bearer ${alice.accessToken}`)
       .expect(200);
     expect(overviewRes.body.data.members).toHaveLength(1);
-    expect(overviewRes.body.data.members[0]).toMatchObject({ userId: alice.userId, role: 'admin' });
+    expect(overviewRes.body.data.members[0]).toMatchObject({
+      userId: alice.userId,
+      role: 'admin',
+    });
   });
 
   it('never appears in public browse, even though it is a real campaign', async () => {
-    const alice = await registerAndVerifyTraveler(server, 'alice@e2e.test', 'Alice');
+    const alice = await registerAndVerifyTraveler(
+      server,
+      'alice@e2e.test',
+      'Alice',
+    );
     await createGroupCampaign(alice.accessToken);
 
     const browseRes = await request(server())
@@ -108,9 +125,17 @@ describe('Group Campaigns (e2e)', () => {
   });
 
   it('rejects adding a non-friend, and rejects a non-admin trying to add anyone', async () => {
-    const alice = await registerAndVerifyTraveler(server, 'alice@e2e.test', 'Alice');
+    const alice = await registerAndVerifyTraveler(
+      server,
+      'alice@e2e.test',
+      'Alice',
+    );
     const bob = await registerAndVerifyTraveler(server, 'bob@e2e.test', 'Bob');
-    const carol = await registerAndVerifyTraveler(server, 'carol@e2e.test', 'Carol');
+    const carol = await registerAndVerifyTraveler(
+      server,
+      'carol@e2e.test',
+      'Carol',
+    );
     const campaign = await createGroupCampaign(alice.accessToken);
 
     // Bob isn't Alice's friend yet.
@@ -138,7 +163,11 @@ describe('Group Campaigns (e2e)', () => {
   });
 
   it('creates the group chat on the first member add and keeps it in sync', async () => {
-    const alice = await registerAndVerifyTraveler(server, 'alice@e2e.test', 'Alice');
+    const alice = await registerAndVerifyTraveler(
+      server,
+      'alice@e2e.test',
+      'Alice',
+    );
     const bob = await registerAndVerifyTraveler(server, 'bob@e2e.test', 'Bob');
     await befriend(alice, bob);
     const campaign = await createGroupCampaign(alice.accessToken);
@@ -154,13 +183,23 @@ describe('Group Campaigns (e2e)', () => {
       .set('Authorization', `Bearer ${bob.accessToken}`)
       .expect(200);
     expect(
-      bobConversations.body.data.some((c: { title: string }) => c.title === campaign.title),
+      bobConversations.body.data.some(
+        (c: { title: string }) => c.title === campaign.title,
+      ),
     ).toBe(true);
   });
 
   it('blocks a non-member from every group endpoint', async () => {
-    const alice = await registerAndVerifyTraveler(server, 'alice@e2e.test', 'Alice');
-    const stranger = await registerAndVerifyTraveler(server, 'stranger@e2e.test', 'Stranger');
+    const alice = await registerAndVerifyTraveler(
+      server,
+      'alice@e2e.test',
+      'Alice',
+    );
+    const stranger = await registerAndVerifyTraveler(
+      server,
+      'stranger@e2e.test',
+      'Stranger',
+    );
     const campaign = await createGroupCampaign(alice.accessToken);
 
     await request(server())
@@ -179,7 +218,11 @@ describe('Group Campaigns (e2e)', () => {
   });
 
   it('self-attributes contributions and computes overview totals/percentages correctly', async () => {
-    const alice = await registerAndVerifyTraveler(server, 'alice@e2e.test', 'Alice');
+    const alice = await registerAndVerifyTraveler(
+      server,
+      'alice@e2e.test',
+      'Alice',
+    );
     const bob = await registerAndVerifyTraveler(server, 'bob@e2e.test', 'Bob');
     await befriend(alice, bob);
     const campaign = await createGroupCampaign(alice.accessToken);
@@ -206,14 +249,22 @@ describe('Group Campaigns (e2e)', () => {
       .expect(200);
 
     expect(overviewRes.body.data.totalRaised).toEqual(1000);
-    const aliceRow = overviewRes.body.data.members.find((m: { userId: string }) => m.userId === alice.userId);
-    const bobRow = overviewRes.body.data.members.find((m: { userId: string }) => m.userId === bob.userId);
+    const aliceRow = overviewRes.body.data.members.find(
+      (m: { userId: string }) => m.userId === alice.userId,
+    );
+    const bobRow = overviewRes.body.data.members.find(
+      (m: { userId: string }) => m.userId === bob.userId,
+    );
     expect(aliceRow).toMatchObject({ contributed: 750, percentage: 75 });
     expect(bobRow).toMatchObject({ contributed: 250, percentage: 25 });
   });
 
   it('expense lifecycle: any member can log an expense, only an admin can delete it', async () => {
-    const alice = await registerAndVerifyTraveler(server, 'alice@e2e.test', 'Alice');
+    const alice = await registerAndVerifyTraveler(
+      server,
+      'alice@e2e.test',
+      'Alice',
+    );
     const bob = await registerAndVerifyTraveler(server, 'bob@e2e.test', 'Bob');
     await befriend(alice, bob);
     const campaign = await createGroupCampaign(alice.accessToken);
@@ -226,7 +277,12 @@ describe('Group Campaigns (e2e)', () => {
     const expenseRes = await request(server())
       .post(`/api/v1/campaigns/${campaign.id}/group/expenses`)
       .set('Authorization', `Bearer ${bob.accessToken}`)
-      .send({ name: 'Flights', amount: 500, category: 'transportation', paidByUserId: alice.userId })
+      .send({
+        name: 'Flights',
+        amount: 500,
+        category: 'transportation',
+        paidByUserId: alice.userId,
+      })
       .expect(201);
     const expenseId = expenseRes.body.data.id;
 
@@ -249,19 +305,36 @@ describe('Group Campaigns (e2e)', () => {
   });
 
   it('rejects logging an expense paid by someone who is not a group member', async () => {
-    const alice = await registerAndVerifyTraveler(server, 'alice@e2e.test', 'Alice');
-    const outsider = await registerAndVerifyTraveler(server, 'outsider@e2e.test', 'Outsider');
+    const alice = await registerAndVerifyTraveler(
+      server,
+      'alice@e2e.test',
+      'Alice',
+    );
+    const outsider = await registerAndVerifyTraveler(
+      server,
+      'outsider@e2e.test',
+      'Outsider',
+    );
     const campaign = await createGroupCampaign(alice.accessToken);
 
     await request(server())
       .post(`/api/v1/campaigns/${campaign.id}/group/expenses`)
       .set('Authorization', `Bearer ${alice.accessToken}`)
-      .send({ name: 'Hotel', amount: 300, category: 'accommodation', paidByUserId: outsider.userId })
+      .send({
+        name: 'Hotel',
+        amount: 300,
+        category: 'accommodation',
+        paidByUserId: outsider.userId,
+      })
       .expect(400);
   });
 
   it('lists group trips you created or joined under /campaigns/group-trips/mine', async () => {
-    const alice = await registerAndVerifyTraveler(server, 'alice@e2e.test', 'Alice');
+    const alice = await registerAndVerifyTraveler(
+      server,
+      'alice@e2e.test',
+      'Alice',
+    );
     const bob = await registerAndVerifyTraveler(server, 'bob@e2e.test', 'Bob');
     await befriend(alice, bob);
     const campaign = await createGroupCampaign(alice.accessToken);
@@ -276,6 +349,9 @@ describe('Group Campaigns (e2e)', () => {
       .set('Authorization', `Bearer ${bob.accessToken}`)
       .expect(200);
     expect(bobTrips.body.data).toHaveLength(1);
-    expect(bobTrips.body.data[0]).toMatchObject({ id: campaign.id, memberCount: 2 });
+    expect(bobTrips.body.data[0]).toMatchObject({
+      id: campaign.id,
+      memberCount: 2,
+    });
   });
 });

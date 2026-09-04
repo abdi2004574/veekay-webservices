@@ -37,7 +37,8 @@ export class CreateConversationDto {
   @ApiProperty({
     required: false,
     type: [String],
-    description: 'Required for type=group — friend user ids to add besides yourself.',
+    description:
+      'Required for type=group — friend user ids to add besides yourself.',
   })
   @IsOptional()
   @IsArray()

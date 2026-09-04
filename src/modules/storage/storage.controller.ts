@@ -12,7 +12,9 @@ export class StorageController {
   constructor(private readonly mediaAssetsService: MediaAssetsService) {}
 
   @Post('upload-url')
-  @ApiOperation({ summary: 'Request a presigned URL to upload a file directly to storage.' })
+  @ApiOperation({
+    summary: 'Request a presigned URL to upload a file directly to storage.',
+  })
   async createUploadUrl(
     @Body() dto: CreateUploadUrlDto,
     @CurrentUser('userId') userId: string,
@@ -21,7 +23,9 @@ export class StorageController {
   }
 
   @Post('confirm')
-  @ApiOperation({ summary: 'Confirm a file was uploaded to its presigned URL.' })
+  @ApiOperation({
+    summary: 'Confirm a file was uploaded to its presigned URL.',
+  })
   async confirmUpload(
     @Body() dto: ConfirmUploadDto,
     @CurrentUser('userId') userId: string,
@@ -30,7 +34,9 @@ export class StorageController {
   }
 
   @Get(':mediaId/view-url')
-  @ApiOperation({ summary: 'Get a presigned URL to view/download an uploaded file.' })
+  @ApiOperation({
+    summary: 'Get a presigned URL to view/download an uploaded file.',
+  })
   async getViewUrl(
     @Param('mediaId') mediaId: string,
     @CurrentUser('userId') userId: string,

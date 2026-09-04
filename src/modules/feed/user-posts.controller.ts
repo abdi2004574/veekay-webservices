@@ -13,7 +13,9 @@ export class UserPostsController {
   constructor(private readonly postsService: PostsService) {}
 
   @Get(':id/posts')
-  @ApiOperation({ summary: "List a traveler's posts (shown on their profile)." })
+  @ApiOperation({
+    summary: "List a traveler's posts (shown on their profile).",
+  })
   async listByAuthor(
     @Param('id') id: string,
     @Query('cursor') cursor: string | undefined,

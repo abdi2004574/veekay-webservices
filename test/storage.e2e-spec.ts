@@ -29,7 +29,11 @@ describe('Storage: presigned upload/confirm/view against real MinIO (e2e)', () =
   const server = () => app.getHttpServer();
 
   it('rejects a disallowed content type for the purpose', async () => {
-    const alice = await registerAndVerifyTraveler(server, 'alice@e2e.test', 'Alice');
+    const alice = await registerAndVerifyTraveler(
+      server,
+      'alice@e2e.test',
+      'Alice',
+    );
 
     const res = await request(server())
       .post('/api/v1/storage/upload-url')
@@ -40,7 +44,11 @@ describe('Storage: presigned upload/confirm/view against real MinIO (e2e)', () =
   });
 
   it('uploads a real file to MinIO, confirms it, and resolves a working view URL', async () => {
-    const alice = await registerAndVerifyTraveler(server, 'alice2@e2e.test', 'Alice');
+    const alice = await registerAndVerifyTraveler(
+      server,
+      'alice2@e2e.test',
+      'Alice',
+    );
 
     const urlRes = await request(server())
       .post('/api/v1/storage/upload-url')
@@ -81,7 +89,11 @@ describe('Storage: presigned upload/confirm/view against real MinIO (e2e)', () =
   });
 
   it('rejects confirming before the file is actually uploaded', async () => {
-    const alice = await registerAndVerifyTraveler(server, 'alice3@e2e.test', 'Alice');
+    const alice = await registerAndVerifyTraveler(
+      server,
+      'alice3@e2e.test',
+      'Alice',
+    );
 
     const urlRes = await request(server())
       .post('/api/v1/storage/upload-url')
@@ -98,7 +110,11 @@ describe('Storage: presigned upload/confirm/view against real MinIO (e2e)', () =
   });
 
   it('rejects confirming a media asset owned by someone else', async () => {
-    const alice = await registerAndVerifyTraveler(server, 'alice4@e2e.test', 'Alice');
+    const alice = await registerAndVerifyTraveler(
+      server,
+      'alice4@e2e.test',
+      'Alice',
+    );
     const bob = await registerAndVerifyTraveler(server, 'bob4@e2e.test', 'Bob');
 
     const urlRes = await request(server())
@@ -116,7 +132,11 @@ describe('Storage: presigned upload/confirm/view against real MinIO (e2e)', () =
   });
 
   it('rejects a non-owner viewing an agency document', async () => {
-    const alice = await registerAndVerifyTraveler(server, 'alice5@e2e.test', 'Alice');
+    const alice = await registerAndVerifyTraveler(
+      server,
+      'alice5@e2e.test',
+      'Alice',
+    );
     const bob = await registerAndVerifyTraveler(server, 'bob5@e2e.test', 'Bob');
 
     const urlRes = await request(server())

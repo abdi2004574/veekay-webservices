@@ -25,7 +25,9 @@ function buildClient(
   const endpointUrl = new URL(endpoint);
   return new MinioClient({
     endPoint: endpointUrl.hostname,
-    port: Number(endpointUrl.port) || (endpointUrl.protocol === 'https:' ? 443 : 80),
+    port:
+      Number(endpointUrl.port) ||
+      (endpointUrl.protocol === 'https:' ? 443 : 80),
     useSSL: endpointUrl.protocol === 'https:',
     // Without this, the SDK calls GetBucketLocation against the endpoint to
     // discover the region on first use — the publicClient's endpoint isn't
@@ -79,7 +81,10 @@ export class StorageService implements OnModuleInit {
         this.logger.log(`Created storage bucket "${this.bucket}"`);
       }
     } catch (error) {
-      this.logger.error('Could not verify/create storage bucket on startup', error);
+      this.logger.error(
+        'Could not verify/create storage bucket on startup',
+        error,
+      );
     }
   }
 

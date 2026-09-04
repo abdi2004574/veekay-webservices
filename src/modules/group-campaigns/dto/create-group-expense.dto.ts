@@ -27,11 +27,17 @@ export class CreateGroupExpenseDto {
   @IsEnum(GroupExpenseCategory)
   category: GroupExpenseCategory;
 
-  @ApiProperty({ description: 'userId of the group member who paid — must be a current member.' })
+  @ApiProperty({
+    description:
+      'userId of the group member who paid — must be a current member.',
+  })
   @IsString()
   paidByUserId: string;
 
-  @ApiProperty({ required: false, description: 'ISO date string, defaults to now.' })
+  @ApiProperty({
+    required: false,
+    description: 'ISO date string, defaults to now.',
+  })
   @IsOptional()
   @IsDateString()
   spentAt?: string;

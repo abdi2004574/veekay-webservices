@@ -24,7 +24,9 @@ export class MessagesController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'List messages, newest first (also marks them delivered to you).' })
+  @ApiOperation({
+    summary: 'List messages, newest first (also marks them delivered to you).',
+  })
   async list(
     @Param('conversationId') conversationId: string,
     @Query('cursor') cursor: string | undefined,

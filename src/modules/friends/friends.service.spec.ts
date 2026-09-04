@@ -22,7 +22,9 @@ describe('FriendsService', () => {
 
   describe('sendRequest', () => {
     it('rejects sending a request to yourself', async () => {
-      await expect(service.sendRequest('user-1', 'user-1')).rejects.toMatchObject({
+      await expect(
+        service.sendRequest('user-1', 'user-1'),
+      ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
     });
@@ -30,7 +32,9 @@ describe('FriendsService', () => {
     it('rejects if the addressee does not exist', async () => {
       prisma.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.sendRequest('user-1', 'user-2')).rejects.toMatchObject({
+      await expect(
+        service.sendRequest('user-1', 'user-2'),
+      ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
     });
@@ -41,7 +45,9 @@ describe('FriendsService', () => {
         status: FriendRequestStatus.pending,
       });
 
-      await expect(service.sendRequest('user-1', 'user-2')).rejects.toMatchObject({
+      await expect(
+        service.sendRequest('user-1', 'user-2'),
+      ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
     });
@@ -99,7 +105,10 @@ describe('FriendsService', () => {
 
       expect(prisma.friendRequest.update).toHaveBeenCalledWith({
         where: { id: 'req-1' },
-        data: { status: FriendRequestStatus.accepted, respondedAt: expect.any(Date) },
+        data: {
+          status: FriendRequestStatus.accepted,
+          respondedAt: expect.any(Date),
+        },
       });
     });
 
@@ -118,7 +127,10 @@ describe('FriendsService', () => {
 
       expect(prisma.friendRequest.update).toHaveBeenCalledWith({
         where: { id: 'req-1' },
-        data: { status: FriendRequestStatus.declined, respondedAt: expect.any(Date) },
+        data: {
+          status: FriendRequestStatus.declined,
+          respondedAt: expect.any(Date),
+        },
       });
     });
   });
@@ -154,7 +166,9 @@ describe('FriendsService', () => {
     it('reports no connection when nothing exists between the two users', async () => {
       prisma.friendRequest.findFirst.mockResolvedValue(null);
 
-      await expect(service.getConnectionStatus('user-1', 'user-2')).resolves.toEqual({
+      await expect(
+        service.getConnectionStatus('user-1', 'user-2'),
+      ).resolves.toEqual({
         isFriend: false,
         requestSent: false,
         requestReceived: false,
@@ -168,7 +182,9 @@ describe('FriendsService', () => {
         status: FriendRequestStatus.accepted,
       });
 
-      await expect(service.getConnectionStatus('user-1', 'user-2')).resolves.toEqual({
+      await expect(
+        service.getConnectionStatus('user-1', 'user-2'),
+      ).resolves.toEqual({
         isFriend: true,
         requestSent: false,
         requestReceived: false,
@@ -182,7 +198,9 @@ describe('FriendsService', () => {
         status: FriendRequestStatus.pending,
       });
 
-      await expect(service.getConnectionStatus('user-1', 'user-2')).resolves.toEqual({
+      await expect(
+        service.getConnectionStatus('user-1', 'user-2'),
+      ).resolves.toEqual({
         isFriend: false,
         requestSent: true,
         requestReceived: false,
@@ -196,7 +214,9 @@ describe('FriendsService', () => {
         status: FriendRequestStatus.pending,
       });
 
-      await expect(service.getConnectionStatus('user-1', 'user-2')).resolves.toEqual({
+      await expect(
+        service.getConnectionStatus('user-1', 'user-2'),
+      ).resolves.toEqual({
         isFriend: false,
         requestSent: false,
         requestReceived: true,

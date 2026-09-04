@@ -16,8 +16,14 @@ describe('MessagesService', () => {
       messageReceipt: { upsert: jest.fn(), findMany: jest.fn() },
     };
     conversationsService = { assertAccess: jest.fn() };
-    mediaAssetsService = { resolveViewUrls: jest.fn().mockResolvedValue(new Map()) };
-    service = new MessagesService(prisma, conversationsService, mediaAssetsService);
+    mediaAssetsService = {
+      resolveViewUrls: jest.fn().mockResolvedValue(new Map()),
+    };
+    service = new MessagesService(
+      prisma,
+      conversationsService,
+      mediaAssetsService,
+    );
   });
 
   describe('send', () => {
@@ -74,7 +80,10 @@ describe('MessagesService', () => {
         createdAt: now,
       });
 
-      const result = await service.send('conv-1', 'user-1', { type: 'text', body: '  hi  ' });
+      const result = await service.send('conv-1', 'user-1', {
+        type: 'text',
+        body: '  hi  ',
+      });
 
       expect(prisma.message.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -100,7 +109,9 @@ describe('MessagesService', () => {
         mediaId: 'media-1',
         createdAt: new Date(),
       });
-      mediaAssetsService.resolveViewUrls.mockResolvedValue(new Map([['media-1', 'https://x/1']]));
+      mediaAssetsService.resolveViewUrls.mockResolvedValue(
+        new Map([['media-1', 'https://x/1']]),
+      );
 
       const result = await service.send('conv-1', 'user-1', {
         type: 'image',
@@ -141,7 +152,12 @@ describe('MessagesService', () => {
 
     it('computes read/delivered/sent status only for my own messages', async () => {
       prisma.message.findMany.mockResolvedValue([
-        { id: 'm-mine', senderId: 'user-1', createdAt: new Date(), mediaId: null },
+        {
+          id: 'm-mine',
+          senderId: 'user-1',
+          createdAt: new Date(),
+          mediaId: null,
+        },
       ]);
       prisma.messageReceipt.findMany.mockResolvedValue([
         { messageId: 'm-mine', status: MessageReceiptStatus.read },
@@ -154,7 +170,12 @@ describe('MessagesService', () => {
 
     it('reports sent when no receipt exists yet for my own message', async () => {
       prisma.message.findMany.mockResolvedValue([
-        { id: 'm-mine', senderId: 'user-1', createdAt: new Date(), mediaId: null },
+        {
+          id: 'm-mine',
+          senderId: 'user-1',
+          createdAt: new Date(),
+          mediaId: null,
+        },
       ]);
       prisma.messageReceipt.findMany.mockResolvedValue([]);
 

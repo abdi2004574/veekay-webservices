@@ -14,7 +14,10 @@ const BACKGROUND_COLORS = [
 ];
 
 export class CreateStoryDto {
-  @ApiProperty({ required: false, description: 'Media asset id from a prior presigned upload.' })
+  @ApiProperty({
+    required: false,
+    description: 'Media asset id from a prior presigned upload.',
+  })
   @IsOptional()
   @IsString()
   imageMediaId?: string;

@@ -16,7 +16,9 @@ import { UpdateSmartReplyTemplateDto } from './dto/update-smart-reply-template.d
 const REQUEST_INCLUDE = {
   traveler: { select: { id: true, username: true, displayName: true } },
   agency: { select: { id: true, agencyName: true, status: true } },
-  package: { select: { id: true, title: true, basePrice: true, currency: true } },
+  package: {
+    select: { id: true, title: true, basePrice: true, currency: true },
+  },
   campaign: { select: { id: true, title: true, destination: true } },
 } as const;
 
@@ -184,7 +186,11 @@ export class TripRequestsService {
 
   // ──────────────────────── Shared: get detail ──────────────────────────────
 
-  async getDetailForCaller(requestId: string, callerId: string, callerRole: UserRole) {
+  async getDetailForCaller(
+    requestId: string,
+    callerId: string,
+    callerRole: UserRole,
+  ) {
     const request = await this.prisma.tripRequest.findUnique({
       where: { id: requestId },
       include: REQUEST_INCLUDE,

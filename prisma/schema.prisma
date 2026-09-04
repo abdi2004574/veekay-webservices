@@ -54,6 +54,7 @@ model User {
   stripeConnectAccounts    StripeConnectAccount[]
   travelerProfile          TravelerProfile?
   withdrawalRequests       WithdrawalRequest[]
+  tripRequests             TripRequest[]
 
   @@map("users")
 }
@@ -203,6 +204,8 @@ model Agency {
   staff                 AgencyStaff[]
   conversations         Conversation[]
   packages              Package[]
+  tripRequests          TripRequest[]
+  smartReplyTemplates   SmartReplyTemplate[]
   stripeConnectAccounts StripeConnectAccount[]
 
   @@map("agencies")
@@ -386,6 +389,7 @@ model Conversation {
   agency           Agency?                   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   createdBy        User                      @relation(fields: [createdById], references: [id], onDelete: Cascade)
   messages         Message[]
+  tripRequest      TripRequest?
 
   @@map("conversations")
 }
@@ -466,6 +470,7 @@ model Campaign {
   groupMembers        GroupMember[]
   packageLinks        PackageCampaignLink[]
   withdrawalRequests  WithdrawalRequest[]
+  tripRequests        TripRequest[]
 
   @@index([creatorId])
   @@map("campaigns")
@@ -501,6 +506,7 @@ model Package {
   campaignLinks    PackageCampaignLink[]
   media            PackageMedia[]
   agency           Agency                @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  tripRequests     TripRequest[]
 
   @@index([agencyId])
   @@map("packages")
@@ -571,6 +577,41 @@ model GroupExpense {
   paidBy       User                 @relation(fields: [paidByUserId], references: [id], onDelete: Cascade)
 
   @@map("group_expenses")
+}
+
+model TripRequest {
+  id              String            @id @default(uuid())
+  travelerId      String            @map("traveler_id")
+  agencyId        String            @map("agency_id")
+  packageId       String?           @map("package_id")
+  campaignId      String?           @map("campaign_id")
+  status          TripRequestStatus @default(pending)
+  initialMessage  String?           @map("initial_message")
+  conversationId  String?           @unique @map("conversation_id")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+  traveler        User              @relation(fields: [travelerId], references: [id], onDelete: Cascade)
+  agency          Agency            @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  package         Package?          @relation(fields: [packageId], references: [id])
+  campaign        Campaign?         @relation(fields: [campaignId], references: [id])
+  conversation    Conversation?     @relation(fields: [conversationId], references: [id])
+
+  @@index([travelerId])
+  @@index([agencyId])
+  @@map("trip_requests")
+}
+
+model SmartReplyTemplate {
+  id         String    @id @default(uuid())
+  agencyId   String    @map("agency_id")
+  title      String
+  body       String
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  agency     Agency    @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@index([agencyId])
+  @@map("smart_reply_templates")
 }
 
 model StripeConnectAccount {
@@ -861,4 +902,13 @@ enum GroupExpenseCategory {
   activities
   food
   other
+}
+
+enum TripRequestStatus {
+  pending
+  in_discussion
+  confirmed
+  completed
+  declined
+  cancelled
 }

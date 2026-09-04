@@ -1,4 +1,9 @@
-import { AgencyDocumentType, AgencyStaffPermission, AgencyStatus, UserRole } from '@prisma/client';
+import {
+  AgencyDocumentType,
+  AgencyStaffPermission,
+  AgencyStatus,
+  UserRole,
+} from '@prisma/client';
 import { AgenciesService } from './agencies.service';
 
 describe('AgenciesService', () => {
@@ -15,7 +20,10 @@ describe('AgenciesService', () => {
 
   describe('submitRegistration', () => {
     it('rejects a non-agency user', async () => {
-      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', role: UserRole.traveler });
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        role: UserRole.traveler,
+      });
 
       await expect(
         service.submitRegistration('user-1', {
@@ -27,7 +35,10 @@ describe('AgenciesService', () => {
     });
 
     it('rejects a second registration for the same agency user', async () => {
-      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', role: UserRole.agency });
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        role: UserRole.agency,
+      });
       prisma.agency.findUnique.mockResolvedValue({ id: 'agency-1' });
 
       await expect(
@@ -51,14 +62,21 @@ describe('AgenciesService', () => {
       await service.submitRegistration('user-1', {
         businessContactDetails: '+1 555 0100',
         businessAddress: '123 Main St',
-        documents: [{ type: AgencyDocumentType.business_license, mediaId: 'media-1' }],
+        documents: [
+          { type: AgencyDocumentType.business_license, mediaId: 'media-1' },
+        ],
       });
 
       expect(prisma.agency.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           userId: 'user-1',
           agencyName: 'Dream Travel Co.',
-          staff: { create: { userId: 'user-1', permission: AgencyStaffPermission.owner } },
+          staff: {
+            create: {
+              userId: 'user-1',
+              permission: AgencyStaffPermission.owner,
+            },
+          },
         }),
         include: { documents: true },
       });

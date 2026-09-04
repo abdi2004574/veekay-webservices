@@ -64,7 +64,8 @@ export class CreateCampaignDto {
 
   @ApiProperty({
     type: [String],
-    description: 'Ordered media asset ids from prior presigned uploads (up to 5).',
+    description:
+      'Ordered media asset ids from prior presigned uploads (up to 5).',
   })
   @IsArray()
   @ArrayMinSize(1)
@@ -85,7 +86,8 @@ export class CreateCampaignDto {
   @ApiProperty({
     required: false,
     default: false,
-    description: 'Group trip campaigns are always forced private, never in public discovery.',
+    description:
+      'Group trip campaigns are always forced private, never in public discovery.',
   })
   @IsOptional()
   @IsBoolean()
