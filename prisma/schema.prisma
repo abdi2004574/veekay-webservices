@@ -52,6 +52,7 @@ model User {
   storyLikes               StoryLike[]
   storyViews               StoryView[]
   stripeConnectAccounts    StripeConnectAccount[]
+  walletAccount           WalletAccount?
   travelerProfile          TravelerProfile?
   withdrawalRequests       WithdrawalRequest[]
   tripRequests             TripRequest[]
@@ -600,6 +601,37 @@ model TripRequest {
   @@index([agencyId])
   @@map("trip_requests")
 }
+model WalletAccount {
+  id             String              @id @default(uuid())
+  userId         String              @unique @map("user_id")
+  currency       String              @default("USD")
+  cachedBalance  Decimal             @default(0) @map("cached_balance")
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions   WalletTransaction[]
+
+  @@map("wallet_accounts")
+}
+
+model WalletTransaction {
+  id              String                  @id @default(uuid())
+  walletAccountId String                  @map("wallet_account_id")
+  direction       WalletTransactionDirection
+  amount          Decimal
+  currency        String                  @default("USD")
+  type            WalletTransactionType
+  referenceType   String?                 @map("reference_type")
+  referenceId     String?                 @map("reference_id")
+  idempotencyKey  String?                 @unique @map("idempotency_key")
+  description     String?
+  createdAt       DateTime                @default(now()) @map("created_at")
+  walletAccount   WalletAccount           @relation(fields: [walletAccountId], references: [id], onDelete: Cascade)
+
+  @@index([walletAccountId, createdAt])
+  @@map("wallet_transactions")
+}
+
 
 model SmartReplyTemplate {
   id         String    @id @default(uuid())
@@ -614,6 +646,7 @@ model SmartReplyTemplate {
   @@map("smart_reply_templates")
 }
 
+/// DEPRECATED / pending funding-rail decision: kept in schema for the eventual processor integration, no live code paths in this build.
 model StripeConnectAccount {
   id               String   @id @default(uuid())
   userId           String?  @map("user_id")
@@ -632,25 +665,26 @@ model StripeConnectAccount {
 }
 
 model Donation {
-  id                    String         @id @default(uuid())
-  campaignId            String         @map("campaign_id")
-  donorUserId           String?        @map("donor_user_id")
-  amount                Decimal
-  currency              String         @default("USD")
-  isAnonymous           Boolean        @default(false) @map("is_anonymous")
-  giftMessage           String?        @map("gift_message")
-  isGift                Boolean        @default(false) @map("is_gift")
-  stripePaymentIntentId String?        @unique @map("stripe_payment_intent_id")
-  status                DonationStatus @default(pending)
-  receiptEmailSentAt    DateTime?      @map("receipt_email_sent_at")
-  createdAt             DateTime       @default(now()) @map("created_at")
-  updatedAt             DateTime       @updatedAt @map("updated_at")
-  campaign              Campaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  donor                 User?          @relation(fields: [donorUserId], references: [id])
+  id                String   @id @default(uuid())
+  campaignId        String   @map("campaign_id")
+  donorUserId       String?  @map("donor_user_id")
+  donorDisplayName  String?  @map("donor_display_name")
+  amount            Decimal
+  currency          String   @default("USD")
+  isAnonymous       Boolean  @default(false) @map("is_anonymous")
+  giftMessage       String?  @map("gift_message")
+  isGift            Boolean  @default(false) @map("is_gift")
+  walletTransactionId String? @unique @map("wallet_transaction_id")
+  receiptEmailSentAt DateTime? @map("receipt_email_sent_at")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  campaign          Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  donor             User?    @relation(fields: [donorUserId], references: [id])
 
   @@map("donations")
 }
 
+/// DEPRECATED / pending funding-rail decision: kept in schema for the eventual processor integration, no live code paths in this build.
 model PaymentMethod {
   id                    String            @id @default(uuid())
   userId                String            @map("user_id")
@@ -668,6 +702,7 @@ model PaymentMethod {
   @@map("payment_methods")
 }
 
+/// DEPRECATED / pending funding-rail decision: kept in schema for the eventual processor integration, no live code paths in this build.
 model PayoutAccount {
   id                 String              @id @default(uuid())
   userId             String              @map("user_id")
@@ -684,22 +719,26 @@ model PayoutAccount {
 }
 
 model WithdrawalRequest {
-  id              String           @id @default(uuid())
-  userId          String           @map("user_id")
-  campaignId      String?          @map("campaign_id")
-  payoutAccountId String           @map("payout_account_id")
-  amount          Decimal
-  status          WithdrawalStatus @default(pending)
-  stripePayoutId  String?          @unique @map("stripe_payout_id")
-  createdAt       DateTime         @default(now()) @map("created_at")
-  updatedAt       DateTime         @updatedAt @map("updated_at")
-  campaign        Campaign?        @relation(fields: [campaignId], references: [id])
-  payoutAccount   PayoutAccount    @relation(fields: [payoutAccountId], references: [id])
-  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                String             @id @default(uuid())
+  userId            String             @map("user_id")
+  campaignId        String?            @map("campaign_id")
+  payoutAccountId   String?            @map("payout_account_id")
+  amount            Decimal
+  currency          String             @default("USD")
+  status            WithdrawalStatus   @default(requested)
+  highValueThreshold Decimal?          @map("high_value_threshold")
+  walletTransactionId String?          @unique @map("wallet_transaction_id")
+  rejectionReason   String?            @map("rejection_reason")
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
+  campaign          Campaign?          @relation(fields: [campaignId], references: [id])
+  payoutAccount     PayoutAccount?     @relation(fields: [payoutAccountId], references: [id], onDelete: SetNull)
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("withdrawal_requests")
 }
 
+/// DEPRECATED / pending funding-rail decision: kept in schema for the eventual processor integration, no live code paths in this build.
 model StripeWebhookEvent {
   id               String    @id @default(uuid())
   eventId          String    @unique @map("event_id")
@@ -851,17 +890,12 @@ enum PayoutAccountType {
 }
 
 enum WithdrawalStatus {
-  pending
-  processing
-  completed
-  failed
+  requested
+  approved
+  rejected
+  paid
 }
 
-enum DonationStatus {
-  pending
-  succeeded
-  failed
-}
 
 enum CampaignStatus {
   draft
@@ -911,4 +945,17 @@ enum TripRequestStatus {
   completed
   declined
   cancelled
+}
+
+enum WalletTransactionDirection {
+  credit
+  debit
+}
+
+enum WalletTransactionType {
+  donation_received
+  withdrawal
+  refund
+  commission
+  booking_payment
 }

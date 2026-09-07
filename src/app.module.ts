@@ -1,4 +1,4 @@
-﻿import { Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
@@ -21,6 +21,7 @@ import { CampaignsModule } from './modules/campaigns/campaigns.module';
 import { GroupCampaignsModule } from './modules/group-campaigns/group-campaigns.module';
 import { PackagesModule } from './modules/packages/packages.module';
 import { TripRequestsModule } from './modules/trip-requests/trip-requests.module';
+import { WalletModule } from './modules/wallet/wallet.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
@@ -77,6 +78,7 @@ import { AppConfig } from './config/configuration';
     GroupCampaignsModule,
     PackagesModule,
     TripRequestsModule,
+    WalletModule,
   ],
   controllers: [AppController],
   providers: [
@@ -91,3 +93,5 @@ import { AppConfig } from './config/configuration';
   ],
 })
 export class AppModule {}
+
+

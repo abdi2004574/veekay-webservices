@@ -33,6 +33,10 @@ export async function resetDb(): Promise<void> {
     prisma.conversationParticipant.deleteMany(),
     prisma.conversation.deleteMany(),
     prisma.mediaAsset.deleteMany(),
+    prisma.donation.deleteMany(),
+    prisma.walletTransaction.deleteMany(),
+    prisma.withdrawalRequest.deleteMany(),
+    prisma.walletAccount.deleteMany(),
     prisma.user.deleteMany(),
   ]);
 }
