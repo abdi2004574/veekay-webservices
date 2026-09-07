@@ -1,6 +1,7 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { AppException } from '../../common/errors/app.exception';
 import { MediaAssetsService } from './media-assets.service';
 import { CreateUploadUrlDto } from './dto/create-upload-url.dto';
 import { ConfirmUploadDto } from './dto/confirm-upload.dto';
@@ -39,9 +40,17 @@ export class StorageController {
   })
   async getViewUrl(
     @Param('mediaId') mediaId: string,
+    @Query('entityType') entityType: string,
+    @Query('entityId') entityId: string,
     @CurrentUser('userId') userId: string,
   ) {
-    const url = await this.mediaAssetsService.getViewUrl(userId, mediaId);
+    if (!entityType || !entityId) {
+      throw AppException.badRequest('entityType and entityId query parameters are required.');
+    }
+    const url = await this.mediaAssetsService.getViewUrl(userId, mediaId, { entityType, entityId });
     return { url };
   }
 }
+
+
+

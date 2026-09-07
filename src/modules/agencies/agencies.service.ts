@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { AgencyStaffPermission, AgencyStatus, UserRole } from '@prisma/client';
 import { AppException } from '../../common/errors/app.exception';
+import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AgencyRegistrationDto } from './dto/agency-registration.dto';
 
@@ -33,7 +34,11 @@ function toDirectoryEntry(agency: {
 
 @Injectable()
 export class AgenciesService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(AgenciesService.name);
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mailService: MailService,
+  ) {}
 
   async listDirectory(cursor?: string, limit = 20, search?: string) {
     const agencies = await this.prisma.agency.findMany({
@@ -102,5 +107,93 @@ export class AgenciesService {
       },
       include: { documents: true },
     });
+  }
+
+  async findPending() {
+    return this.prisma.agency.findMany({
+      where: { status: AgencyStatus.pending_verification },
+      select: {
+        id: true,
+        agencyName: true,
+        businessContact: true,
+        businessAddress: true,
+        status: true,
+        createdAt: true,
+        user: { select: { id: true, email: true, displayName: true, username: true } },
+        documents: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  async approve(agencyId: string, actorUserId: string) {
+    const agency = await this.prisma.agency.findUnique({
+      where: { id: agencyId },
+      include: { user: true },
+    });
+    if (!agency) {
+      throw AppException.notFound('Agency not found.');
+    }
+    if (agency.status !== AgencyStatus.pending_verification) {
+      throw AppException.businessRule(
+        `Agency is already ${agency.status}. Only pending agencies can be approved.`,
+      );
+    }
+
+    const updated = await this.prisma.agency.update({
+      where: { id: agencyId },
+      data: { status: AgencyStatus.approved },
+      include: { user: true },
+    });
+
+    this.logger.log(
+      JSON.stringify({
+        audit: 'agency.verification.approved',
+        actorUserId,
+        agencyId: updated.id,
+        agencyName: updated.agencyName,
+        userId: updated.userId,
+      }),
+    );
+
+    await this.mailService.sendAgencyApprovedEmail(updated.user.email, updated.agencyName);
+
+    return updated;
+  }
+
+  async reject(agencyId: string, reason: string, actorUserId: string) {
+    const agency = await this.prisma.agency.findUnique({
+      where: { id: agencyId },
+      include: { user: true },
+    });
+    if (!agency) {
+      throw AppException.notFound('Agency not found.');
+    }
+    if (agency.status !== AgencyStatus.pending_verification) {
+      throw AppException.businessRule(
+        `Agency is already ${agency.status}. Only pending agencies can be rejected.`,
+      );
+    }
+
+    const updated = await this.prisma.agency.update({
+      where: { id: agencyId },
+      data: { status: AgencyStatus.rejected, rejectionReason: reason },
+      include: { user: true },
+    });
+
+    this.logger.log(
+      JSON.stringify({
+        audit: 'agency.verification.rejected',
+        actorUserId,
+        agencyId: updated.id,
+        agencyName: updated.agencyName,
+        userId: updated.userId,
+        reason,
+      }),
+    );
+
+    await this.mailService.sendAgencyRejectedEmail(updated.user.email, reason);
+
+    return updated;
   }
 }
