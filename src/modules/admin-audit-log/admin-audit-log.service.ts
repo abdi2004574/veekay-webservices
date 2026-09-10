@@ -5,7 +5,9 @@ import { AuditLogFilterDto } from './dto/audit-log-filter.dto';
 
 export type AdminAuditLogClient = Parameters<
   PrismaService['$transaction']
->[0] extends (arg: infer C) => unknown ? C : never;
+>[0] extends (arg: infer C) => unknown
+  ? C
+  : never;
 
 @Injectable()
 export class AdminAuditLogService {
@@ -73,4 +75,3 @@ export class AdminAuditLogService {
     };
   }
 }
-

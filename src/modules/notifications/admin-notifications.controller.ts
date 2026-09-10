@@ -1,4 +1,12 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PlatformRole } from '@prisma/client';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -12,7 +20,9 @@ import { SegmentsPreviewDto } from './dto/segments-preview.dto';
 @RequirePlatformRole(PlatformRole.super_admin)
 @Controller('admin/notifications')
 export class AdminNotificationsController {
-  constructor(private readonly broadcastService: NotificationBroadcastService) {}
+  constructor(
+    private readonly broadcastService: NotificationBroadcastService,
+  ) {}
 
   @Post('broadcast')
   @HttpCode(HttpStatus.OK)
@@ -25,7 +35,9 @@ export class AdminNotificationsController {
   }
 
   @Get('segments/preview')
-  @ApiOperation({ summary: '[Super Admin] Preview estimated reach for a broadcast target.' })
+  @ApiOperation({
+    summary: '[Super Admin] Preview estimated reach for a broadcast target.',
+  })
   async preview(@Query() dto: SegmentsPreviewDto) {
     return this.broadcastService.previewSegments(dto);
   }

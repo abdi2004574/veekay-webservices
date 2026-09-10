@@ -13,7 +13,10 @@ export class VerifiedBadgesService {
     private readonly adminAuditLogService: AdminAuditLogService,
   ) {}
 
-  async assign(actorId: string, dto: { subjectType: VerifiedBadgeSubjectType; subjectId: string }): Promise<VerifiedBadge> {
+  async assign(
+    actorId: string,
+    dto: { subjectType: VerifiedBadgeSubjectType; subjectId: string },
+  ): Promise<VerifiedBadge> {
     const existing = await this.prisma.verifiedBadge.findFirst({
       where: {
         subjectType: dto.subjectType,
@@ -23,7 +26,9 @@ export class VerifiedBadgesService {
     });
 
     if (existing) {
-      throw AppException.conflict('A verified badge already exists for this subject.');
+      throw AppException.conflict(
+        'A verified badge already exists for this subject.',
+      );
     }
 
     const badge = await this.prisma.verifiedBadge.create({

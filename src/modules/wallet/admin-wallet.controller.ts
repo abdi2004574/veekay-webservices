@@ -101,7 +101,9 @@ export class AdminWalletController {
 
   @Patch('withdrawals/:id/refund-note')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '[Super Admin] Update refund note on a withdrawal.' })
+  @ApiOperation({
+    summary: '[Super Admin] Update refund note on a withdrawal.',
+  })
   async updateRefundNote(
     @Param('id') id: string,
     @Body('refundNote') refundNote: string,

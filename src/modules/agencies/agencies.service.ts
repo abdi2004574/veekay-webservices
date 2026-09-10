@@ -162,7 +162,7 @@ export class AgenciesService {
 
     try {
       await this.notificationsService.create(updated.userId, {
-        type: 'verification_status' as any,
+        type: 'verification_status',
         title: 'Agency Verified',
         body: 'Congratulations! Your agency has been verified and approved.',
         deepLinkTarget: 'agency',
@@ -215,7 +215,7 @@ export class AgenciesService {
 
     try {
       await this.notificationsService.create(updated.userId, {
-        type: 'verification_status' as any,
+        type: 'verification_status',
         title: 'Agency Verification Update',
         body: `Your agency registration was not approved. Reason: ${reason}`,
         deepLinkTarget: 'agency',

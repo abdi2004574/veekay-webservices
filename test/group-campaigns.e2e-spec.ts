@@ -387,7 +387,11 @@ describe('Group Campaigns (e2e)', () => {
         'alice@e2e.test',
         'Alice',
       );
-      const bob = await registerAndVerifyTraveler(server, 'bob@e2e.test', 'Bob');
+      const bob = await registerAndVerifyTraveler(
+        server,
+        'bob@e2e.test',
+        'Bob',
+      );
       await befriend(alice, bob);
       const campaign = await createGroupCampaign(alice.accessToken);
       await request(server())
@@ -415,7 +419,11 @@ describe('Group Campaigns (e2e)', () => {
         'alice@e2e.test',
         'Alice',
       );
-      const bob = await registerAndVerifyTraveler(server, 'bob@e2e.test', 'Bob');
+      const bob = await registerAndVerifyTraveler(
+        server,
+        'bob@e2e.test',
+        'Bob',
+      );
       await befriend(alice, bob);
       const campaign = await createGroupCampaign(alice.accessToken);
       await request(server())
@@ -457,7 +465,11 @@ describe('Group Campaigns (e2e)', () => {
         'alice@e2e.test',
         'Alice',
       );
-      const bob = await registerAndVerifyTraveler(server, 'bob@e2e.test', 'Bob');
+      const bob = await registerAndVerifyTraveler(
+        server,
+        'bob@e2e.test',
+        'Bob',
+      );
       await befriend(alice, bob);
       const campaign = await createGroupCampaign(alice.accessToken);
       await request(server())

@@ -22,7 +22,10 @@ describe('MilestoneNotificationService', () => {
     it('returns true when no log exists', async () => {
       prisma.milestoneNotificationLog.findFirst.mockResolvedValue(null);
 
-      const result = await service.shouldNotify('campaign-1', MilestoneType.p50);
+      const result = await service.shouldNotify(
+        'campaign-1',
+        MilestoneType.p50,
+      );
 
       expect(result).toBe(true);
       expect(prisma.milestoneNotificationLog.findFirst).toHaveBeenCalledWith({
@@ -36,7 +39,10 @@ describe('MilestoneNotificationService', () => {
         campaignId: 'campaign-1',
       });
 
-      const result = await service.shouldNotify('campaign-1', MilestoneType.p50);
+      const result = await service.shouldNotify(
+        'campaign-1',
+        MilestoneType.p50,
+      );
 
       expect(result).toBe(false);
     });
@@ -80,7 +86,9 @@ describe('MilestoneNotificationService', () => {
         MilestoneType.p50,
       );
 
-      expect(prisma.milestoneNotificationLog.findFirstOrThrow).toHaveBeenCalledWith({
+      expect(
+        prisma.milestoneNotificationLog.findFirstOrThrow,
+      ).toHaveBeenCalledWith({
         where: { campaignId: 'campaign-1', milestone: MilestoneType.p50 },
       });
       expect(result.campaignId).toBe('campaign-1');
@@ -156,9 +164,7 @@ describe('MilestoneNotificationService', () => {
 
       expect(result).toBeInstanceOf(Map);
       expect(result.size).toBe(0);
-      expect(
-        prisma.milestoneNotificationLog.findMany,
-      ).not.toHaveBeenCalled();
+      expect(prisma.milestoneNotificationLog.findMany).not.toHaveBeenCalled();
     });
   });
 });

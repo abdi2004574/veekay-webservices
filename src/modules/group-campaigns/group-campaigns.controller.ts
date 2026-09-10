@@ -1,4 +1,12 @@
-﻿import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+﻿import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -58,14 +66,21 @@ export class GroupCampaignsController {
   }
 
   @Patch('members/:userId')
-  @ApiOperation({ summary: "Update a member's withdraw permission (admin-only)." })
+  @ApiOperation({
+    summary: "Update a member's withdraw permission (admin-only).",
+  })
   async updateMemberWithdrawPermission(
     @Param('id') id: string,
     @Param('userId') targetUserId: string,
     @Body() dto: UpdateGroupMemberDto,
     @CurrentUser('userId') adminId: string,
   ) {
-    return this.groupCampaignsService.updateMemberWithdrawPermission(id, adminId, targetUserId, dto.canWithdraw);
+    return this.groupCampaignsService.updateMemberWithdrawPermission(
+      id,
+      adminId,
+      targetUserId,
+      dto.canWithdraw,
+    );
   }
 
   @Get('contributions')

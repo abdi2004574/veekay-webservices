@@ -42,7 +42,8 @@ export class NotificationBroadcastService {
             title: dto.title,
             body: dto.body,
             deepLinkTarget: dto.metadata?.deepLinkTarget as string | undefined,
-            deepLinkEntityId: dto.metadata?.deepLinkEntityId as string | undefined,
+            deepLinkEntityId: dto.metadata?.deepLinkEntityId as
+              string | undefined,
             metadata: dto.metadata,
             channel: undefined,
           });
@@ -77,13 +78,20 @@ export class NotificationBroadcastService {
     return { sentCount, failedCount };
   }
 
-  async previewSegments(
-    dto: SegmentsPreviewDto,
-  ): Promise<{ estimatedReach: number; breakdown: { travelers: number; agencies: number; admins: number } }> {
+  async previewSegments(dto: SegmentsPreviewDto): Promise<{
+    estimatedReach: number;
+    breakdown: { travelers: number; agencies: number; admins: number };
+  }> {
     const [travelers, agencies, admins] = await Promise.all([
-      this.prisma.user.count({ where: { role: UserRole.traveler, isActive: true } }),
-      this.prisma.user.count({ where: { role: UserRole.agency, isActive: true } }),
-      this.prisma.user.count({ where: { role: UserRole.admin, isActive: true } }),
+      this.prisma.user.count({
+        where: { role: UserRole.traveler, isActive: true },
+      }),
+      this.prisma.user.count({
+        where: { role: UserRole.agency, isActive: true },
+      }),
+      this.prisma.user.count({
+        where: { role: UserRole.admin, isActive: true },
+      }),
     ]);
 
     const breakdown = { travelers, agencies, admins };
@@ -104,10 +112,13 @@ export class NotificationBroadcastService {
     return { estimatedReach, breakdown };
   }
 
-  private async resolveTargetUserIds(dto: BroadcastNotificationDto): Promise<string[]> {
+  private async resolveTargetUserIds(
+    dto: BroadcastNotificationDto,
+  ): Promise<string[]> {
     switch (dto.target) {
       case 'role': {
-        const role = dto.role === 'traveler' ? UserRole.traveler : UserRole.agency;
+        const role =
+          dto.role === 'traveler' ? UserRole.traveler : UserRole.agency;
         const users = await this.prisma.user.findMany({
           where: { role, isActive: true },
           select: { id: true },

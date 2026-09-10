@@ -12,10 +12,18 @@ import { AdminAuditLogService } from '../admin-audit-log/admin-audit-log.service
 import { VerifiedBadgesService } from '../verified-badges/verified-badges.service';
 import { CreateCampaignDto } from './dto/create-campaign.dto';
 import { UpdateCampaignDto } from './dto/update-campaign.dto';
+import { AdminCampaignFilterDto } from './dto/admin-campaign-filter.dto';
+import { UpdateCampaignFlagDto } from './dto/update-campaign-flag.dto';
+import {
+  decodeCursor,
+  toCursorPage,
+} from '../../common/utils/cursor-pagination.util';
 
 const CREATOR_SELECT = {
   select: { id: true, username: true, displayName: true },
 };
+
+const NOT_DELETED = { deletedAt: null };
 
 @Injectable()
 export class CampaignsService {
@@ -177,20 +185,21 @@ export class CampaignsService {
     const [withUrls] = await this.attachViewUrls([campaign]);
     return withUrls;
   }
+
   async remove(campaignId: string, creatorId: string) {
     await this.findOwnedOrThrow(campaignId, creatorId);
-    const photos = await this.prisma.campaignPhoto.findMany({
-      where: { campaignId },
-      select: { mediaId: true },
+    await this.prisma.campaign.update({
+      where: { id: campaignId },
+      data: {
+        deletedAt: new Date(),
+        deletedById: creatorId,
+      },
     });
-    const mediaIds = photos.map((p) => p.mediaId);
-    await this.prisma.campaign.delete({ where: { id: campaignId } });
-    await this.mediaAssetsService.cleanupMediaAssets(mediaIds);
   }
 
   async listMine(creatorId: string) {
     const campaigns = await this.prisma.campaign.findMany({
-      where: { creatorId },
+      where: { creatorId, ...NOT_DELETED },
       orderBy: { createdAt: 'desc' },
       include: { photos: { orderBy: { position: 'asc' } } },
     });
@@ -207,6 +216,7 @@ export class CampaignsService {
       where: {
         privacy: CampaignPrivacy.public,
         isGroup: false,
+        deletedAt: null,
         ...(creatorId ? { creatorId } : {}),
         ...(search
           ? {
@@ -246,7 +256,7 @@ export class CampaignsService {
         creator: CREATOR_SELECT,
       },
     });
-    if (!campaign) {
+    if (!campaign || campaign.deletedAt !== null) {
       throw AppException.notFound('Campaign not found.');
     }
     const isCreator = campaign.creatorId === viewerId;
@@ -270,7 +280,7 @@ export class CampaignsService {
     const campaign = await this.prisma.campaign.findUnique({
       where: { id: campaignId },
     });
-    if (!campaign) {
+    if (!campaign || campaign.deletedAt !== null) {
       throw AppException.notFound('Campaign not found.');
     }
     if (
@@ -280,6 +290,171 @@ export class CampaignsService {
       throw AppException.notFound('Campaign not found.');
     }
     return { items: [] };
+  }
+
+  private toAdminCampaign(campaign: any) {
+    return {
+      id: campaign.id,
+      title: campaign.title,
+      destination: campaign.destination,
+      goalAmount: Number(campaign.goalAmount),
+      raisedAmount: Number(campaign.raisedAmount),
+      currency: campaign.currency,
+      status: campaign.status,
+      privacy: campaign.privacy,
+      isGiftMode: campaign.giftMode,
+      creator: {
+        id: campaign.creator.id,
+        displayName: campaign.creator.displayName ?? campaign.creator.username,
+        email: campaign.creator.email,
+      },
+      createdAt: campaign.createdAt,
+      ...(campaign.status === CampaignStatus.flagged
+        ? {
+            flaggedAt: campaign.updatedAt,
+            flagReason: campaign.verificationNote,
+          }
+        : {}),
+    };
+  }
+
+  async listAdminCampaigns(
+    filter: AdminCampaignFilterDto,
+    cursor?: string,
+    limit = 20,
+  ) {
+    const position = decodeCursor(cursor);
+    const search = filter.search?.trim();
+    const where: any = {
+      deletedAt: null,
+      ...(search
+        ? {
+            OR: [
+              { title: { contains: search, mode: 'insensitive' } },
+              { destination: { contains: search, mode: 'insensitive' } },
+              {
+                creator: {
+                  OR: [
+                    { email: { contains: search, mode: 'insensitive' } },
+                    { displayName: { contains: search, mode: 'insensitive' } },
+                    { username: { contains: search, mode: 'insensitive' } },
+                  ],
+                },
+              },
+            ],
+          }
+        : {}),
+      ...(filter.status ? { status: filter.status } : {}),
+      ...(filter.privacy ? { privacy: filter.privacy } : {}),
+      ...(filter.flagged !== undefined
+        ? {
+            status: filter.flagged
+              ? CampaignStatus.flagged
+              : { not: CampaignStatus.flagged },
+          }
+        : {}),
+    };
+
+    const campaigns = await this.prisma.campaign.findMany({
+      where,
+      select: {
+        id: true,
+        title: true,
+        destination: true,
+        goalAmount: true,
+        raisedAmount: true,
+        currency: true,
+        status: true,
+        privacy: true,
+        giftMode: true,
+        createdAt: true,
+        updatedAt: true,
+        verificationNote: true,
+        creator: {
+          select: { id: true, username: true, displayName: true, email: true },
+        },
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: limit + 1,
+      ...(position
+        ? {
+            cursor: { createdAt: position.createdAt, id: position.id },
+            skip: 1,
+          }
+        : {}),
+    });
+    const page = toCursorPage(campaigns, limit);
+
+    return {
+      data: page.items.map((campaign) => this.toAdminCampaign(campaign)),
+      meta: { cursor: page.cursor, hasMore: page.hasMore },
+    };
+  }
+
+  async flagCampaign(
+    campaignId: string,
+    dto: UpdateCampaignFlagDto,
+    actorUserId: string,
+  ) {
+    const campaign = await this.prisma.campaign.findUnique({
+      where: { id: campaignId },
+      include: { creator: true },
+    });
+    if (!campaign || campaign.deletedAt !== null) {
+      throw AppException.notFound('Campaign not found.');
+    }
+
+    const reason = dto.reason?.trim() || null;
+    const updated = await this.prisma.campaign.update({
+      where: { id: campaignId },
+      data: {
+        status: CampaignStatus.flagged,
+        verificationStatus: VerificationStatus.flagged,
+        verificationNote: reason,
+        verifiedBadgeAssignedAt: null,
+      },
+      include: { creator: true },
+    });
+
+    await this.adminAuditLogService.record(
+      actorUserId,
+      'campaign.flagged',
+      'campaign',
+      campaignId,
+      reason ?? undefined,
+    );
+
+    return this.toAdminCampaign(updated);
+  }
+
+  async unflagCampaign(campaignId: string, actorUserId: string) {
+    const campaign = await this.prisma.campaign.findUnique({
+      where: { id: campaignId },
+      include: { creator: true },
+    });
+    if (!campaign || campaign.deletedAt !== null) {
+      throw AppException.notFound('Campaign not found.');
+    }
+
+    const updated = await this.prisma.campaign.update({
+      where: { id: campaignId },
+      data: {
+        status: CampaignStatus.active,
+        verificationStatus: VerificationStatus.unverified,
+        verificationNote: null,
+        verifiedBadgeAssignedAt: null,
+      },
+      include: { creator: true },
+    });
+
+    await this.adminAuditLogService.record(
+      actorUserId,
+      'campaign.unflagged',
+      'campaign',
+      campaignId,
+    );
+
+    return this.toAdminCampaign(updated);
   }
 
   async updateVerificationStatus(
@@ -323,7 +498,10 @@ export class CampaignsService {
       } catch (error) {
         // ignore duplicate badge
       }
-    } else if (status === VerificationStatus.flagged || status === VerificationStatus.rejected) {
+    } else if (
+      status === VerificationStatus.flagged ||
+      status === VerificationStatus.rejected
+    ) {
       updateData.verifiedBadgeAssignedAt = null;
       await this.prisma.travelerProfile.update({
         where: { userId: campaign.creatorId },
@@ -333,7 +511,10 @@ export class CampaignsService {
         },
       });
       try {
-        const badge = await this.verifiedBadgesService.findActiveBySubject('user', campaign.creatorId);
+        const badge = await this.verifiedBadgesService.findActiveBySubject(
+          'user',
+          campaign.creatorId,
+        );
         if (badge) {
           await this.verifiedBadgesService.revoke(actorUserId ?? '', badge.id);
         }

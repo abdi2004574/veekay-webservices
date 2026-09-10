@@ -69,7 +69,8 @@ export class ReviewsService {
       where: { id: reviewerId },
       select: { username: true, displayName: true },
     });
-    const reviewerName = reviewer?.displayName ?? reviewer?.username ?? 'Someone';
+    const reviewerName =
+      reviewer?.displayName ?? reviewer?.username ?? 'Someone';
 
     try {
       await this.notificationsService.create(agency.userId, {

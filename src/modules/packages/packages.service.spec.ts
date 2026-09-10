@@ -15,7 +15,11 @@ describe('PackagesService', () => {
         findMany: jest.fn(),
         findUnique: jest.fn(),
       },
-      packageMedia: { deleteMany: jest.fn(), createMany: jest.fn(), findMany: jest.fn() },
+      packageMedia: {
+        deleteMany: jest.fn(),
+        createMany: jest.fn(),
+        findMany: jest.fn(),
+      },
       packageCampaignLink: {
         findFirst: jest.fn(),
         create: jest.fn(),

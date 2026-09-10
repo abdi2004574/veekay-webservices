@@ -45,7 +45,8 @@ describe('AdminInvitesService', () => {
       const dto = {
         email: 'new.admin@example.com',
         platformRole: 'super_admin' as const,
-        acceptUrl: 'http://localhost:57800/admin/invites/accept?token=RAW_TOKEN',
+        acceptUrl:
+          'http://localhost:57800/admin/invites/accept?token=RAW_TOKEN',
       };
 
       const result = await service.create('actor-1', dto);
@@ -147,7 +148,10 @@ describe('AdminInvitesService', () => {
       };
       prisma.adminInvite.findUnique.mockResolvedValue(existingInvite);
 
-      const revokedInvite = { ...existingInvite, status: AdminInviteStatus.revoked };
+      const revokedInvite = {
+        ...existingInvite,
+        status: AdminInviteStatus.revoked,
+      };
       prisma.adminInvite.update.mockResolvedValue(revokedInvite);
 
       const result = await service.revoke('actor-1', 'invite-1');
@@ -172,9 +176,11 @@ describe('AdminInvitesService', () => {
       };
       prisma.adminInvite.findUnique.mockResolvedValue(existingInvite);
 
-      await expect(service.revoke('actor-1', 'invite-1')).rejects.toMatchObject({
-        getStatus: expect.any(Function),
-      });
+      await expect(service.revoke('actor-1', 'invite-1')).rejects.toMatchObject(
+        {
+          getStatus: expect.any(Function),
+        },
+      );
       expect(prisma.adminInvite.update).not.toHaveBeenCalled();
     });
   });
@@ -223,7 +229,9 @@ describe('AdminInvitesService', () => {
     it('rejects expired invite by returning empty findMany result', async () => {
       prisma.adminInvite.findMany.mockResolvedValue([]);
 
-      await expect(service.accept('user-1', { token: 'any-token' })).rejects.toMatchObject({
+      await expect(
+        service.accept('user-1', { token: 'any-token' }),
+      ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
     });
@@ -231,7 +239,9 @@ describe('AdminInvitesService', () => {
     it('rejects non-pending invite by returning empty findMany result', async () => {
       prisma.adminInvite.findMany.mockResolvedValue([]);
 
-      await expect(service.accept('user-1', { token: 'any-token' })).rejects.toMatchObject({
+      await expect(
+        service.accept('user-1', { token: 'any-token' }),
+      ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
     });

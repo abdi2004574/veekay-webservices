@@ -620,8 +620,12 @@ describe('MediaAssetsService', () => {
 
       await service.cleanupMediaAssets(['m1', 'm2']);
 
-      expect(storageService.deleteObject).toHaveBeenCalledWith('post_media/u1/m1.jpg');
-      expect(storageService.deleteObject).toHaveBeenCalledWith('post_media/u1/m2.jpg');
+      expect(storageService.deleteObject).toHaveBeenCalledWith(
+        'post_media/u1/m1.jpg',
+      );
+      expect(storageService.deleteObject).toHaveBeenCalledWith(
+        'post_media/u1/m2.jpg',
+      );
       expect(prisma.mediaAsset.update).toHaveBeenCalledWith({
         where: { id: 'm1' },
         data: { status: MediaStatus.deleted },
@@ -691,4 +695,3 @@ describe('MediaAssetsService', () => {
     });
   });
 });
-

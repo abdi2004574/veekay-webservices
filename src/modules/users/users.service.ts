@@ -1,5 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { CampaignPrivacy, NotificationType, ProfileVisibility, UserRole, VerificationStatus } from '@prisma/client';
+import {
+  CampaignPrivacy,
+  CampaignStatus,
+  NotificationType,
+  ProfileVisibility,
+  UserRole,
+  VerificationStatus,
+} from '@prisma/client';
 import { TripRequestStatus } from '@prisma/client';
 import { AppException } from '../../common/errors/app.exception';
 import { PrismaService } from '../prisma/prisma.service';
@@ -13,6 +20,15 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto';
 import { UpdatePrivacySettingsDto } from './dto/update-privacy-settings.dto';
 import { UpdateKycDto } from './dto/update-kyc.dto';
+import {
+  AdminUserFilterDto,
+  AdminUserStatus,
+} from './dto/admin-user-filter.dto';
+import { UpdateUserStatusDto } from './dto/update-user-status.dto';
+import {
+  decodeCursor,
+  toCursorPage,
+} from '../../common/utils/cursor-pagination.util';
 
 @Injectable()
 export class UsersService {
@@ -312,7 +328,9 @@ export class UsersService {
         ...(dto.travelStyles
           ? {
               travelStyles: {
-                create: dto.travelStyles.map((travelStyle) => ({ travelStyle })),
+                create: dto.travelStyles.map((travelStyle) => ({
+                  travelStyle,
+                })),
               },
             }
           : {}),
@@ -342,7 +360,9 @@ export class UsersService {
           ? {
               travelStyles: {
                 deleteMany: {},
-                create: dto.travelStyles.map((travelStyle) => ({ travelStyle })),
+                create: dto.travelStyles.map((travelStyle) => ({
+                  travelStyle,
+                })),
               },
             }
           : {}),
@@ -357,19 +377,19 @@ export class UsersService {
       where: { userId },
     });
 
-    const prefMap = new Map(
-      prefs.map((p) => [p.type, p]),
-    );
+    const prefMap = new Map(prefs.map((p) => [p.type, p]));
 
-    return (Object.values(NotificationType) as NotificationType[]).map((type) => {
-      const existing = prefMap.get(type);
-      return {
-        type,
-        inAppEnabled: existing?.inAppEnabled ?? true,
-        pushEnabled: existing?.pushEnabled ?? true,
-        emailEnabled: existing?.emailEnabled ?? false,
-      };
-    });
+    return (Object.values(NotificationType) as NotificationType[]).map(
+      (type) => {
+        const existing = prefMap.get(type);
+        return {
+          type,
+          inAppEnabled: existing?.inAppEnabled ?? true,
+          pushEnabled: existing?.pushEnabled ?? true,
+          emailEnabled: existing?.emailEnabled ?? false,
+        };
+      },
+    );
   }
 
   async updateNotificationPreferences(
@@ -381,8 +401,7 @@ export class UsersService {
     const updateData: Record<string, boolean> = {};
     if (dto.inAppEnabled !== undefined)
       updateData.inAppEnabled = dto.inAppEnabled;
-    if (dto.pushEnabled !== undefined)
-      updateData.pushEnabled = dto.pushEnabled;
+    if (dto.pushEnabled !== undefined) updateData.pushEnabled = dto.pushEnabled;
     if (dto.emailEnabled !== undefined)
       updateData.emailEnabled = dto.emailEnabled;
 
@@ -519,7 +538,10 @@ export class UsersService {
 
     if (status !== VerificationStatus.verified) {
       try {
-        const badge = await this.verifiedBadgesService.findActiveBySubject('user', targetUserId);
+        const badge = await this.verifiedBadgesService.findActiveBySubject(
+          'user',
+          targetUserId,
+        );
         if (badge) {
           await this.verifiedBadgesService.revoke(actorUserId ?? '', badge.id);
         }
@@ -567,10 +589,155 @@ export class UsersService {
       .sort((a, b) => b.completedTripCount - a.completedTripCount)
       .slice(0, limit);
   }
+  private toAdminUserSummary(user: any) {
+    return {
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName ?? user.username ?? user.email,
+      role: user.platformRole === 'super_admin' ? 'super_admin' : user.role,
+      platformRole: user.platformRole,
+      isActive: user.isActive,
+      ...(user.deactivatedAt ? { deactivatedAt: user.deactivatedAt } : {}),
+      createdAt: user.createdAt,
+      ...(user.lastLoginAt ? { lastLoginAt: user.lastLoginAt } : {}),
+      ...(user.travelerProfile
+        ? {
+            profile: {
+              bio: user.travelerProfile.bio ?? undefined,
+              location: user.travelerProfile.location ?? undefined,
+              badge: user.travelerProfile.badge,
+              walletConnected: user.travelerProfile.walletConnected,
+            },
+          }
+        : {}),
+    };
+  }
+
+  async listAdminUsers(
+    filter: AdminUserFilterDto,
+    cursor?: string,
+    limit = 20,
+  ) {
+    const position = decodeCursor(cursor);
+    const search = filter.search?.trim();
+    const where: any = {
+      ...(search
+        ? {
+            OR: [
+              { email: { contains: search, mode: 'insensitive' } },
+              { displayName: { contains: search, mode: 'insensitive' } },
+              { username: { contains: search, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+      ...(filter.role ? { role: filter.role } : {}),
+      ...(filter.status === AdminUserStatus.active ? { isActive: true } : {}),
+      ...(filter.status === AdminUserStatus.deactivated
+        ? { isActive: false }
+        : {}),
+    };
+
+    const users = await this.prisma.user.findMany({
+      where,
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        username: true,
+        role: true,
+        platformRole: true,
+        isActive: true,
+        deactivatedAt: true,
+        createdAt: true,
+        lastLoginAt: true,
+        travelerProfile: {
+          select: {
+            bio: true,
+            location: true,
+            badge: true,
+            walletConnected: true,
+          },
+        },
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: limit + 1,
+      ...(position
+        ? {
+            cursor: { createdAt: position.createdAt, id: position.id },
+            skip: 1,
+          }
+        : {}),
+    });
+    const page = toCursorPage(users, limit);
+
+    return {
+      data: page.items.map((user) => this.toAdminUserSummary(user)),
+      meta: { cursor: page.cursor, hasMore: page.hasMore },
+    };
+  }
+
+  async getAdminUserDetail(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { travelerProfile: true },
+    });
+    if (!user) {
+      throw AppException.notFound('User not found.');
+    }
+
+    const [campaignsCreated, campaignsFunded, donationsMade] =
+      await Promise.all([
+        this.prisma.campaign.count({ where: { creatorId: userId } }),
+        this.prisma.campaign.count({
+          where: { creatorId: userId, status: CampaignStatus.funded },
+        }),
+        this.prisma.donation.count({ where: { donorUserId: userId } }),
+      ]);
+
+    return {
+      ...this.toAdminUserSummary(user),
+      stats: { campaignsCreated, campaignsFunded, donationsMade },
+    };
+  }
+
+  async updateAdminUserStatus(
+    userId: string,
+    dto: UpdateUserStatusDto,
+    actorUserId: string,
+  ) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw AppException.notFound('User not found.');
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        isActive: dto.isActive,
+        deactivatedAt: dto.isActive ? null : new Date(),
+      },
+    });
+
+    if (!dto.isActive) {
+      await this.tokenService.revokeAllRefreshTokensForUser(userId);
+    }
+
+    await this.adminAuditLogService.record(
+      actorUserId,
+      dto.isActive ? 'user.activated' : 'user.deactivated',
+      'user',
+      userId,
+      undefined,
+      { previousIsActive: user.isActive, newIsActive: dto.isActive },
+    );
+
+    return this.toAdminUserSummary(updated);
+  }
+
   async deactivateAccount(userId: string) {
     try {
       await this.notificationsService.create(userId, {
-        type: 'account_status' as any,
+        type: 'account_status',
         title: 'Account Deactivated',
         body: 'Your account has been deactivated. You can reactivate it by contacting support.',
         deepLinkTarget: 'settings',

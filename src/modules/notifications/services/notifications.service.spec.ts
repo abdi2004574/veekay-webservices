@@ -46,7 +46,9 @@ describe('NotificationsService', () => {
     };
 
     pushDeviceService = {
-      getActiveTokensForUser: jest.fn().mockResolvedValue(['token-1', 'token-2']),
+      getActiveTokensForUser: jest
+        .fn()
+        .mockResolvedValue(['token-1', 'token-2']),
       touch: jest.fn(),
     };
 
@@ -139,7 +141,9 @@ describe('NotificationsService', () => {
         body: 'Test body',
       });
 
-      expect(pushDeviceService.getActiveTokensForUser).toHaveBeenCalledWith('user-1');
+      expect(pushDeviceService.getActiveTokensForUser).toHaveBeenCalledWith(
+        'user-1',
+      );
       expect(firebasePush.sendTokens).toHaveBeenCalledWith(
         ['token-1', 'token-2'],
         expect.any(String),
@@ -164,7 +168,9 @@ describe('NotificationsService', () => {
         body: 'Test body',
       });
 
-      expect(pushDeviceService.getActiveTokensForUser).toHaveBeenCalledWith('user-1');
+      expect(pushDeviceService.getActiveTokensForUser).toHaveBeenCalledWith(
+        'user-1',
+      );
       expect(firebasePush.sendTokens).not.toHaveBeenCalled();
       expect(prisma.notification.update).toHaveBeenCalledWith({
         where: { id: 'notif-1' },
@@ -237,9 +243,7 @@ describe('NotificationsService', () => {
           title: 'Test',
           body: 'Test body',
         }),
-      ).resolves.toEqual(
-        expect.objectContaining({ id: 'notif-1' }),
-      );
+      ).resolves.toEqual(expect.objectContaining({ id: 'notif-1' }));
     });
 
     it('never throws if email fails (best-effort)', async () => {
@@ -257,9 +261,7 @@ describe('NotificationsService', () => {
           title: 'Donation received',
           body: '$100 was donated',
         }),
-      ).resolves.toEqual(
-        expect.objectContaining({ id: 'notif-1' }),
-      );
+      ).resolves.toEqual(expect.objectContaining({ id: 'notif-1' }));
     });
   });
 
@@ -364,7 +366,12 @@ describe('NotificationsService', () => {
 
       prisma.notification.findMany.mockResolvedValue(page);
 
-      const result = await service.listForUser('user-1', undefined, undefined, 2);
+      const result = await service.listForUser(
+        'user-1',
+        undefined,
+        undefined,
+        2,
+      );
 
       expect(result.items).toHaveLength(2);
       expect(result.items[0].id).toBe('notif-0');
@@ -421,10 +428,14 @@ describe('NotificationsService', () => {
     it('throws 404 if notification does not exist', async () => {
       prisma.notification.findUnique.mockResolvedValue(null);
 
-      await expect(service.markRead('notif-1', 'user-1')).rejects.toThrow(AppException);
-      await expect(service.markRead('notif-1', 'user-1')).rejects.toMatchObject({
-        getStatus: expect.any(Function),
-      });
+      await expect(service.markRead('notif-1', 'user-1')).rejects.toThrow(
+        AppException,
+      );
+      await expect(service.markRead('notif-1', 'user-1')).rejects.toMatchObject(
+        {
+          getStatus: expect.any(Function),
+        },
+      );
     });
 
     it('throws 404 if notification belongs to another user', async () => {
@@ -442,10 +453,14 @@ describe('NotificationsService', () => {
         createdAt: new Date(),
       });
 
-      await expect(service.markRead('notif-1', 'user-1')).rejects.toThrow(AppException);
-      await expect(service.markRead('notif-1', 'user-1')).rejects.toMatchObject({
-        getStatus: expect.any(Function),
-      });
+      await expect(service.markRead('notif-1', 'user-1')).rejects.toThrow(
+        AppException,
+      );
+      await expect(service.markRead('notif-1', 'user-1')).rejects.toMatchObject(
+        {
+          getStatus: expect.any(Function),
+        },
+      );
     });
   });
 
@@ -501,7 +516,9 @@ describe('NotificationsService', () => {
     it('throws 404 if notification does not exist', async () => {
       prisma.notification.findUnique.mockResolvedValue(null);
 
-      await expect(service.delete('notif-1', 'user-1')).rejects.toThrow(AppException);
+      await expect(service.delete('notif-1', 'user-1')).rejects.toThrow(
+        AppException,
+      );
       await expect(service.delete('notif-1', 'user-1')).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
@@ -522,7 +539,9 @@ describe('NotificationsService', () => {
         createdAt: new Date(),
       });
 
-      await expect(service.delete('notif-1', 'user-1')).rejects.toThrow(AppException);
+      await expect(service.delete('notif-1', 'user-1')).rejects.toThrow(
+        AppException,
+      );
       await expect(service.delete('notif-1', 'user-1')).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });

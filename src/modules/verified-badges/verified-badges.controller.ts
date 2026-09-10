@@ -24,10 +24,7 @@ export class VerifiedBadgesController {
 
   @Delete('/:id')
   @ApiOperation({ summary: 'Revoke a verified badge.' })
-  async revoke(
-    @Param('id') id: string,
-    @CurrentUser('userId') userId: string,
-  ) {
+  async revoke(@Param('id') id: string, @CurrentUser('userId') userId: string) {
     return this.verifiedBadgesService.revoke(userId, id);
   }
 

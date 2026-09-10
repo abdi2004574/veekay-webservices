@@ -1,8 +1,4 @@
-import {
-  ContentReport,
-  ReportStatus,
-  ReportTargetType,
-} from '@prisma/client';
+import { ContentReport, ReportStatus, ReportTargetType } from '@prisma/client';
 import { ReportsService } from './reports.service';
 
 describe('ReportsService', () => {
@@ -75,11 +71,7 @@ describe('ReportsService', () => {
       }));
       prisma.contentReport.findMany.mockResolvedValue(page);
 
-      const result = await service.findAll(
-        {},
-        undefined,
-        2,
-      );
+      const result = await service.findAll({}, undefined, 2);
 
       expect(result.items).toHaveLength(2);
       expect(result.nextCursor).toBe('report-1');
@@ -104,7 +96,9 @@ describe('ReportsService', () => {
 
       expect(prisma.contentReport.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({ targetType: ReportTargetType.review }),
+          where: expect.objectContaining({
+            targetType: ReportTargetType.review,
+          }),
         }),
       );
     });

@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PlatformRole } from '@prisma/client';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -19,15 +28,26 @@ export class FraudController {
   @Post('/')
   @RequirePlatformRole(PlatformRole.super_admin)
   @ApiOperation({ summary: 'Create a fraud flag (super_admin only).' })
-  async create(@Body() dto: CreateFraudFlagDto, @CurrentUser('userId') userId: string) {
+  async create(
+    @Body() dto: CreateFraudFlagDto,
+    @CurrentUser('userId') userId: string,
+  ) {
     return this.fraudService.create(userId, dto);
   }
 
   @Get('/')
   @RequirePlatformRole(PlatformRole.super_admin)
   @ApiOperation({ summary: 'List fraud flags (super_admin only).' })
-  async findAll(@Query() filter: FraudFlagFilterDto, @Query('cursor') cursor: string | undefined, @Query('limit') limit: string | undefined) {
-    return this.fraudService.findAll(filter, cursor, limit ? Number(limit) : undefined);
+  async findAll(
+    @Query() filter: FraudFlagFilterDto,
+    @Query('cursor') cursor: string | undefined,
+    @Query('limit') limit: string | undefined,
+  ) {
+    return this.fraudService.findAll(
+      filter,
+      cursor,
+      limit ? Number(limit) : undefined,
+    );
   }
 
   @Get(':id')
@@ -40,7 +60,11 @@ export class FraudController {
   @Patch(':id')
   @RequirePlatformRole(PlatformRole.super_admin)
   @ApiOperation({ summary: 'Review/update a fraud flag (super_admin only).' })
-  async review(@Param('id') id: string, @Body() dto: ReviewFraudFlagDto, @CurrentUser('userId') actorId: string) {
+  async review(
+    @Param('id') id: string,
+    @Body() dto: ReviewFraudFlagDto,
+    @CurrentUser('userId') actorId: string,
+  ) {
     return this.fraudService.review(actorId, id, dto);
   }
 }

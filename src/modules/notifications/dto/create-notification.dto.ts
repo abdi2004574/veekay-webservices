@@ -31,7 +31,11 @@ export class CreateNotificationDto {
   @IsOptional()
   metadata?: Record<string, unknown>;
 
-  @ApiProperty({ enum: NotificationChannel, required: false, default: 'in_app' })
+  @ApiProperty({
+    enum: NotificationChannel,
+    required: false,
+    default: 'in_app',
+  })
   @IsOptional()
   @IsEnum(NotificationChannel)
   channel?: NotificationChannel;

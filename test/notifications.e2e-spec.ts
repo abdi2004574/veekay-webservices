@@ -60,7 +60,9 @@ describe('Notifications (e2e)', () => {
         .expect(200);
 
       expect(res.body.data.items).toHaveLength(1);
-      expect(res.body.data.items[0].type).toBe(NotificationType.review_received);
+      expect(res.body.data.items[0].type).toBe(
+        NotificationType.review_received,
+      );
       expect(res.body.data.items[0].title).toBe('New Review Received');
       expect(res.body.data.items[0].read).toBe(false);
       expect(res.body.data.items[0].deepLinkTarget).toBe('agency');
@@ -354,17 +356,28 @@ describe('Notifications (e2e)', () => {
         .get('/api/v1/notifications')
         .set('Authorization', `Bearer ${traveler.accessToken}`)
         .expect(200);
-      expect(travelerNotifs.body.data.items.some((n: any) => n.type === NotificationType.admin_broadcast)).toBe(true);
+      expect(
+        travelerNotifs.body.data.items.some(
+          (n: any) => n.type === NotificationType.admin_broadcast,
+        ),
+      ).toBe(true);
 
       const agencyNotifs = await request(server())
         .get('/api/v1/notifications')
         .set('Authorization', `Bearer ${agencyAccessToken}`)
         .expect(200);
-      expect(agencyNotifs.body.data.items.some((n: any) => n.type === NotificationType.admin_broadcast)).toBe(true);
+      expect(
+        agencyNotifs.body.data.items.some(
+          (n: any) => n.type === NotificationType.admin_broadcast,
+        ),
+      ).toBe(true);
     });
 
     it('POST /admin/notifications/broadcast with target=role sends to specific role', async () => {
-      const admin = await registerAndLoginAdmin(server, 'notif-bcast-role-admin@test.com');
+      const admin = await registerAndLoginAdmin(
+        server,
+        'notif-bcast-role-admin@test.com',
+      );
       const traveler = await registerAndVerifyTraveler(
         server,
         'notif-bcast-role-traveler@test.com',
@@ -394,11 +407,18 @@ describe('Notifications (e2e)', () => {
         .get('/api/v1/notifications')
         .set('Authorization', `Bearer ${traveler.accessToken}`)
         .expect(200);
-      expect(travelerNotifs.body.data.items.some((n: any) => n.type === NotificationType.system_alert)).toBe(true);
+      expect(
+        travelerNotifs.body.data.items.some(
+          (n: any) => n.type === NotificationType.system_alert,
+        ),
+      ).toBe(true);
     });
 
     it('GET /admin/notifications/segments/preview returns estimated reach', async () => {
-      const admin = await registerAndLoginAdmin(server, 'notif-preview-admin@test.com');
+      const admin = await registerAndLoginAdmin(
+        server,
+        'notif-preview-admin@test.com',
+      );
       await registerAndVerifyTraveler(
         server,
         'notif-preview-traveler@test.com',
@@ -452,7 +472,9 @@ describe('Notifications (e2e)', () => {
         .expect(200);
 
       expect(res.body.data.items).toHaveLength(1);
-      expect(res.body.data.items[0].type).toBe(NotificationType.review_received);
+      expect(res.body.data.items[0].type).toBe(
+        NotificationType.review_received,
+      );
       expect(res.body.data.items[0].pushSentAt).toBeNull();
     });
 
@@ -514,7 +536,9 @@ describe('Notifications (e2e)', () => {
       expect(page1.body.data.nextCursor).toBe(page1.body.data.items[9].id);
 
       const page2 = await request(server())
-        .get(`/api/v1/notifications?cursor=${page1.body.data.nextCursor}&limit=10`)
+        .get(
+          `/api/v1/notifications?cursor=${page1.body.data.nextCursor}&limit=10`,
+        )
         .set('Authorization', `Bearer ${agencyAccessToken}`)
         .expect(200);
 

@@ -19,7 +19,10 @@ export class MilestoneNotificationService {
    * Returns true when no notification log exists for this campaign/milestone
    * pair, i.e. the milestone has not been notified yet.
    */
-  async shouldNotify(campaignId: string, milestone: MilestoneType): Promise<boolean> {
+  async shouldNotify(
+    campaignId: string,
+    milestone: MilestoneType,
+  ): Promise<boolean> {
     const log = await this.prisma.milestoneNotificationLog.findFirst({
       where: { campaignId, milestone },
       select: { campaignId: true },
@@ -95,4 +98,3 @@ export class MilestoneNotificationService {
     return result;
   }
 }
-

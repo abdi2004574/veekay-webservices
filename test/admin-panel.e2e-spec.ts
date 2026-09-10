@@ -47,11 +47,19 @@ describe('Admin Panel (e2e)', () => {
     });
 
     it('non-admin cannot create invites', async () => {
-      const traveler = await registerAndVerifyTraveler(server, 't-invite@test.com', 'T1');
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        't-invite@test.com',
+        'T1',
+      );
       await request(server())
         .post('/api/v1/admin/invites')
         .set('Authorization', `Bearer ${traveler.accessToken}`)
-        .send({ email: 'hack@test.com', platformRole: 'super_admin', acceptUrl: 'http://test' })
+        .send({
+          email: 'hack@test.com',
+          platformRole: 'super_admin',
+          acceptUrl: 'http://test',
+        })
         .expect(403);
     });
 
@@ -60,7 +68,11 @@ describe('Admin Panel (e2e)', () => {
       await request(server())
         .post('/api/v1/admin/invites')
         .set('Authorization', `Bearer ${adminAccessToken}`)
-        .send({ email: 'list@test.com', platformRole: 'super_admin', acceptUrl: 'http://test' })
+        .send({
+          email: 'list@test.com',
+          platformRole: 'super_admin',
+          acceptUrl: 'http://test',
+        })
         .expect(201);
 
       const res = await request(server())
@@ -76,7 +88,11 @@ describe('Admin Panel (e2e)', () => {
       const createRes = await request(server())
         .post('/api/v1/admin/invites')
         .set('Authorization', `Bearer ${adminAccessToken}`)
-        .send({ email: 'revoke@test.com', platformRole: 'super_admin', acceptUrl: 'http://test' })
+        .send({
+          email: 'revoke@test.com',
+          platformRole: 'super_admin',
+          acceptUrl: 'http://test',
+        })
         .expect(201);
 
       await request(server())
@@ -95,7 +111,11 @@ describe('Admin Panel (e2e)', () => {
 
   describe('Content Reports', () => {
     it('traveler can create a report', async () => {
-      const traveler = await registerAndVerifyTraveler(server, 't-report@test.com', 'T1');
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        't-report@test.com',
+        'T1',
+      );
       const res = await request(server())
         .post('/api/v1/reports')
         .set('Authorization', `Bearer ${traveler.accessToken}`)
@@ -107,11 +127,19 @@ describe('Admin Panel (e2e)', () => {
     });
 
     it('cannot report own content', async () => {
-      const traveler = await registerAndVerifyTraveler(server, 't-selfreport@test.com', 'T1');
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        't-selfreport@test.com',
+        'T1',
+      );
       await request(server())
         .post('/api/v1/reports')
         .set('Authorization', `Bearer ${traveler.accessToken}`)
-        .send({ targetType: 'post', targetId: traveler.userId, reason: 'Self report' })
+        .send({
+          targetType: 'post',
+          targetId: traveler.userId,
+          reason: 'Self report',
+        })
         .expect(422);
     });
 
@@ -129,7 +157,11 @@ describe('Admin Panel (e2e)', () => {
   describe('Verified Badges', () => {
     it('admin can assign a verified badge', async () => {
       const { adminAccessToken } = await registerAndLoginAdmin(server);
-      const traveler = await registerAndVerifyTraveler(server, 't-badge@test.com', 'T1');
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        't-badge@test.com',
+        'T1',
+      );
       const res = await request(server())
         .post('/api/v1/admin/badges')
         .set('Authorization', `Bearer ${adminAccessToken}`)
@@ -165,7 +197,11 @@ describe('Admin Panel (e2e)', () => {
 
   describe('High-Value Withdrawal', () => {
     it('rejects high-value withdrawal for unverified user', async () => {
-      const traveler = await registerAndVerifyTraveler(server, 't-hv-unv@test.com', 'T1');
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        't-hv-unv@test.com',
+        'T1',
+      );
       const admin = await registerAndLoginAdmin(server);
 
       // Credit wallet with enough balance
@@ -186,7 +222,11 @@ describe('Admin Panel (e2e)', () => {
 
   describe('Group Fund Withdrawal', () => {
     it('group admin can withdraw group funds', async () => {
-      const creator = await registerAndVerifyTraveler(server, 't-gw-creator@test.com', 'T1');
+      const creator = await registerAndVerifyTraveler(
+        server,
+        't-gw-creator@test.com',
+        'T1',
+      );
 
       // Create a group campaign
       const campaignRes = await request(server())

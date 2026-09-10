@@ -32,15 +32,14 @@ export class AdminInvitesController {
 
   @Post('/:id/revoke')
   @ApiOperation({ summary: 'Revoke an admin invite.' })
-  async revoke(
-    @Param('id') id: string,
-    @CurrentUser('userId') userId: string,
-  ) {
+  async revoke(@Param('id') id: string, @CurrentUser('userId') userId: string) {
     return this.adminInvitesService.revoke(userId, id);
   }
 
   @Post('/accept')
-  @ApiOperation({ summary: 'Accept an admin invite using the token from email.' })
+  @ApiOperation({
+    summary: 'Accept an admin invite using the token from email.',
+  })
   async accept(
     @Body() dto: AcceptAdminInviteDto,
     @CurrentUser('userId') userId: string,

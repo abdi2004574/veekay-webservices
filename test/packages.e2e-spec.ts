@@ -291,10 +291,14 @@ describe('Packages (e2e)', () => {
         .send({ mediaMediaIds: [newMedia] })
         .expect(200);
 
-      const oldAsset = await testPrisma.mediaAsset.findUnique({ where: { id: oldMedia } });
+      const oldAsset = await testPrisma.mediaAsset.findUnique({
+        where: { id: oldMedia },
+      });
       expect(oldAsset?.status).toEqual('deleted');
 
-      const newAsset = await testPrisma.mediaAsset.findUnique({ where: { id: newMedia } });
+      const newAsset = await testPrisma.mediaAsset.findUnique({
+        where: { id: newMedia },
+      });
       expect(newAsset?.status).toEqual('uploaded');
     });
   });

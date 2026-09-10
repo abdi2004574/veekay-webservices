@@ -3,7 +3,12 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AppException } from '../../common/errors/app.exception';
 import { ConfigService } from '@nestjs/config';
 import { AppConfig } from '../../config/configuration';
-import { FraudFlag, FraudFlagStatus, FraudFlagType, FraudFlagSeverity } from '@prisma/client';
+import {
+  FraudFlag,
+  FraudFlagStatus,
+  FraudFlagType,
+  FraudFlagSeverity,
+} from '@prisma/client';
 import { AdminAuditLogService } from '../admin-audit-log/admin-audit-log.service';
 
 @Injectable()
@@ -16,7 +21,15 @@ export class FraudService {
     private readonly adminAuditLogService: AdminAuditLogService,
   ) {}
 
-  async create(userId: string, dto: { type: FraudFlagType; severity: FraudFlagSeverity; description: string; metadata?: string }): Promise<FraudFlag> {
+  async create(
+    userId: string,
+    dto: {
+      type: FraudFlagType;
+      severity: FraudFlagSeverity;
+      description: string;
+      metadata?: string;
+    },
+  ): Promise<FraudFlag> {
     let parsedMetadata: Record<string, unknown> | undefined;
     if (dto.metadata) {
       try {
@@ -49,7 +62,11 @@ export class FraudService {
     return flag;
   }
 
-  async findAll(filter: { type?: FraudFlagType; status?: FraudFlagStatus; userId?: string }, cursor?: string, limit = 20): Promise<{ items: FraudFlag[]; nextCursor: string | null }> {
+  async findAll(
+    filter: { type?: FraudFlagType; status?: FraudFlagStatus; userId?: string },
+    cursor?: string,
+    limit = 20,
+  ): Promise<{ items: FraudFlag[]; nextCursor: string | null }> {
     const where: any = {};
     if (filter.type) where.type = filter.type;
     if (filter.status) where.status = filter.status;
@@ -60,24 +77,37 @@ export class FraudService {
       orderBy: { createdAt: 'desc' },
       take: limit + 1,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-      include: { user: { select: { id: true, username: true, email: true } }, reviewedBy: { select: { id: true, username: true } } },
+      include: {
+        user: { select: { id: true, username: true, email: true } },
+        reviewedBy: { select: { id: true, username: true } },
+      },
     });
 
     const hasMore = items.length > limit;
     const page = hasMore ? items.slice(0, limit) : items;
-    return { items: page, nextCursor: hasMore ? page[page.length - 1].id : null };
+    return {
+      items: page,
+      nextCursor: hasMore ? page[page.length - 1].id : null,
+    };
   }
 
   async findOne(id: string): Promise<FraudFlag> {
     const flag = await this.prisma.fraudFlag.findUnique({
       where: { id },
-      include: { user: { select: { id: true, username: true, email: true } }, reviewedBy: { select: { id: true, username: true } } },
+      include: {
+        user: { select: { id: true, username: true, email: true } },
+        reviewedBy: { select: { id: true, username: true } },
+      },
     });
     if (!flag) throw AppException.notFound('Fraud flag not found.');
     return flag;
   }
 
-  async review(actorId: string, id: string, dto: { status: FraudFlagStatus; resolutionNote?: string }): Promise<FraudFlag> {
+  async review(
+    actorId: string,
+    id: string,
+    dto: { status: FraudFlagStatus; resolutionNote?: string },
+  ): Promise<FraudFlag> {
     const flag = await this.prisma.fraudFlag.findUnique({ where: { id } });
     if (!flag) throw AppException.notFound('Fraud flag not found.');
 
@@ -113,8 +143,12 @@ export class FraudService {
   }
 
   async checkFrequentProfileChanges(userId: string): Promise<FraudFlag | null> {
-    const threshold = this.configService.get('fraud.profileChangeThreshold', { infer: true });
-    const windowDays = this.configService.get('fraud.profileChangeWindowDays', { infer: true });
+    const threshold = this.configService.get('fraud.profileChangeThreshold', {
+      infer: true,
+    });
+    const windowDays = this.configService.get('fraud.profileChangeWindowDays', {
+      infer: true,
+    });
     const windowStart = new Date();
     windowStart.setDate(windowStart.getDate() - windowDays);
 
@@ -128,21 +162,28 @@ export class FraudService {
       },
     });
 
-    // This is a simplified check — the real implementation would track
+    // This is a simplified check ï¿½ the real implementation would track
     // actual profile field changes in a separate log table.
     if (recentUpdates > threshold) {
       return this.create(userId, {
         type: FraudFlagType.frequent_profile_changes,
         severity: FraudFlagSeverity.low,
         description: `User profile updated ${recentUpdates} times in the last ${windowDays} days (threshold: ${threshold}).`,
-        metadata: JSON.stringify({ updatesInWindow: recentUpdates, threshold, windowDays }),
+        metadata: JSON.stringify({
+          updatesInWindow: recentUpdates,
+          threshold,
+          windowDays,
+        }),
       });
     }
 
     return null;
   }
 
-  async checkPaymentMethodMismatch(userId: string, paymentDetails: { nameOnCard?: string; billingZip?: string }): Promise<FraudFlag | null> {
+  async checkPaymentMethodMismatch(
+    userId: string,
+    paymentDetails: { nameOnCard?: string; billingZip?: string },
+  ): Promise<FraudFlag | null> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: { travelerProfile: true },
@@ -151,7 +192,11 @@ export class FraudService {
     if (!user || !user.travelerProfile) return null;
 
     const mismatches: string[] = [];
-    if (paymentDetails.nameOnCard && user.displayName && paymentDetails.nameOnCard.toLowerCase() !== user.displayName.toLowerCase()) {
+    if (
+      paymentDetails.nameOnCard &&
+      user.displayName &&
+      paymentDetails.nameOnCard.toLowerCase() !== user.displayName.toLowerCase()
+    ) {
       mismatches.push('name');
     }
 
@@ -167,9 +212,16 @@ export class FraudService {
     return null;
   }
 
-  async checkWithdrawalAnomaly(userId: string, amount: number, currency: string): Promise<FraudFlag | null> {
-    const threshold = this.configService.get('wallet.highValueWithdrawalThreshold', { infer: true });
-    
+  async checkWithdrawalAnomaly(
+    userId: string,
+    amount: number,
+    currency: string,
+  ): Promise<FraudFlag | null> {
+    const threshold = this.configService.get(
+      'wallet.highValueWithdrawalThreshold',
+      { infer: true },
+    );
+
     if (amount >= threshold) {
       const recentWithdrawals = await this.prisma.withdrawalRequest.findMany({
         where: { userId, status: { in: ['approved', 'paid'] as any } },
@@ -181,7 +233,12 @@ export class FraudService {
         type: FraudFlagType.withdrawal_anomaly,
         severity: FraudFlagSeverity.high,
         description: `High-value withdrawal of $${amount} ${currency} requested (threshold: $${threshold}).`,
-        metadata: JSON.stringify({ amount, currency, threshold, recentWithdrawalCount: recentWithdrawals.length }),
+        metadata: JSON.stringify({
+          amount,
+          currency,
+          threshold,
+          recentWithdrawalCount: recentWithdrawals.length,
+        }),
       });
     }
 

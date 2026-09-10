@@ -20,7 +20,9 @@ export class AdminInvitesService {
   ) {}
 
   private generateRawToken(): string {
-    return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+    return (
+      Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)
+    );
   }
 
   private async hashToken(raw: string): Promise<string> {
@@ -31,7 +33,10 @@ export class AdminInvitesService {
     return bcrypt.compare(raw, hash);
   }
 
-  async create(actorUserId: string, dto: CreateAdminInviteDto): Promise<AdminInvite> {
+  async create(
+    actorUserId: string,
+    dto: CreateAdminInviteDto,
+  ): Promise<AdminInvite> {
     const rawToken = this.generateRawToken();
     const tokenHash = await this.hashToken(rawToken);
     const expiresAt = new Date();
@@ -41,7 +46,7 @@ export class AdminInvitesService {
       data: {
         email: dto.email,
         token: tokenHash,
-        
+
         invitedById: actorUserId,
         expiresAt,
       },
@@ -87,7 +92,9 @@ export class AdminInvitesService {
     const invite = await this.findOne(id);
 
     if (invite.status !== AdminInviteStatus.pending) {
-      throw AppException.badRequest('Invite is not pending and cannot be revoked.');
+      throw AppException.badRequest(
+        'Invite is not pending and cannot be revoked.',
+      );
     }
 
     const revoked = await this.prisma.adminInvite.update({
@@ -106,7 +113,10 @@ export class AdminInvitesService {
     return revoked;
   }
 
-  async accept(userId: string, dto: AcceptAdminInviteDto): Promise<{ message: string }> {
+  async accept(
+    userId: string,
+    dto: AcceptAdminInviteDto,
+  ): Promise<{ message: string }> {
     const now = new Date();
     const pendingInvites = await this.prisma.adminInvite.findMany({
       where: {

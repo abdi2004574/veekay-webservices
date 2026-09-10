@@ -34,7 +34,9 @@ describe('TripRequestsService', () => {
     };
     conversationsService = { create: jest.fn() };
     messagesService = { send: jest.fn() };
-    const mockNotificationsService = { create: jest.fn().mockResolvedValue({}) };
+    const mockNotificationsService = {
+      create: jest.fn().mockResolvedValue({}),
+    };
     service = new TripRequestsService(
       prisma,
       conversationsService,

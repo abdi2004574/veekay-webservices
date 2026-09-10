@@ -253,7 +253,10 @@ describe('FraudService', () => {
         'fraud_flag',
         'flag-1',
         'All good',
-        { previousStatus: FraudFlagStatus.open, newStatus: FraudFlagStatus.resolved },
+        {
+          previousStatus: FraudFlagStatus.open,
+          newStatus: FraudFlagStatus.resolved,
+        },
       );
     });
   });
@@ -267,7 +270,8 @@ describe('FraudService', () => {
         userId: 'user-1',
         type: FraudFlagType.frequent_profile_changes,
         severity: FraudFlagSeverity.low,
-        description: 'User profile updated 5 times in the last 7 days (threshold: 3).',
+        description:
+          'User profile updated 5 times in the last 7 days (threshold: 3).',
         status: FraudFlagStatus.open,
         reviewedById: null,
         reviewedAt: null,
@@ -312,7 +316,10 @@ describe('FraudService', () => {
         reviewedById: null,
         reviewedAt: null,
         resolutionNote: null,
-        metadata: { mismatches: ['name'], paymentDetails: { nameOnCard: 'Bob Jones' } },
+        metadata: {
+          mismatches: ['name'],
+          paymentDetails: { nameOnCard: 'Bob Jones' },
+        },
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -354,17 +361,27 @@ describe('FraudService', () => {
         userId: 'user-1',
         type: FraudFlagType.withdrawal_anomaly,
         severity: FraudFlagSeverity.high,
-        description: 'High-value withdrawal of $1500 USD requested (threshold: $1000).',
+        description:
+          'High-value withdrawal of $1500 USD requested (threshold: $1000).',
         status: FraudFlagStatus.open,
         reviewedById: null,
         reviewedAt: null,
         resolutionNote: null,
-        metadata: { amount: 1500, currency: 'USD', threshold: 1000, recentWithdrawalCount: 2 },
+        metadata: {
+          amount: 1500,
+          currency: 'USD',
+          threshold: 1000,
+          recentWithdrawalCount: 2,
+        },
         createdAt: new Date(),
         updatedAt: new Date(),
       });
 
-      const result = await service.checkWithdrawalAnomaly('user-1', 1500, 'USD');
+      const result = await service.checkWithdrawalAnomaly(
+        'user-1',
+        1500,
+        'USD',
+      );
 
       expect(result).not.toBeNull();
       expect(result?.type).toBe(FraudFlagType.withdrawal_anomaly);

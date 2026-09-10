@@ -69,9 +69,13 @@ export class GroupCampaignsService {
 
   private async assertWithdrawPermission(campaignId: string, userId: string) {
     const result = await this.assertMember(campaignId, userId);
-    const canWithdraw = result.membership.role === GroupMemberRole.admin || result.membership.canWithdraw;
+    const canWithdraw =
+      result.membership.role === GroupMemberRole.admin ||
+      result.membership.canWithdraw;
     if (!canWithdraw) {
-      throw AppException.forbidden('Only a group admin or designated member can withdraw funds.');
+      throw AppException.forbidden(
+        'Only a group admin or designated member can withdraw funds.',
+      );
     }
     return result;
   }
@@ -354,7 +358,10 @@ export class GroupCampaignsService {
     userId: string,
     dto: GroupWithdrawDto,
   ) {
-    const { membership } = await this.assertWithdrawPermission(campaignId, userId);
+    const { membership } = await this.assertWithdrawPermission(
+      campaignId,
+      userId,
+    );
 
     const [contributionSum, expenseSum] = await Promise.all([
       this.prisma.groupContribution.aggregate({
@@ -380,7 +387,10 @@ export class GroupCampaignsService {
       throw AppException.businessRule('Insufficient group funds.');
     }
 
-    const threshold = this.configService.get('wallet.highValueWithdrawalThreshold', { infer: true });
+    const threshold = this.configService.get(
+      'wallet.highValueWithdrawalThreshold',
+      { infer: true },
+    );
     if (dto.amount >= threshold) {
       const profile = await this.prisma.travelerProfile.findUnique({
         where: { userId },

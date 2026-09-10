@@ -326,7 +326,7 @@ describe('WalletService', () => {
       prisma.walletTransaction.findMany.mockResolvedValue([]);
       await service.listTransactions('user-1', {
         type: WalletTransactionType.withdrawal,
-      } as any);
+      });
       expect(prisma.walletTransaction.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
@@ -345,7 +345,7 @@ describe('WalletService', () => {
       ]);
       const result = await service.listTransactions('user-1', {
         limit: 2,
-      } as any);
+      });
       expect(result.items).toHaveLength(2);
       expect(result.nextCursor).toBe('tx-2');
     });

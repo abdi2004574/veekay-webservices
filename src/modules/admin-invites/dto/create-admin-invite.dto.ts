@@ -12,7 +12,9 @@ export class CreateAdminInviteDto {
   @IsString()
   platformRole: 'super_admin';
 
-  @ApiProperty({ example: 'http://localhost:57800/admin/invites/accept?token=...' })
+  @ApiProperty({
+    example: 'http://localhost:57800/admin/invites/accept?token=...',
+  })
   @IsString()
   @Length(1, 500)
   acceptUrl: string;

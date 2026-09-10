@@ -200,7 +200,7 @@ describe('Campaigns (e2e)', () => {
     expect(res.body.data.viewsCount).toEqual(2);
   });
 
-  it('rejects editing/deleting someone else\'s campaign, and lets the owner edit and delete', async () => {
+  it("rejects editing/deleting someone else's campaign, and lets the owner edit and delete", async () => {
     const alice = await registerAndVerifyTraveler(
       server,
       'alice7@e2e.test',
@@ -290,10 +290,14 @@ describe('Campaigns (e2e)', () => {
       .send({ photoMediaIds: [mediaId2] })
       .expect(200);
 
-    const media1 = await testPrisma.mediaAsset.findUnique({ where: { id: mediaId1 } });
+    const media1 = await testPrisma.mediaAsset.findUnique({
+      where: { id: mediaId1 },
+    });
     expect(media1?.status).toEqual('deleted');
 
-    const media2 = await testPrisma.mediaAsset.findUnique({ where: { id: mediaId2 } });
+    const media2 = await testPrisma.mediaAsset.findUnique({
+      where: { id: mediaId2 },
+    });
     expect(media2?.status).toEqual('uploaded');
   });
 
@@ -317,7 +321,9 @@ describe('Campaigns (e2e)', () => {
       .set('Authorization', `Bearer ${alice.accessToken}`)
       .expect(200);
 
-    const media = await testPrisma.mediaAsset.findUnique({ where: { id: mediaId } });
+    const media = await testPrisma.mediaAsset.findUnique({
+      where: { id: mediaId },
+    });
     expect(media?.status).toEqual('deleted');
   });
 
@@ -439,5 +445,3 @@ describe('Campaigns (e2e)', () => {
     });
   });
 });
-
-

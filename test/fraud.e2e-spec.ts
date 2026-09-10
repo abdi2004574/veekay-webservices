@@ -46,7 +46,11 @@ describe('Fraud (e2e)', () => {
     });
 
     it('non-admin cannot create fraud flags (403)', async () => {
-      const traveler = await registerAndVerifyTraveler(server, 't-fraud@test.com', 'T1');
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        't-fraud@test.com',
+        'T1',
+      );
       await request(server())
         .post('/api/v1/admin/fraud')
         .set('Authorization', `Bearer ${traveler.accessToken}`)

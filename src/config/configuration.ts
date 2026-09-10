@@ -1,4 +1,4 @@
-export interface AppConfig {
+﻿export interface AppConfig {
   nodeEnv: string;
   port: number;
   appUrl: string;
@@ -57,6 +57,19 @@ export interface AppConfig {
   fraud: {
     profileChangeThreshold: number;
     profileChangeWindowDays: number;
+  };
+  stripe: {
+    secretKey: string;
+    publishableKey: string;
+    webhookSecret: string;
+    connectWebhookSecret: string;
+    platformFeePercent: number;
+    commissionPercent: number;
+    subscriptionPrices: {
+      basic: string;
+      premium: string;
+      featured: string;
+    };
   };
 }
 
@@ -139,5 +152,27 @@ export default (): AppConfig => ({
       process.env.FRAUD_PROFILE_CHANGE_WINDOW_DAYS ?? '30',
       10,
     ),
+  },
+  stripe: {
+    secretKey: process.env.STRIPE_SECRET_KEY as string,
+    publishableKey: process.env.STRIPE_PUBLISHABLE_KEY as string,
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET as string,
+    connectWebhookSecret:
+      process.env.STRIPE_CONNECT_WEBHOOK_SECRET ??
+      process.env.STRIPE_WEBHOOK_SECRET ??
+      '',
+    platformFeePercent: parseInt(
+      process.env.STRIPE_PLATFORM_FEE_PERCENT ?? '0',
+      10,
+    ),
+    commissionPercent: parseInt(
+      process.env.STRIPE_COMMISSION_PERCENT ?? '10',
+      10,
+    ),
+    subscriptionPrices: {
+      basic: process.env.STRIPE_PRICE_BASIC ?? '',
+      premium: process.env.STRIPE_PRICE_PREMIUM ?? '',
+      featured: process.env.STRIPE_PRICE_FEATURED ?? '',
+    },
   },
 });

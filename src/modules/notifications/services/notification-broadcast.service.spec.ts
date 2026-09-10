@@ -30,10 +30,7 @@ describe('NotificationBroadcastService', () => {
 
   describe('broadcast', () => {
     it('sends to all active users when target is "all"', async () => {
-      prisma.user.findMany.mockResolvedValue([
-        { id: 'u1' },
-        { id: 'u2' },
-      ]);
+      prisma.user.findMany.mockResolvedValue([{ id: 'u1' }, { id: 'u2' }]);
 
       const result = await service.broadcast('admin-1', baseDto);
 
@@ -71,7 +68,11 @@ describe('NotificationBroadcastService', () => {
     });
 
     it('sends to a single user when target is "user"', async () => {
-      const dto = { ...baseDto, target: 'user', userId: 'u1' } as BroadcastNotificationDto;
+      const dto = {
+        ...baseDto,
+        target: 'user',
+        userId: 'u1',
+      } as BroadcastNotificationDto;
       prisma.user.findUnique.mockResolvedValue({
         id: 'u1',
         isActive: true,
@@ -92,7 +93,11 @@ describe('NotificationBroadcastService', () => {
     });
 
     it('returns 0 sent for a nonexistent user', async () => {
-      const dto = { ...baseDto, target: 'user', userId: 'ghost' } as BroadcastNotificationDto;
+      const dto = {
+        ...baseDto,
+        target: 'user',
+        userId: 'ghost',
+      } as BroadcastNotificationDto;
       prisma.user.findUnique.mockResolvedValue(null);
 
       const result = await service.broadcast('admin-1', dto);
@@ -103,7 +108,9 @@ describe('NotificationBroadcastService', () => {
 
     it('logs an audit event after sending', async () => {
       prisma.user.findMany.mockResolvedValue([{ id: 'u1' }]);
-      const logSpy = jest.spyOn((service as any).logger, 'log').mockImplementation(() => undefined);
+      const logSpy = jest
+        .spyOn((service as any).logger, 'log')
+        .mockImplementation(() => undefined);
 
       await service.broadcast('admin-1', { ...baseDto, target: 'all' });
 
@@ -132,7 +139,9 @@ describe('NotificationBroadcastService', () => {
         }
         return { id: 'notif-1' };
       });
-      jest.spyOn((service as any).logger, 'warn').mockImplementation(() => undefined);
+      jest
+        .spyOn((service as any).logger, 'warn')
+        .mockImplementation(() => undefined);
 
       const result = await service.broadcast('admin-1', baseDto);
 
@@ -143,7 +152,11 @@ describe('NotificationBroadcastService', () => {
   });
 
   describe('previewSegments', () => {
-    function setupCounts(counts: { travelers: number; agencies: number; admins: number }) {
+    function setupCounts(counts: {
+      travelers: number;
+      agencies: number;
+      admins: number;
+    }) {
       prisma.user.count.mockImplementation(async ({ where }: any) => {
         if (where.role === UserRole.traveler) return counts.travelers;
         if (where.role === UserRole.agency) return counts.agencies;
@@ -158,7 +171,11 @@ describe('NotificationBroadcastService', () => {
       const result = await service.previewSegments(baseDto);
 
       expect(result.estimatedReach).toBe(15);
-      expect(result.breakdown).toEqual({ travelers: 10, agencies: 3, admins: 2 });
+      expect(result.breakdown).toEqual({
+        travelers: 10,
+        agencies: 3,
+        admins: 2,
+      });
       expect(prisma.user.count).toHaveBeenCalledTimes(3);
     });
 
@@ -169,11 +186,19 @@ describe('NotificationBroadcastService', () => {
       const result = await service.previewSegments(dto);
 
       expect(result.estimatedReach).toBe(3);
-      expect(result.breakdown).toEqual({ travelers: 10, agencies: 3, admins: 2 });
+      expect(result.breakdown).toEqual({
+        travelers: 10,
+        agencies: 3,
+        admins: 2,
+      });
     });
 
     it('returns 1 for target "user"', async () => {
-      const dto = { ...baseDto, target: 'user', userId: 'u1' } as BroadcastNotificationDto;
+      const dto = {
+        ...baseDto,
+        target: 'user',
+        userId: 'u1',
+      } as BroadcastNotificationDto;
       setupCounts({ travelers: 10, agencies: 3, admins: 2 });
 
       const result = await service.previewSegments(dto);

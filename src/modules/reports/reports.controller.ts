@@ -41,7 +41,11 @@ export class ReportsController {
     @Query('cursor') cursor: string | undefined,
     @Query('limit') limit: string | undefined,
   ) {
-    return this.reportsService.findAll(filter, cursor, limit ? Number(limit) : undefined);
+    return this.reportsService.findAll(
+      filter,
+      cursor,
+      limit ? Number(limit) : undefined,
+    );
   }
 
   @Get('admin/reports/:id')
@@ -53,7 +57,9 @@ export class ReportsController {
 
   @Patch('admin/reports/:id')
   @RequirePlatformRole(PlatformRole.super_admin)
-  @ApiOperation({ summary: 'Review/update a content report (super_admin only).' })
+  @ApiOperation({
+    summary: 'Review/update a content report (super_admin only).',
+  })
   async review(
     @Param('id') id: string,
     @Body() dto: ReviewReportDto,

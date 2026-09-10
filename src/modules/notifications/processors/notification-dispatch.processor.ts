@@ -62,12 +62,16 @@ export class NotificationDispatchProcessor extends WorkerHost {
     });
 
     if (!notification) {
-      this.logger.warn(`Notification ${notificationId} not found; skipping dispatch`);
+      this.logger.warn(
+        `Notification ${notificationId} not found; skipping dispatch`,
+      );
       return;
     }
 
     if (notification.pushSentAt) {
-      this.logger.debug(`Push already sent for notification ${notificationId}; skipping`);
+      this.logger.debug(
+        `Push already sent for notification ${notificationId}; skipping`,
+      );
       return;
     }
 
@@ -77,7 +81,8 @@ export class NotificationDispatchProcessor extends WorkerHost {
     );
 
     if (pref.pushEnabled) {
-      const tokens = await this.pushDeviceService.getActiveTokensForUser(userId);
+      const tokens =
+        await this.pushDeviceService.getActiveTokensForUser(userId);
       if (tokens.length > 0) {
         try {
           await this.firebasePushProvider.sendTokens(tokens, title, body, {
@@ -104,7 +109,10 @@ export class NotificationDispatchProcessor extends WorkerHost {
       );
     }
 
-    if (pref.emailEnabled && FINANCIAL_EMAIL_TYPES.includes(type as NotificationType)) {
+    if (
+      pref.emailEnabled &&
+      FINANCIAL_EMAIL_TYPES.includes(type as NotificationType)
+    ) {
       try {
         const user = await this.prisma.user.findUnique({
           where: { id: userId },

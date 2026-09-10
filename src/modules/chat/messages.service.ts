@@ -77,13 +77,16 @@ export class MessagesService {
       data: { lastMessageAt: message.createdAt },
     });
 
-    this.dispatchChatNotifications(conversationId, senderId, message, dto).catch(
-      (error) => {
-        this.logger.error(
-          `Notification dispatch failed for message ${message.id}: ${(error as Error).message}`,
-        );
-      },
-    );
+    this.dispatchChatNotifications(
+      conversationId,
+      senderId,
+      message,
+      dto,
+    ).catch((error) => {
+      this.logger.error(
+        `Notification dispatch failed for message ${message.id}: ${(error as Error).message}`,
+      );
+    });
 
     return this.attachMediaUrl(message);
   }
@@ -91,7 +94,12 @@ export class MessagesService {
   private async dispatchChatNotifications(
     conversationId: string,
     senderId: string,
-    message: { id: string; type: string; body: string | null; sender: { username: string | null; displayName: string | null } },
+    message: {
+      id: string;
+      type: string;
+      body: string | null;
+      sender: { username: string | null; displayName: string | null };
+    },
     dto: SendMessageDto,
   ) {
     const senderName =
@@ -110,14 +118,13 @@ export class MessagesService {
 
     const textBody =
       message.type === 'text'
-        ? message.body ?? ''
+        ? (message.body ?? '')
         : message.type === 'document'
-          ? dto.fileName ?? 'a document'
+          ? (dto.fileName ?? 'a document')
           : 'a photo';
 
-    const truncatedBody = textBody.length > 100
-      ? `${textBody.slice(0, 97)}...`
-      : textBody;
+    const truncatedBody =
+      textBody.length > 100 ? `${textBody.slice(0, 97)}...` : textBody;
 
     await Promise.all(
       recipientIds.map((userId) =>

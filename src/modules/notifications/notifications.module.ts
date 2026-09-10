@@ -16,7 +16,11 @@ import { FirebasePushProvider } from './providers/firebase-push.provider';
 import { FIREBASE_PUSH_PROVIDER } from './interfaces/firebase-push.interface';
 import { AppConfig } from '../../config/configuration';
 
-function parseRedisUrl(url: string): { host: string; port: number; password?: string } {
+function parseRedisUrl(url: string): {
+  host: string;
+  port: number;
+  password?: string;
+} {
   const u = new URL(url);
   return {
     host: u.hostname,

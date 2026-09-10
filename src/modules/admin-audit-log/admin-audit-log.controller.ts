@@ -1,9 +1,4 @@
-﻿import {
-  Controller,
-  Get,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+﻿import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PlatformRole } from '@prisma/client';
 import { RequirePlatformRole } from '../../common/decorators/require-platform-role.decorator';
@@ -21,7 +16,8 @@ export class AdminAuditLogController {
 
   @Get()
   @ApiOperation({
-    summary: '[Super Admin] List admin audit logs with optional filters and cursor pagination.',
+    summary:
+      '[Super Admin] List admin audit logs with optional filters and cursor pagination.',
   })
   async findAll(
     @Query() filter: AuditLogFilterDto,

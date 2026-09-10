@@ -10,7 +10,13 @@ import { AdminUsersController } from './admin-users.controller';
 import { UsersService } from './users.service';
 
 @Module({
-  imports: [FriendsModule, AuthModule, NotificationsModule, AdminAuditLogModule, VerifiedBadgesModule],
+  imports: [
+    FriendsModule,
+    AuthModule,
+    NotificationsModule,
+    AdminAuditLogModule,
+    VerifiedBadgesModule,
+  ],
   controllers: [UsersController, UserProfileController, AdminUsersController],
   providers: [UsersService],
   exports: [UsersService],

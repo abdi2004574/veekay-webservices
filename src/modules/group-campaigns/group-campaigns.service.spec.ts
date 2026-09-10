@@ -285,7 +285,12 @@ describe('GroupCampaignsService', () => {
       prisma.campaign.findUnique.mockResolvedValue(groupCampaign);
       prisma.groupMember.findUnique
         .mockResolvedValueOnce({ role: GroupMemberRole.admin }) // assertAdmin
-        .mockResolvedValueOnce({ id: 'gm-1', userId: 'member-1', role: GroupMemberRole.member, canWithdraw: false }); // target lookup
+        .mockResolvedValueOnce({
+          id: 'gm-1',
+          userId: 'member-1',
+          role: GroupMemberRole.member,
+          canWithdraw: false,
+        }); // target lookup
       prisma.groupMember.update.mockResolvedValue({
         id: 'gm-1',
         userId: 'member-1',
@@ -296,7 +301,12 @@ describe('GroupCampaignsService', () => {
     });
 
     it('admin can update canWithdraw to true', async () => {
-      const result = await service.updateMemberWithdrawPermission('c-1', 'admin-1', 'member-1', true);
+      const result = await service.updateMemberWithdrawPermission(
+        'c-1',
+        'admin-1',
+        'member-1',
+        true,
+      );
 
       expect(prisma.groupMember.findUnique).toHaveBeenCalledTimes(2);
       expect(prisma.groupMember.update).toHaveBeenCalledWith({
@@ -316,7 +326,12 @@ describe('GroupCampaignsService', () => {
         user: { id: 'member-1', username: 'member', displayName: 'Member' },
       });
 
-      const result = await service.updateMemberWithdrawPermission('c-1', 'admin-1', 'member-1', false);
+      const result = await service.updateMemberWithdrawPermission(
+        'c-1',
+        'admin-1',
+        'member-1',
+        false,
+      );
 
       expect(prisma.groupMember.update).toHaveBeenCalledWith({
         where: { id: 'gm-1' },
@@ -333,7 +348,12 @@ describe('GroupCampaignsService', () => {
       });
 
       await expect(
-        service.updateMemberWithdrawPermission('c-1', 'member-1', 'member-2', true),
+        service.updateMemberWithdrawPermission(
+          'c-1',
+          'member-1',
+          'member-2',
+          true,
+        ),
       ).rejects.toMatchObject({ getStatus: expect.any(Function) });
       expect(prisma.groupMember.update).not.toHaveBeenCalled();
     });
@@ -345,7 +365,12 @@ describe('GroupCampaignsService', () => {
         .mockResolvedValueOnce(null); // target lookup returns null
 
       await expect(
-        service.updateMemberWithdrawPermission('c-1', 'admin-1', 'non-existent', true),
+        service.updateMemberWithdrawPermission(
+          'c-1',
+          'admin-1',
+          'non-existent',
+          true,
+        ),
       ).rejects.toMatchObject({ getStatus: expect.any(Function) });
       expect(prisma.groupMember.update).not.toHaveBeenCalled();
     });

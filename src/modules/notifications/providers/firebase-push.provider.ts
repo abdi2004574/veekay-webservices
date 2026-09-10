@@ -42,7 +42,10 @@ export class FirebasePushProvider implements IFirebasePushProvider {
         });
         this.isConfigured = true;
       } catch (error) {
-        this.logger.warn('Firebase initialization failed, push notifications disabled', error);
+        this.logger.warn(
+          'Firebase initialization failed, push notifications disabled',
+          error,
+        );
         this.isConfigured = false;
       }
     } else {
@@ -92,7 +95,10 @@ export class FirebasePushProvider implements IFirebasePushProvider {
         error: first.error?.message,
       };
     } catch (error) {
-      this.logger.error(`Failed to send push notification to topic ${topic}`, error);
+      this.logger.error(
+        `Failed to send push notification to topic ${topic}`,
+        error,
+      );
       return { ok: false, error: (error as Error).message };
     }
   }
@@ -104,7 +110,11 @@ export class FirebasePushProvider implements IFirebasePushProvider {
     data?: Record<string, string>,
   ): Promise<SendTokensResult> {
     if (!this.isConfigured) {
-      return { successCount: 0, failureCount: tokens.length, failedTokens: tokens };
+      return {
+        successCount: 0,
+        failureCount: tokens.length,
+        failedTokens: tokens,
+      };
     }
     try {
       const messaging = getMessaging();

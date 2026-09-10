@@ -15,9 +15,24 @@ describe('AgenciesService', () => {
       user: { findUnique: jest.fn() },
       agency: { findUnique: jest.fn(), findMany: jest.fn(), create: jest.fn() },
     };
-    const mockMailService = { send: jest.fn().mockResolvedValue(undefined), sendAgencyApprovedEmail: jest.fn(), sendAgencyRejectedEmail: jest.fn() };
-    const mockNotificationsService = { create: jest.fn().mockResolvedValue({}), listForUser: jest.fn(), getUnreadCount: jest.fn(), markRead: jest.fn(), markAllRead: jest.fn(), delete: jest.fn() };
-    service = new AgenciesService(prisma, mockMailService as any, mockNotificationsService as any);
+    const mockMailService = {
+      send: jest.fn().mockResolvedValue(undefined),
+      sendAgencyApprovedEmail: jest.fn(),
+      sendAgencyRejectedEmail: jest.fn(),
+    };
+    const mockNotificationsService = {
+      create: jest.fn().mockResolvedValue({}),
+      listForUser: jest.fn(),
+      getUnreadCount: jest.fn(),
+      markRead: jest.fn(),
+      markAllRead: jest.fn(),
+      delete: jest.fn(),
+    };
+    service = new AgenciesService(
+      prisma,
+      mockMailService as any,
+      mockNotificationsService as any,
+    );
   });
 
   describe('submitRegistration', () => {

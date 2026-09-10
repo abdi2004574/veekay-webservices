@@ -68,7 +68,8 @@ export class NotificationsService {
     });
 
     if (pref.pushEnabled) {
-      const tokens = await this.pushDeviceService.getActiveTokensForUser(userId);
+      const tokens =
+        await this.pushDeviceService.getActiveTokensForUser(userId);
       if (tokens.length > 0) {
         this.dispatchPush(notification, tokens).catch((error) => {
           this.logger.error(

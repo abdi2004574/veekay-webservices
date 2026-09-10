@@ -54,9 +54,11 @@ export class NotificationPreferenceService {
 
   async set(userId: string, dto: UpdateNotificationPreferenceDto) {
     const updateData: Record<string, boolean> = {};
-    if (dto.inAppEnabled !== undefined) updateData.inAppEnabled = dto.inAppEnabled;
+    if (dto.inAppEnabled !== undefined)
+      updateData.inAppEnabled = dto.inAppEnabled;
     if (dto.pushEnabled !== undefined) updateData.pushEnabled = dto.pushEnabled;
-    if (dto.emailEnabled !== undefined) updateData.emailEnabled = dto.emailEnabled;
+    if (dto.emailEnabled !== undefined)
+      updateData.emailEnabled = dto.emailEnabled;
 
     const pref = await this.prisma.notificationPreference.upsert({
       where: { userId_type: { userId, type: dto.type } },
@@ -84,9 +86,12 @@ export class NotificationPreferenceService {
     await this.prisma.$transaction(async (tx) => {
       for (const dto of dtos) {
         const updateData: Record<string, boolean> = {};
-        if (dto.inAppEnabled !== undefined) updateData.inAppEnabled = dto.inAppEnabled;
-        if (dto.pushEnabled !== undefined) updateData.pushEnabled = dto.pushEnabled;
-        if (dto.emailEnabled !== undefined) updateData.emailEnabled = dto.emailEnabled;
+        if (dto.inAppEnabled !== undefined)
+          updateData.inAppEnabled = dto.inAppEnabled;
+        if (dto.pushEnabled !== undefined)
+          updateData.pushEnabled = dto.pushEnabled;
+        if (dto.emailEnabled !== undefined)
+          updateData.emailEnabled = dto.emailEnabled;
 
         await tx.notificationPreference.upsert({
           where: { userId_type: { userId, type: dto.type } },

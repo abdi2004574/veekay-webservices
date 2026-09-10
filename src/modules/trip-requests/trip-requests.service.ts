@@ -118,11 +118,12 @@ export class TripRequestsService {
       where: { id: travelerId },
       select: { displayName: true, username: true },
     });
-    const travelerName = traveler?.displayName ?? traveler?.username ?? 'A traveler';
+    const travelerName =
+      traveler?.displayName ?? traveler?.username ?? 'A traveler';
 
     try {
       await this.notificationsService.create(agency.userId, {
-        type: 'new_request' as any,
+        type: 'new_request',
         title: 'New Trip Request',
         body: `You have a new trip request from ${travelerName}`,
         deepLinkTarget: 'trip-requests',
@@ -291,7 +292,7 @@ export class TripRequestsService {
 
       try {
         await this.notificationsService.create(updated.travelerId, {
-          type: 'agency_response' as any,
+          type: 'agency_response',
           title: 'Agency Response',
           body: bodyMap[nextStatus],
           deepLinkTarget: 'trip-requests',
@@ -307,7 +308,7 @@ export class TripRequestsService {
     if (nextStatus === TripRequestStatus.confirmed) {
       try {
         await this.notificationsService.create(updated.travelerId, {
-          type: 'booking_update' as any,
+          type: 'booking_update',
           title: 'Booking Update',
           body: 'Your booking has been confirmed!',
           deepLinkTarget: 'trip-requests',

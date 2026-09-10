@@ -1,5 +1,12 @@
 ﻿import { ApiProperty } from '@nestjs/swagger';
-import { IsNumber, IsOptional, IsPositive, IsString, Length, Min } from 'class-validator';
+import {
+  IsNumber,
+  IsOptional,
+  IsPositive,
+  IsString,
+  Length,
+  Min,
+} from 'class-validator';
 
 export class GroupWithdrawDto {
   @ApiProperty({ minimum: 0.01, example: 50 })

@@ -18,7 +18,14 @@ describe('ReviewsService', () => {
         aggregate: jest.fn(),
       },
     };
-    const mockNotificationsService = { create: jest.fn().mockResolvedValue({}), listForUser: jest.fn(), getUnreadCount: jest.fn(), markRead: jest.fn(), markAllRead: jest.fn(), delete: jest.fn() };
+    const mockNotificationsService = {
+      create: jest.fn().mockResolvedValue({}),
+      listForUser: jest.fn(),
+      getUnreadCount: jest.fn(),
+      markRead: jest.fn(),
+      markAllRead: jest.fn(),
+      delete: jest.fn(),
+    };
     service = new ReviewsService(prisma, mockNotificationsService as any);
   });
 
@@ -243,5 +250,3 @@ describe('ReviewsService', () => {
     });
   });
 });
-
-

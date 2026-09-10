@@ -1,9 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import {
-  ContentReport,
-  ReportStatus,
-  ReportTargetType,
-} from '@prisma/client';
+import { ContentReport, ReportStatus, ReportTargetType } from '@prisma/client';
 import { AppException } from '../../common/errors/app.exception';
 import { PrismaService } from '../prisma/prisma.service';
 import { AdminAuditLogService } from '../admin-audit-log/admin-audit-log.service';
@@ -20,11 +16,12 @@ export class ReportsService {
     private readonly auditLogService: AdminAuditLogService,
   ) {}
 
-  async create(reporterId: string, dto: CreateReportDto): Promise<ContentReport> {
+  async create(
+    reporterId: string,
+    dto: CreateReportDto,
+  ): Promise<ContentReport> {
     if (reporterId === dto.targetId) {
-      throw AppException.businessRule(
-        'You cannot report your own content.',
-      );
+      throw AppException.businessRule('You cannot report your own content.');
     }
 
     this.logger.log(

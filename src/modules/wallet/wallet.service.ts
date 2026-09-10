@@ -315,9 +315,9 @@ export class WalletService {
       try {
         const donorLabel = params.isAnonymous
           ? 'Someone'
-          : params.donorDisplayName ?? 'Someone';
+          : (params.donorDisplayName ?? 'Someone');
         await this.notificationsService.create(creator.id, {
-          type: 'donation' as any,
+          type: 'donation',
           title: 'New Donation',
           body: `${donorLabel} donated $${params.amount} to your campaign`,
           deepLinkTarget: 'campaign',
@@ -329,7 +329,10 @@ export class WalletService {
         );
       }
 
-      const feePercentage = this.configService.get('wallet.donationFeePercentage', { infer: true });
+      const feePercentage = this.configService.get(
+        'wallet.donationFeePercentage',
+        { infer: true },
+      );
       if (feePercentage > 0) {
         const fee = amount.times(feePercentage).dividedBy(100);
         if (fee.greaterThan(0)) {
@@ -392,7 +395,10 @@ export class WalletService {
       throw AppException.businessRule('Insufficient wallet balance.');
     }
 
-    const threshold = this.configService.get('wallet.highValueWithdrawalThreshold', { infer: true });
+    const threshold = this.configService.get(
+      'wallet.highValueWithdrawalThreshold',
+      { infer: true },
+    );
     if (dto.amount >= threshold) {
       const profile = await this.prisma.travelerProfile.findUnique({
         where: { userId },
@@ -411,7 +417,8 @@ export class WalletService {
         amount: new Decimal(dto.amount),
         currency: dto.currency,
         status: WithdrawalStatus.requested,
-        highValueThreshold: dto.amount >= threshold ? new Decimal(threshold) : null,
+        highValueThreshold:
+          dto.amount >= threshold ? new Decimal(threshold) : null,
       },
     });
 
@@ -427,13 +434,15 @@ export class WalletService {
       for (const admin of admins) {
         try {
           await this.notificationsService.create(admin.id, {
-            type: 'system_alert' as any,
+            type: 'system_alert',
             title: 'High-Value Withdrawal Requested',
             body: `User ${user?.username ?? userId} requested a $${dto.amount} withdrawal.`,
             deepLinkTarget: 'admin-wallet',
           });
         } catch (error) {
-          this.logger.error(`Failed to send high-value withdrawal alert: ${(error as Error).message}`);
+          this.logger.error(
+            `Failed to send high-value withdrawal alert: ${(error as Error).message}`,
+          );
         }
       }
     }
@@ -528,7 +537,7 @@ export class WalletService {
     if (dto.decision === 'rejected') {
       try {
         await this.notificationsService.create(request.userId, {
-          type: 'withdrawal_status' as any,
+          type: 'withdrawal_status',
           title: 'Withdrawal Update',
           body: `Your withdrawal request was rejected. Reason: ${dto.reason ?? 'Not specified'}`,
           deepLinkTarget: 'wallet',
@@ -559,7 +568,7 @@ export class WalletService {
 
     try {
       await this.notificationsService.create(request.userId, {
-        type: 'withdrawal_status' as any,
+        type: 'withdrawal_status',
         title: 'Withdrawal Update',
         body: 'Your withdrawal request has been approved.',
         deepLinkTarget: 'wallet',
@@ -622,7 +631,7 @@ export class WalletService {
 
     try {
       await this.notificationsService.create(request.userId, {
-        type: 'withdrawal_status' as any,
+        type: 'withdrawal_status',
         title: 'Withdrawal Paid',
         body: 'Your withdrawal has been paid.',
         deepLinkTarget: 'wallet',
@@ -714,4 +723,3 @@ export class WalletService {
     return updated;
   }
 }
-

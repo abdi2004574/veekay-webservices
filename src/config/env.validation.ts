@@ -1,4 +1,4 @@
-import * as Joi from 'joi';
+﻿import * as Joi from 'joi';
 
 export const envValidationSchema = Joi.object({
   NODE_ENV: Joi.string()
@@ -44,6 +44,12 @@ export const envValidationSchema = Joi.object({
   STRIPE_SECRET_KEY: Joi.string().allow('').optional(),
   STRIPE_PUBLISHABLE_KEY: Joi.string().allow('').optional(),
   STRIPE_WEBHOOK_SECRET: Joi.string().allow('').optional(),
+  STRIPE_CONNECT_WEBHOOK_SECRET: Joi.string().allow('').optional(),
+  STRIPE_PLATFORM_FEE_PERCENT: Joi.number().default(0),
+  STRIPE_COMMISSION_PERCENT: Joi.number().default(10),
+  STRIPE_PRICE_BASIC: Joi.string().allow('').optional(),
+  STRIPE_PRICE_PREMIUM: Joi.string().allow('').optional(),
+  STRIPE_PRICE_FEATURED: Joi.string().allow('').optional(),
 
   OTP_EXPIRY_MINUTES: Joi.number().default(10),
   OTP_RESEND_COOLDOWN_SECONDS: Joi.number().default(60),

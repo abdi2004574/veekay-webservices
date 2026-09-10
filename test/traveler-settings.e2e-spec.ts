@@ -103,8 +103,7 @@ describe('Traveler Settings (e2e)', () => {
         Object.keys(NotificationType).length,
       );
       const donationPref = defaultsRes.body.data.find(
-        (p: { type: NotificationType }) =>
-          p.type === NotificationType.donation,
+        (p: { type: NotificationType }) => p.type === NotificationType.donation,
       );
       expect(donationPref.inAppEnabled).toBe(true);
       expect(donationPref.pushEnabled).toBe(true);
@@ -121,8 +120,7 @@ describe('Traveler Settings (e2e)', () => {
         .set('Authorization', `Bearer ${alice.accessToken}`)
         .expect(200);
       const updatedDonation = updatedRes.body.data.find(
-        (p: { type: NotificationType }) =>
-          p.type === NotificationType.donation,
+        (p: { type: NotificationType }) => p.type === NotificationType.donation,
       );
       expect(updatedDonation.inAppEnabled).toBe(false);
       expect(updatedDonation.pushEnabled).toBe(true);

@@ -69,7 +69,9 @@ describe('NotificationPreferenceService', () => {
         pushEnabled: false,
         emailEnabled: true,
       });
-      const milestone = result.find((r) => r.type === NotificationType.milestone);
+      const milestone = result.find(
+        (r) => r.type === NotificationType.milestone,
+      );
       expect(milestone).toEqual({
         type: NotificationType.milestone,
         inAppEnabled: true,
@@ -131,10 +133,12 @@ describe('NotificationPreferenceService', () => {
 
       const result = await service.set('user-1', {
         type: NotificationType.donation,
-      } as UpdateNotificationPreferenceDto);
+      });
 
       expect(prisma.notificationPreference.upsert).toHaveBeenCalledWith({
-        where: { userId_type: { userId: 'user-1', type: NotificationType.donation } },
+        where: {
+          userId_type: { userId: 'user-1', type: NotificationType.donation },
+        },
         create: {
           userId: 'user-1',
           type: NotificationType.donation,
@@ -165,10 +169,12 @@ describe('NotificationPreferenceService', () => {
       const result = await service.set('user-1', {
         type: NotificationType.donation,
         emailEnabled: true,
-      } as UpdateNotificationPreferenceDto);
+      });
 
       expect(prisma.notificationPreference.upsert).toHaveBeenCalledWith({
-        where: { userId_type: { userId: 'user-1', type: NotificationType.donation } },
+        where: {
+          userId_type: { userId: 'user-1', type: NotificationType.donation },
+        },
         create: expect.any(Object),
         update: { emailEnabled: true },
       });
@@ -209,7 +215,9 @@ describe('NotificationPreferenceService', () => {
       await service.resetDefaults('user-1', NotificationType.donation);
 
       expect(prisma.notificationPreference.delete).toHaveBeenCalledWith({
-        where: { userId_type: { userId: 'user-1', type: NotificationType.donation } },
+        where: {
+          userId_type: { userId: 'user-1', type: NotificationType.donation },
+        },
       });
     });
   });
