@@ -17,6 +17,7 @@ describe('TripRequestsService', () => {
       agency: { findUnique: jest.fn() },
       package: { findUnique: jest.fn() },
       campaign: { findUnique: jest.fn() },
+      user: { findUnique: jest.fn() },
       tripRequest: {
         create: jest.fn(),
         findMany: jest.fn(),
@@ -33,10 +34,12 @@ describe('TripRequestsService', () => {
     };
     conversationsService = { create: jest.fn() };
     messagesService = { send: jest.fn() };
+    const mockNotificationsService = { create: jest.fn().mockResolvedValue({}) };
     service = new TripRequestsService(
       prisma,
       conversationsService,
       messagesService,
+      mockNotificationsService as any,
     );
   });
 
@@ -75,7 +78,7 @@ describe('TripRequestsService', () => {
 
       expect(prisma.agency.findUnique).toHaveBeenCalledWith({
         where: { id: 'agency-1' },
-        select: { id: true, status: true },
+        select: { id: true, status: true, userId: true },
       });
       expect(prisma.tripRequest.create).toHaveBeenCalledWith(
         expect.objectContaining({

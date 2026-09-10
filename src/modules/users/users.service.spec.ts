@@ -1,6 +1,7 @@
 import {
   DestinationType,
   Gender,
+  NotificationType,
   ProfileVisibility,
   TravelStyle,
   UserRole,
@@ -11,6 +12,9 @@ describe('UsersService', () => {
   let prisma: any;
   let friendsService: any;
   let tokenService: any;
+  let notificationsService: any;
+  let adminAuditLogService: any;
+  let verifiedBadgesService: any;
   let service: UsersService;
 
   beforeEach(() => {
@@ -19,11 +23,12 @@ describe('UsersService', () => {
       travelerDestinationPreference: { deleteMany: jest.fn() },
       travelerTravelStylePreference: { deleteMany: jest.fn() },
       travelerPreviousTripPhoto: { deleteMany: jest.fn() },
-      travelerProfile: { upsert: jest.fn() },
-      notificationPreference: { findUnique: jest.fn(), upsert: jest.fn() },
+      travelerProfile: { upsert: jest.fn(), update: jest.fn() },
+      notificationPreference: { findUnique: jest.fn(), findMany: jest.fn(), upsert: jest.fn() },
       privacySetting: { findUnique: jest.fn(), upsert: jest.fn() },
       post: { count: jest.fn() },
       campaign: { count: jest.fn().mockResolvedValue(0) },
+      tripRequest: { count: jest.fn().mockResolvedValue(0) },
     };
     friendsService = {
       getFriendIds: jest.fn().mockResolvedValue([]),
@@ -38,7 +43,24 @@ describe('UsersService', () => {
     tokenService = {
       revokeAllRefreshTokensForUser: jest.fn().mockResolvedValue(undefined),
     };
-    service = new UsersService(prisma, friendsService, tokenService);
+    notificationsService = {
+      create: jest.fn().mockResolvedValue(undefined),
+    };
+    adminAuditLogService = {
+      record: jest.fn().mockResolvedValue({}),
+    };
+    verifiedBadgesService = {
+      findActiveBySubject: jest.fn().mockResolvedValue(null),
+      revoke: jest.fn().mockResolvedValue({}),
+    };
+    service = new UsersService(
+      prisma,
+      friendsService,
+      tokenService,
+      notificationsService,
+      adminAuditLogService,
+      verifiedBadgesService,
+    );
   });
 
   it('rejects profile setup for a non-traveler account', async () => {
@@ -239,32 +261,52 @@ describe('UsersService', () => {
   });
 
   describe('notification preferences', () => {
-    it('returns schema defaults when no preference row exists yet', async () => {
-      prisma.notificationPreference.findUnique.mockResolvedValue(null);
+    it('returns schema defaults for all notification types when no preference rows exist yet', async () => {
+      prisma.notificationPreference.findMany.mockResolvedValue([]);
 
       const prefs = await service.getNotificationPreferences('user-1');
 
-      expect(prefs).toEqual({
-        donationAlerts: true,
-        campaignUpdates: true,
-        agencyMessages: true,
-      });
+      expect(prefs).toEqual([
+        { type: NotificationType.donation, inAppEnabled: true, pushEnabled: true, emailEnabled: false },
+        { type: NotificationType.milestone, inAppEnabled: true, pushEnabled: true, emailEnabled: false },
+        { type: NotificationType.agency_response, inAppEnabled: true, pushEnabled: true, emailEnabled: false },
+        { type: NotificationType.chat_message, inAppEnabled: true, pushEnabled: true, emailEnabled: false },
+        { type: NotificationType.like, inAppEnabled: true, pushEnabled: true, emailEnabled: false },
+        { type: NotificationType.comment, inAppEnabled: true, pushEnabled: true, emailEnabled: false },
+        { type: NotificationType.share, inAppEnabled: true, pushEnabled: true, emailEnabled: false },
+        { type: NotificationType.review_received, inAppEnabled: true, pushEnabled: true, emailEnabled: false },
+        { type: NotificationType.verification_status, inAppEnabled: true, pushEnabled: true, emailEnabled: false },
+        { type: NotificationType.account_status, inAppEnabled: true, pushEnabled: true, emailEnabled: false },
+        { type: NotificationType.campaign_flagged, inAppEnabled: true, pushEnabled: true, emailEnabled: false },
+        { type: NotificationType.admin_broadcast, inAppEnabled: true, pushEnabled: true, emailEnabled: false },
+        { type: NotificationType.new_request, inAppEnabled: true, pushEnabled: true, emailEnabled: false },
+        { type: NotificationType.booking_update, inAppEnabled: true, pushEnabled: true, emailEnabled: false },
+        { type: NotificationType.payment_received, inAppEnabled: true, pushEnabled: true, emailEnabled: false },
+        { type: NotificationType.withdrawal_status, inAppEnabled: true, pushEnabled: true, emailEnabled: false },
+        { type: NotificationType.friend_request, inAppEnabled: true, pushEnabled: true, emailEnabled: false },
+        { type: NotificationType.shared_file, inAppEnabled: true, pushEnabled: true, emailEnabled: false },
+        { type: NotificationType.new_call, inAppEnabled: true, pushEnabled: true, emailEnabled: false },
+        { type: NotificationType.system_alert, inAppEnabled: true, pushEnabled: true, emailEnabled: false },
+      ]);
     });
 
     it('upserts and returns the updated values', async () => {
       prisma.notificationPreference.upsert.mockResolvedValue({
-        donationAlerts: false,
-        campaignUpdates: true,
-        agencyMessages: true,
+        type: NotificationType.donation,
+        inAppEnabled: false,
+        pushEnabled: true,
+        emailEnabled: true,
       });
 
       const prefs = await service.updateNotificationPreferences('user-1', {
-        donationAlerts: false,
+        type: NotificationType.donation,
+        inAppEnabled: false,
       });
 
-      expect(prefs.donationAlerts).toBe(false);
+      expect(prefs.type).toBe(NotificationType.donation);
+      expect(prefs.inAppEnabled).toBe(false);
       expect(prisma.notificationPreference.upsert).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { userId: 'user-1' } }),
+        expect.objectContaining({ where: { userId_type: { userId: 'user-1', type: NotificationType.donation } } }),
       );
     });
   });
@@ -565,3 +607,4 @@ describe('UsersService', () => {
     });
   });
 });
+

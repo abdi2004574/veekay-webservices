@@ -1,6 +1,7 @@
 ﻿import { ApiProperty } from '@nestjs/swagger';
 import { DestinationType, PackageStatus } from '@prisma/client';
 import {
+  ArrayMaxSize,
   IsArray,
   IsEnum,
   IsInt,
@@ -79,5 +80,6 @@ export class CreatePackageDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
+  @ArrayMaxSize(6)
   mediaMediaIds?: string[];
 }

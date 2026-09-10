@@ -8,7 +8,10 @@ import { WalletService } from './wallet.service';
 describe('WalletService', () => {
   let prisma: any;
   let fundingProvider: any;
+  let notificationsService: any;
   let service: WalletService;
+  let configService: any;
+  let adminAuditLogService: any;
   beforeEach(() => {
     prisma = {
       walletAccount: {
@@ -34,7 +37,22 @@ describe('WalletService', () => {
     };
     prisma.$transaction.mockImplementation(async (cb: any) => cb(prisma));
     fundingProvider = { name: 'manual', deposit: jest.fn() };
-    service = new WalletService(prisma, fundingProvider);
+    notificationsService = { create: jest.fn() };
+    configService = {
+      get: jest.fn((key) => {
+        if (key === 'wallet.donationFeePercentage') return 0;
+        if (key === 'wallet.highValueWithdrawalThreshold') return 1000;
+        return undefined;
+      }),
+    };
+    adminAuditLogService = { record: jest.fn() };
+    service = new WalletService(
+      prisma,
+      fundingProvider,
+      notificationsService,
+      configService,
+      adminAuditLogService,
+    );
   });
   const wallet = (overrides: Record<string, unknown> = {}) => ({
     id: 'wallet-1',

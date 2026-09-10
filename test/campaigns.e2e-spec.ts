@@ -6,6 +6,7 @@ import { resetDb, disconnectDb } from './utils/reset-db';
 import { resetRedis, disconnectRedis } from './utils/reset-redis';
 import { clearMailhog } from './utils/mailhog';
 import { registerAndVerifyTraveler } from './utils/register-traveler';
+import { testPrisma } from './utils/reset-db';
 
 describe('Campaigns (e2e)', () => {
   let app: INestApplication<App>;
@@ -199,7 +200,7 @@ describe('Campaigns (e2e)', () => {
     expect(res.body.data.viewsCount).toEqual(2);
   });
 
-  it('rejects editing/deleting someone else’s campaign, and lets the owner edit and delete', async () => {
+  it('rejects editing/deleting someone else\'s campaign, and lets the owner edit and delete', async () => {
     const alice = await registerAndVerifyTraveler(
       server,
       'alice7@e2e.test',
@@ -245,7 +246,7 @@ describe('Campaigns (e2e)', () => {
       .expect(404);
   });
 
-  it('top-contributors is always empty — no Donation model exists yet', async () => {
+  it('top-contributors is always empty � no Donation model exists yet', async () => {
     const alice = await registerAndVerifyTraveler(
       server,
       'alice8@e2e.test',
@@ -265,6 +266,80 @@ describe('Campaigns (e2e)', () => {
       .set('Authorization', `Bearer ${alice.accessToken}`)
       .expect(200);
     expect(res.body.data.items).toEqual([]);
+  });
+
+  it('removes old photo MinIO objects and MediaAsset rows on update', async () => {
+    const alice = await registerAndVerifyTraveler(
+      server,
+      'alice-cleanup@e2e.test',
+      'Alice',
+    );
+    const mediaId1 = await uploadPhoto(alice.accessToken);
+    const mediaId2 = await uploadPhoto(alice.accessToken);
+
+    const createRes = await request(server())
+      .post('/api/v1/campaigns')
+      .set('Authorization', `Bearer ${alice.accessToken}`)
+      .send({ ...basePayload, photoMediaIds: [mediaId1] })
+      .expect(201);
+    const campaignId = createRes.body.data.id;
+
+    await request(server())
+      .patch(`/api/v1/campaigns/${campaignId}`)
+      .set('Authorization', `Bearer ${alice.accessToken}`)
+      .send({ photoMediaIds: [mediaId2] })
+      .expect(200);
+
+    const media1 = await testPrisma.mediaAsset.findUnique({ where: { id: mediaId1 } });
+    expect(media1?.status).toEqual('deleted');
+
+    const media2 = await testPrisma.mediaAsset.findUnique({ where: { id: mediaId2 } });
+    expect(media2?.status).toEqual('uploaded');
+  });
+
+  it('cleans up photo MinIO objects and MediaAsset rows on campaign delete', async () => {
+    const alice = await registerAndVerifyTraveler(
+      server,
+      'alice-cleanup-del@e2e.test',
+      'Alice',
+    );
+    const mediaId = await uploadPhoto(alice.accessToken);
+
+    const createRes = await request(server())
+      .post('/api/v1/campaigns')
+      .set('Authorization', `Bearer ${alice.accessToken}`)
+      .send({ ...basePayload, photoMediaIds: [mediaId] })
+      .expect(201);
+    const campaignId = createRes.body.data.id;
+
+    await request(server())
+      .delete(`/api/v1/campaigns/${campaignId}`)
+      .set('Authorization', `Bearer ${alice.accessToken}`)
+      .expect(200);
+
+    const media = await testPrisma.mediaAsset.findUnique({ where: { id: mediaId } });
+    expect(media?.status).toEqual('deleted');
+  });
+
+  it('allows removing all photos via empty photoMediaIds on update', async () => {
+    const alice = await registerAndVerifyTraveler(
+      server,
+      'alice-empty@e2e.test',
+      'Alice',
+    );
+    const mediaId = await uploadPhoto(alice.accessToken);
+    const createRes = await request(server())
+      .post('/api/v1/campaigns')
+      .set('Authorization', `Bearer ${alice.accessToken}`)
+      .send({ ...basePayload, photoMediaIds: [mediaId] })
+      .expect(201);
+    const campaignId = createRes.body.data.id;
+
+    await request(server())
+      .patch(`/api/v1/campaigns/${campaignId}`)
+      .set('Authorization', `Bearer ${alice.accessToken}`)
+      .send({ photoMediaIds: [] })
+      .expect(200);
   });
 
   describe('public browse (GET /campaigns)', () => {
@@ -364,3 +439,5 @@ describe('Campaigns (e2e)', () => {
     });
   });
 });
+
+

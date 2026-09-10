@@ -18,10 +18,10 @@ export interface FundingProviderResult {
 
 /**
  * Processor-agnostic funding-rail interface. The eventual client-confirmed
- * processor (JazzCash / Easypaisa / bank gateway / Stripe Connect — TBD) plugs
+ * processor (JazzCash / Easypaisa / bank gateway / Stripe Connect ï¿½ TBD) plugs
  * in here implementing IFundingProvider. Until that decision is made, the
  * ManualFundingProvider stub is the only registered implementation; admin
- * can use it to credit a wallet for MVP/testing only — see
+ * can use it to credit a wallet for MVP/testing only ï¿½ see
  * docs/features/wallet-ledger.md.
  */
 export interface IFundingProvider {

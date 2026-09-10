@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import {
   ConversationType,
   MediaStatus,
@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { MediaAssetsService } from '../storage/media-assets.service';
 import { ConversationsService } from './conversations.service';
 import { SendMessageDto } from './dto/send-message.dto';
+import { NotificationsService } from '../notifications/services/notifications.service';
 
 const SENDER_SELECT = {
   select: { id: true, username: true, displayName: true },
@@ -16,10 +17,13 @@ const SENDER_SELECT = {
 
 @Injectable()
 export class MessagesService {
+  private readonly logger = new Logger(MessagesService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly conversationsService: ConversationsService,
     private readonly mediaAssetsService: MediaAssetsService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async send(conversationId: string, senderId: string, dto: SendMessageDto) {
@@ -73,7 +77,73 @@ export class MessagesService {
       data: { lastMessageAt: message.createdAt },
     });
 
+    this.dispatchChatNotifications(conversationId, senderId, message, dto).catch(
+      (error) => {
+        this.logger.error(
+          `Notification dispatch failed for message ${message.id}: ${(error as Error).message}`,
+        );
+      },
+    );
+
     return this.attachMediaUrl(message);
+  }
+
+  private async dispatchChatNotifications(
+    conversationId: string,
+    senderId: string,
+    message: { id: string; type: string; body: string | null; sender: { username: string | null; displayName: string | null } },
+    dto: SendMessageDto,
+  ) {
+    const senderName =
+      message.sender.username ?? message.sender.displayName ?? 'Someone';
+
+    const participants = await this.prisma.conversationParticipant.findMany({
+      where: { conversationId, leftAt: null, userId: { not: senderId } },
+      include: { user: { select: { id: true } } },
+    });
+
+    const recipientIds = participants
+      .map((p) => p.user.id)
+      .filter((id): id is string => !!id);
+
+    if (recipientIds.length === 0) return;
+
+    const textBody =
+      message.type === 'text'
+        ? message.body ?? ''
+        : message.type === 'document'
+          ? dto.fileName ?? 'a document'
+          : 'a photo';
+
+    const truncatedBody = textBody.length > 100
+      ? `${textBody.slice(0, 97)}...`
+      : textBody;
+
+    await Promise.all(
+      recipientIds.map((userId) =>
+        this.notificationsService.create(userId, {
+          type: 'chat_message',
+          title: 'New message',
+          body: `${senderName}: ${truncatedBody}`,
+          deepLinkTarget: 'chat',
+          deepLinkEntityId: conversationId,
+        }),
+      ),
+    );
+
+    if (message.type === 'document') {
+      await Promise.all(
+        recipientIds.map((userId) =>
+          this.notificationsService.create(userId, {
+            type: 'shared_file',
+            title: 'Shared file',
+            body: `${senderName} shared a document`,
+            deepLinkTarget: 'chat',
+            deepLinkEntityId: conversationId,
+          }),
+        ),
+      );
+    }
   }
 
   private async attachMediaUrl<T extends { mediaId: string | null }>(
@@ -107,7 +177,6 @@ export class MessagesService {
     const hasMore = messages.length > limit;
     const page = hasMore ? messages.slice(0, limit) : messages;
 
-    // Fetching messages counts as delivery for anything not already delivered/read.
     const othersMessageIds = page
       .filter((m) => m.senderId !== viewerId)
       .map((m) => m.id);

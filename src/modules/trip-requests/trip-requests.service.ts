@@ -9,6 +9,7 @@ import { AppException } from '../../common/errors/app.exception';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConversationsService } from '../chat/conversations.service';
 import { MessagesService } from '../chat/messages.service';
+import { NotificationsService } from '../notifications/services/notifications.service';
 import { CreateTripRequestDto } from './dto/create-trip-request.dto';
 import { CreateSmartReplyTemplateDto } from './dto/create-smart-reply-template.dto';
 import { UpdateSmartReplyTemplateDto } from './dto/update-smart-reply-template.dto';
@@ -22,8 +23,6 @@ const REQUEST_INCLUDE = {
   campaign: { select: { id: true, title: true, destination: true } },
 } as const;
 
-// Legal status transitions per docs/features/user-requests-communication.md.
-// No back-transitions; declined/cancelled/completed are terminal.
 const ALLOWED_TRANSITIONS: Record<TripRequestStatus, TripRequestStatus[]> = {
   [TripRequestStatus.pending]: [
     TripRequestStatus.in_discussion,
@@ -49,9 +48,8 @@ export class TripRequestsService {
     private readonly prisma: PrismaService,
     private readonly conversationsService: ConversationsService,
     private readonly messagesService: MessagesService,
+    private readonly notificationsService: NotificationsService,
   ) {}
-
-  // ──────────────────────── Agency resolution helpers ────────────────────────
 
   async resolveAgencyIdOrThrow(userId: string): Promise<string> {
     const agency = await this.prisma.agency.findUnique({
@@ -64,12 +62,10 @@ export class TripRequestsService {
     return agency.id;
   }
 
-  // ──────────────────────── Traveler: create + list ─────────────────────────
-
   async create(travelerId: string, dto: CreateTripRequestDto) {
     const agency = await this.prisma.agency.findUnique({
       where: { id: dto.agencyId },
-      select: { id: true, status: true },
+      select: { id: true, userId: true, status: true },
     });
     if (!agency || agency.status !== AgencyStatus.approved) {
       throw AppException.notFound('Agency not found.');
@@ -95,9 +91,6 @@ export class TripRequestsService {
       }
     }
 
-    // Reuse-or-create the agency conversation (lazy fan-out, same pattern as
-    // group-campaigns' groupConversationId). create() returns the existing
-    // Conversation if one already exists between this traveler and agency.
     const conversation = await this.conversationsService.create(travelerId, {
       type: 'agency',
       agencyId: agency.id,
@@ -116,12 +109,30 @@ export class TripRequestsService {
       include: REQUEST_INCLUDE,
     });
 
-    // Auto-post the initial inquiry as a text message in the conversation
-    // so the chat thread already has context when the agency opens it.
     await this.messagesService.send(conversation.id, travelerId, {
       type: MessageType.text,
       body: dto.message,
     });
+
+    const traveler = await this.prisma.user.findUnique({
+      where: { id: travelerId },
+      select: { displayName: true, username: true },
+    });
+    const travelerName = traveler?.displayName ?? traveler?.username ?? 'A traveler';
+
+    try {
+      await this.notificationsService.create(agency.userId, {
+        type: 'new_request' as any,
+        title: 'New Trip Request',
+        body: `You have a new trip request from ${travelerName}`,
+        deepLinkTarget: 'trip-requests',
+        deepLinkEntityId: createdRequest.id,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to send new_request notification to agency ${agency.id}: ${(error as Error).message}`,
+      );
+    }
 
     return createdRequest;
   }
@@ -154,8 +165,6 @@ export class TripRequestsService {
     };
   }
 
-  // ──────────────────────── Agency: list incoming ───────────────────────────
-
   async listForAgency(
     agencyId: string,
     status: TripRequestStatus | undefined,
@@ -183,8 +192,6 @@ export class TripRequestsService {
       nextCursor: hasMore ? page[page.length - 1].id : null,
     };
   }
-
-  // ──────────────────────── Shared: get detail ──────────────────────────────
 
   async getDetailForCaller(
     requestId: string,
@@ -220,8 +227,6 @@ export class TripRequestsService {
     throw AppException.forbidden('You do not have access to this request.');
   }
 
-  // ──────────────────────── Agency: status transitions ─────────────────────
-
   async updateStatus(
     requestId: string,
     agencyUserId: string,
@@ -229,7 +234,7 @@ export class TripRequestsService {
   ) {
     const agency = await this.prisma.agency.findUnique({
       where: { userId: agencyUserId },
-      select: { id: true },
+      select: { id: true, agencyName: true },
     });
     if (!agency) {
       throw AppException.forbidden('Agency account not found.');
@@ -256,12 +261,6 @@ export class TripRequestsService {
       include: REQUEST_INCLUDE,
     });
 
-    // TODO: invoicing/commission deduction pending Feature #6. When a request
-    // transitions to `confirmed`, this is where the booking-invoice trigger
-    // would normally fire — creating a Stripe PaymentIntent or commission split
-    // per docs/14-payments-and-stripe.md. Feature #6 (Payments, Wallet &
-    // Withdrawal) is the most blocked feature in PROGRESS_TRACKER.md; do not
-    // silently wire a stub here.
     if (nextStatus === TripRequestStatus.confirmed) {
       this.logger.log(
         JSON.stringify({
@@ -275,11 +274,52 @@ export class TripRequestsService {
       );
     }
 
-    // NOTE: AuditService is not yet implemented (Feature #11). For now we
-    // emit a structured Pino log entry on every status transition. Once
-    // AuditService exists, replace this with auditService.record(...)
-    // targeting audit_logs (action='trip_request.status_changed', before/
-    // after = { status: previousStatus } / { status: nextStatus }).
+    const agencyResponseStatuses: TripRequestStatus[] = [
+      TripRequestStatus.in_discussion,
+      TripRequestStatus.confirmed,
+      TripRequestStatus.completed,
+      TripRequestStatus.declined,
+    ];
+
+    if (agencyResponseStatuses.includes(nextStatus)) {
+      const bodyMap: Record<string, string> = {
+        [TripRequestStatus.in_discussion]: `${agency.agencyName} started discussing your trip request`,
+        [TripRequestStatus.confirmed]: `${agency.agencyName} confirmed your trip request`,
+        [TripRequestStatus.completed]: `${agency.agencyName} marked your trip request as completed`,
+        [TripRequestStatus.declined]: `${agency.agencyName} declined your trip request`,
+      };
+
+      try {
+        await this.notificationsService.create(updated.travelerId, {
+          type: 'agency_response' as any,
+          title: 'Agency Response',
+          body: bodyMap[nextStatus],
+          deepLinkTarget: 'trip-requests',
+          deepLinkEntityId: requestId,
+        });
+      } catch (error) {
+        this.logger.error(
+          `Failed to send agency_response notification for request ${requestId}: ${(error as Error).message}`,
+        );
+      }
+    }
+
+    if (nextStatus === TripRequestStatus.confirmed) {
+      try {
+        await this.notificationsService.create(updated.travelerId, {
+          type: 'booking_update' as any,
+          title: 'Booking Update',
+          body: 'Your booking has been confirmed!',
+          deepLinkTarget: 'trip-requests',
+          deepLinkEntityId: requestId,
+        });
+      } catch (error) {
+        this.logger.error(
+          `Failed to send booking_update notification for request ${requestId}: ${(error as Error).message}`,
+        );
+      }
+    }
+
     this.logger.log(
       JSON.stringify({
         audit: 'trip_request.status_changed',
@@ -293,8 +333,6 @@ export class TripRequestsService {
 
     return updated;
   }
-
-  // ──────────────────────── Traveler: cancel ─────────────────────────────────
 
   async cancel(requestId: string, travelerId: string) {
     const request = await this.prisma.tripRequest.findUnique({
@@ -320,8 +358,6 @@ export class TripRequestsService {
       include: REQUEST_INCLUDE,
     });
   }
-
-  // ──────────────────────── Smart-reply templates ───────────────────────────
 
   async listTemplates(agencyId: string) {
     return this.prisma.smartReplyTemplate.findMany({

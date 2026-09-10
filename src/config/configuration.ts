@@ -31,6 +31,11 @@ export interface AppConfig {
     secretKey: string;
     forcePathStyle: boolean;
   };
+  firebase: {
+    projectId: string;
+    clientEmail: string;
+    privateKey: string;
+  };
   otp: {
     expiryMinutes: number;
     resendCooldownSeconds: number;
@@ -44,6 +49,14 @@ export interface AppConfig {
   throttle: {
     ttlMs: number;
     limit: number;
+  };
+  wallet: {
+    highValueWithdrawalThreshold: number;
+    donationFeePercentage: number;
+  };
+  fraud: {
+    profileChangeThreshold: number;
+    profileChangeWindowDays: number;
   };
 }
 
@@ -77,9 +90,6 @@ export default (): AppConfig => ({
   },
   storage: {
     endpoint: process.env.S3_ENDPOINT as string,
-    // Presigned URLs are signed against this host instead, since S3_ENDPOINT
-    // inside docker-compose is the internal `minio:9000` hostname, which is
-    // unreachable from a browser/mobile client outside the compose network.
     publicEndpoint:
       process.env.S3_PUBLIC_ENDPOINT ?? (process.env.S3_ENDPOINT as string),
     region: process.env.S3_REGION ?? 'us-east-1',
@@ -87,6 +97,11 @@ export default (): AppConfig => ({
     accessKey: process.env.S3_ACCESS_KEY as string,
     secretKey: process.env.S3_SECRET_KEY as string,
     forcePathStyle: process.env.S3_FORCE_PATH_STYLE !== 'false',
+  },
+  firebase: {
+    projectId: process.env.FIREBASE_PROJECT_ID as string,
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL as string,
+    privateKey: process.env.FIREBASE_PRIVATE_KEY as string,
   },
   otp: {
     expiryMinutes: parseInt(process.env.OTP_EXPIRY_MINUTES ?? '10', 10),
@@ -104,5 +119,25 @@ export default (): AppConfig => ({
   throttle: {
     ttlMs: parseInt(process.env.THROTTLE_TTL_MS ?? '60000', 10),
     limit: parseInt(process.env.THROTTLE_LIMIT ?? '100', 10),
+  },
+  wallet: {
+    highValueWithdrawalThreshold: parseInt(
+      process.env.WALLET_HIGH_VALUE_THRESHOLD ?? '1000',
+      10,
+    ),
+    donationFeePercentage: parseInt(
+      process.env.WALLET_DONATION_FEE_PERCENTAGE ?? '0',
+      10,
+    ),
+  },
+  fraud: {
+    profileChangeThreshold: parseInt(
+      process.env.FRAUD_PROFILE_CHANGE_THRESHOLD ?? '3',
+      10,
+    ),
+    profileChangeWindowDays: parseInt(
+      process.env.FRAUD_PROFILE_CHANGE_WINDOW_DAYS ?? '30',
+      10,
+    ),
   },
 });

@@ -40,7 +40,7 @@ model User {
   mediaAssets              MediaAsset[]
   messageReceipts          MessageReceipt[]
   messages                 Message[]
-  notificationPreference   NotificationPreference?
+  notificationPreferences  NotificationPreference[]
   paymentMethods           PaymentMethod[]
   payoutAccounts           PayoutAccount[]
   postLikes                PostLike[]
@@ -56,6 +56,10 @@ model User {
   travelerProfile          TravelerProfile?
   withdrawalRequests       WithdrawalRequest[]
   tripRequests             TripRequest[]
+  fraudFlags              FraudFlag[]
+  reviewedFraudFlags      FraudFlag[]           @relation("FraudFlagReviews")
+  notifications            Notification[]
+  pushDevices             PushDevice[]
 
   @@map("users")
 }
@@ -73,6 +77,11 @@ model TravelerProfile {
   dateOfBirth           DateTime?                       @map("date_of_birth")
   gender                Gender?
   phone                 String?
+  governmentIdMediaId   String?                         @map("government_id_media_id")
+  identityVerified      Boolean                         @default(false) @map("identity_verified")
+  isAdult               Boolean?                        @map("is_adult")
+  requiresAccompaniment Boolean?                        @map("requires_accompaniment")
+  verificationStatus    VerificationStatus              @default(unverified) @map("verification_status")
   destinationTypes      TravelerDestinationPreference[]
   previousTripPhotos    TravelerPreviousTripPhoto[]
   user                  User                            @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -98,14 +107,17 @@ model TravelerPreviousTripPhoto {
 }
 
 model NotificationPreference {
-  userId          String  @id @map("user_id")
-  donationAlerts  Boolean @default(true) @map("donation_alerts")
-  campaignUpdates Boolean @default(true) @map("campaign_updates")
-  agencyMessages  Boolean @default(true) @map("agency_messages")
-  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String           @map("user_id")
+  type          NotificationType
+  inAppEnabled  Boolean          @default(true) @map("in_app_enabled")
+  pushEnabled   Boolean          @default(true) @map("push_enabled")
+  emailEnabled  Boolean          @default(false) @map("email_enabled")
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@id([userId, type])
   @@map("notification_preferences")
 }
+
 
 model PrivacySetting {
   userId                String            @id @map("user_id")
@@ -197,6 +209,7 @@ model Agency {
   subscriptionTier      AgencySubscriptionTier @default(basic) @map("subscription_tier")
   logoMediaId           String?                @map("logo_media_id")
   description           String?
+  refundNote            String?                @map("refund_note")
   createdAt             DateTime               @default(now()) @map("created_at")
   updatedAt             DateTime               @updatedAt @map("updated_at")
   user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -463,6 +476,9 @@ model Campaign {
   groupConversationId String?               @unique @map("group_conversation_id")
   isGroup             Boolean               @default(false) @map("is_group")
   raisedAmount        Decimal               @default(0) @map("raised_amount")
+  verificationStatus   VerificationStatus              @default(unverified) @map("verification_status")
+  verificationNote     String?                         @map("verification_note")
+  verifiedBadgeAssignedAt DateTime?                    @map("verified_badge_assigned_at")
   photos              CampaignPhoto[]
   creator             User                  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   donations           Donation[]
@@ -472,6 +488,7 @@ model Campaign {
   packageLinks        PackageCampaignLink[]
   withdrawalRequests  WithdrawalRequest[]
   tripRequests        TripRequest[]
+  milestoneNotificationLogs MilestoneNotificationLog?
 
   @@index([creatorId])
   @@map("campaigns")
@@ -542,6 +559,7 @@ model GroupMember {
   campaignId String          @map("campaign_id")
   userId     String          @map("user_id")
   role       GroupMemberRole @default(member)
+  canWithdraw Boolean        @default(false) @map("can_withdraw")
   joinedAt   DateTime        @default(now()) @map("joined_at")
   campaign   Campaign        @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -729,6 +747,7 @@ model WithdrawalRequest {
   highValueThreshold Decimal?          @map("high_value_threshold")
   walletTransactionId String?          @unique @map("wallet_transaction_id")
   rejectionReason   String?            @map("rejection_reason")
+  refundNote        String?            @map("refund_note")
   createdAt         DateTime           @default(now()) @map("created_at")
   updatedAt         DateTime           @updatedAt @map("updated_at")
   campaign          Campaign?          @relation(fields: [campaignId], references: [id])
@@ -843,6 +862,7 @@ enum MediaPurpose {
   campaign_photo
   campaign_document
   package_visual
+  government_id
 }
 
 enum ConversationType {
@@ -954,8 +974,230 @@ enum WalletTransactionDirection {
 
 enum WalletTransactionType {
   donation_received
+  donation_fee
   withdrawal
   refund
   commission
   booking_payment
 }
+
+enum NotificationType {
+  donation
+  milestone
+  agency_response
+  chat_message
+  like
+  comment
+  share
+  review_received
+  verification_status
+  account_status
+  campaign_flagged
+  admin_broadcast
+  new_request
+  booking_update
+  payment_received
+  withdrawal_status
+  friend_request
+  shared_file
+  new_call
+  system_alert
+}
+
+enum NotificationChannel {
+  in_app
+  push
+  email
+}
+
+enum MilestoneType {
+  p25
+  p50
+  p100
+}
+
+enum VerifiedBadgeSubjectType {
+  user
+  agency
+}
+
+enum ReportTargetType {
+  post
+  review
+  chat_message
+  campaign_media
+  agency_document
+}
+
+enum ReportStatus {
+  pending
+  reviewing
+  resolved
+  dismissed
+  flagged
+  rejected
+}
+
+enum VerificationStatus {
+  unverified
+  pending_review
+  verified
+  flagged
+  rejected
+}
+
+enum FraudFlagType {
+  frequent_profile_changes
+  payment_method_mismatch
+  withdrawal_anomaly
+  personal_info_mismatch
+}
+
+enum FraudFlagSeverity {
+  low
+  medium
+  high
+  critical
+}
+
+enum FraudFlagStatus {
+  open
+  reviewing
+  resolved
+  dismissed
+}
+
+enum AdminInviteStatus {
+  pending
+  accepted
+  revoked
+  expired
+}
+
+model ContentReport {
+  id              String           @id @default(uuid())
+  reporterId      String           @map("reporter_id")
+  targetType      ReportTargetType @map("targetType")
+  targetId        String           @map("target_id")
+  reason          String
+  status          ReportStatus     @default(pending)
+  resolvedById    String?          @map("resolved_by_id")
+  resolutionNote  String?          @map("resolution_note")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([targetType, targetId])
+  @@map("content_reports")
+}
+
+model VerifiedBadge {
+  id             String                   @id @default(uuid())
+  subjectType    VerifiedBadgeSubjectType @map("subjectType")
+  subjectId      String                   @map("subject_id")
+  assignedById   String                   @map("assigned_by_id")
+  assignedAt     DateTime                 @default(now()) @map("assigned_at")
+  revokedAt      DateTime?                @map("revoked_at")
+
+  @@unique([subjectType, subjectId])
+  @@map("verified_badges")
+}
+
+model AdminAuditLog {
+  id          String   @id @default(uuid())
+  actorId     String   @map("actor_id")
+  action      String
+  targetType  String   @map("target_type")
+  targetId    String?  @map("target_id")
+  reason      String?
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([actorId])
+  @@index([createdAt])
+  @@index([targetType, targetId])
+  @@map("admin_audit_logs")
+}
+
+model AdminInvite {
+  id            String            @id @default(uuid())
+  email         String
+  token         String
+  invitedById   String            @map("invited_by_id")
+  status        AdminInviteStatus @default(pending)
+  expiresAt     DateTime          @map("expires_at")
+  acceptedAt    DateTime?         @map("accepted_at")
+  createdAt     DateTime          @default(now()) @map("created_at")
+
+  @@index([email])
+  @@index([status])
+  @@map("admin_invites")
+}
+
+model Notification {
+  id                String              @id @default(uuid())
+  userId            String              @map("user_id")
+  type              NotificationType
+  title             String
+  body              String
+  read              Boolean             @default(false)
+  deepLinkTarget    String?             @map("deep_link_target")
+  deepLinkEntityId  String?             @map("deep_link_entity_id")
+  metadata          Json?
+  channel           NotificationChannel @default(in_app)
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+  pushSentAt        DateTime?           @map("push_sent_at")
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, read])
+  @@map("notifications")
+}
+
+model PushDevice {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  fcmToken    String    @unique @map("fcm_token")
+  platform    String
+  lastSeenAt  DateTime? @map("last_seen_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_devices")
+}
+
+model MilestoneNotificationLog {
+  campaignId String        @id @map("campaign_id")
+  milestone  MilestoneType
+  notifiedAt DateTime      @default(now()) @map("notified_at")
+  campaign   Campaign      @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@map("milestone_notification_logs")
+}
+
+model FraudFlag {
+  id             String            @id @default(uuid())
+  userId         String            @map("user_id")
+  type           FraudFlagType
+  severity       FraudFlagSeverity @default(low)
+  description    String
+  status         FraudFlagStatus   @default(open)
+  reviewedById   String?           @map("reviewed_by_id")
+  reviewedAt     DateTime?         @map("reviewed_at")
+  resolutionNote String?           @map("resolution_note")
+  metadata       Json?
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy     User?             @relation("FraudFlagReviews", fields: [reviewedById], references: [id])
+
+  @@index([userId, status])
+  @@index([createdAt])
+  @@map("fraud_flags")
+}
+
+
+
+

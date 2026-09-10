@@ -15,7 +15,7 @@ describe('PackagesService', () => {
         findMany: jest.fn(),
         findUnique: jest.fn(),
       },
-      packageMedia: { deleteMany: jest.fn(), createMany: jest.fn() },
+      packageMedia: { deleteMany: jest.fn(), createMany: jest.fn(), findMany: jest.fn() },
       packageCampaignLink: {
         findFirst: jest.fn(),
         create: jest.fn(),
@@ -27,6 +27,7 @@ describe('PackagesService', () => {
     };
     mediaAssetsService = {
       resolveViewUrls: jest.fn().mockResolvedValue(new Map()),
+      cleanupMediaAssets: jest.fn().mockResolvedValue(undefined),
     };
     service = new PackagesService(prisma, mediaAssetsService);
   });
@@ -201,6 +202,7 @@ describe('PackagesService', () => {
         id: 'pkg-1',
         agencyId: 'agency-1',
       });
+      prisma.packageMedia.findMany.mockResolvedValue([]);
       prisma.package.update.mockResolvedValue({
         id: 'pkg-1',
         media: [],
@@ -252,6 +254,7 @@ describe('PackagesService', () => {
         id: 'pkg-1',
         agencyId: 'agency-1',
       });
+      prisma.packageMedia.findMany.mockResolvedValue([]);
 
       prisma.agency.findUnique.mockResolvedValue({
         id: 'agency-1',

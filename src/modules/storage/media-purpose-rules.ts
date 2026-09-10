@@ -42,6 +42,7 @@ export const MEDIA_PURPOSE_RULES: Record<MediaPurpose, MediaPurposeRule> = {
     contentTypes: CHAT_DOCUMENT_TYPES,
     maxSizeBytes: 20 * 1024 * 1024,
   },
+  government_id: { contentTypes: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'], maxSizeBytes: 5 * 1024 * 1024 },
   package_visual: { contentTypes: IMAGE_TYPES, maxSizeBytes: 10 * 1024 * 1024 },
 };
 
@@ -58,3 +59,4 @@ const EXT_BY_CONTENT_TYPE: Record<string, string> = {
 export function extensionForContentType(contentType: string): string {
   return EXT_BY_CONTENT_TYPE[contentType] ?? 'bin';
 }
+

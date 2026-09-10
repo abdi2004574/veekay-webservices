@@ -2,7 +2,9 @@ import {
   GroupContributionType,
   GroupExpenseCategory,
   GroupMemberRole,
+  WithdrawalStatus,
 } from '@prisma/client';
+import { Decimal } from '@prisma/client/runtime/library';
 import { GroupCampaignsService } from './group-campaigns.service';
 
 describe('GroupCampaignsService', () => {
@@ -10,6 +12,7 @@ describe('GroupCampaignsService', () => {
   let friendsService: any;
   let conversationsService: any;
   let mediaAssetsService: any;
+  let configService: any;
   let service: GroupCampaignsService;
 
   const groupCampaign = {
@@ -34,11 +37,13 @@ describe('GroupCampaignsService', () => {
         findMany: jest.fn().mockResolvedValue([]),
         create: jest.fn(),
         delete: jest.fn(),
+        update: jest.fn(),
       },
       groupContribution: {
         findMany: jest.fn().mockResolvedValue([]),
         create: jest.fn(),
         groupBy: jest.fn().mockResolvedValue([]),
+        aggregate: jest.fn().mockResolvedValue({ _sum: { amount: null } }),
       },
       groupExpense: {
         findMany: jest.fn().mockResolvedValue([]),
@@ -46,6 +51,12 @@ describe('GroupCampaignsService', () => {
         create: jest.fn(),
         delete: jest.fn(),
         aggregate: jest.fn().mockResolvedValue({ _sum: { amount: null } }),
+      },
+      withdrawalRequest: {
+        create: jest.fn(),
+      },
+      travelerProfile: {
+        findUnique: jest.fn(),
       },
     };
     friendsService = { areFriends: jest.fn().mockResolvedValue(true) };
@@ -57,8 +68,15 @@ describe('GroupCampaignsService', () => {
     mediaAssetsService = {
       resolveViewUrls: jest.fn().mockResolvedValue(new Map()),
     };
+    configService = {
+      get: jest.fn((key: string) => {
+        if (key === 'wallet.highValueWithdrawalThreshold') return 1000;
+        return undefined;
+      }),
+    };
     service = new GroupCampaignsService(
       prisma,
+      configService,
       friendsService,
       conversationsService,
       mediaAssetsService,
@@ -262,6 +280,77 @@ describe('GroupCampaignsService', () => {
     });
   });
 
+  describe('updateMemberWithdrawPermission', () => {
+    beforeEach(() => {
+      prisma.campaign.findUnique.mockResolvedValue(groupCampaign);
+      prisma.groupMember.findUnique
+        .mockResolvedValueOnce({ role: GroupMemberRole.admin }) // assertAdmin
+        .mockResolvedValueOnce({ id: 'gm-1', userId: 'member-1', role: GroupMemberRole.member, canWithdraw: false }); // target lookup
+      prisma.groupMember.update.mockResolvedValue({
+        id: 'gm-1',
+        userId: 'member-1',
+        role: GroupMemberRole.member,
+        canWithdraw: true,
+        user: { id: 'member-1', username: 'member', displayName: 'Member' },
+      });
+    });
+
+    it('admin can update canWithdraw to true', async () => {
+      const result = await service.updateMemberWithdrawPermission('c-1', 'admin-1', 'member-1', true);
+
+      expect(prisma.groupMember.findUnique).toHaveBeenCalledTimes(2);
+      expect(prisma.groupMember.update).toHaveBeenCalledWith({
+        where: { id: 'gm-1' },
+        data: { canWithdraw: true },
+        include: expect.any(Object),
+      });
+      expect(result.canWithdraw).toBe(true);
+    });
+
+    it('admin can update canWithdraw to false', async () => {
+      prisma.groupMember.update.mockResolvedValue({
+        id: 'gm-1',
+        userId: 'member-1',
+        role: GroupMemberRole.member,
+        canWithdraw: false,
+        user: { id: 'member-1', username: 'member', displayName: 'Member' },
+      });
+
+      const result = await service.updateMemberWithdrawPermission('c-1', 'admin-1', 'member-1', false);
+
+      expect(prisma.groupMember.update).toHaveBeenCalledWith({
+        where: { id: 'gm-1' },
+        data: { canWithdraw: false },
+        include: expect.any(Object),
+      });
+      expect(result.canWithdraw).toBe(false);
+    });
+
+    it('non-admin gets forbidden', async () => {
+      prisma.groupMember.findUnique.mockReset();
+      prisma.groupMember.findUnique.mockResolvedValue({
+        role: GroupMemberRole.member,
+      });
+
+      await expect(
+        service.updateMemberWithdrawPermission('c-1', 'member-1', 'member-2', true),
+      ).rejects.toMatchObject({ getStatus: expect.any(Function) });
+      expect(prisma.groupMember.update).not.toHaveBeenCalled();
+    });
+
+    it('non-existent member gets not found', async () => {
+      prisma.groupMember.findUnique.mockReset();
+      prisma.groupMember.findUnique
+        .mockResolvedValueOnce({ role: GroupMemberRole.admin }) // assertAdmin
+        .mockResolvedValueOnce(null); // target lookup returns null
+
+      await expect(
+        service.updateMemberWithdrawPermission('c-1', 'admin-1', 'non-existent', true),
+      ).rejects.toMatchObject({ getStatus: expect.any(Function) });
+      expect(prisma.groupMember.update).not.toHaveBeenCalled();
+    });
+  });
+
   describe('addContribution', () => {
     it('always attributes the contribution to the caller, never a selectable member', async () => {
       prisma.campaign.findUnique.mockResolvedValue(groupCampaign);
@@ -379,6 +468,191 @@ describe('GroupCampaignsService', () => {
           },
         }),
       );
+    });
+  });
+
+  describe('groupWithdraw', () => {
+    it('succeeds for group admin with sufficient funds', async () => {
+      prisma.campaign.findUnique.mockResolvedValue(groupCampaign);
+      prisma.groupMember.findUnique.mockResolvedValue({
+        role: GroupMemberRole.admin,
+        canWithdraw: false,
+      });
+      prisma.groupContribution.aggregate.mockResolvedValue({
+        _sum: { amount: new Decimal(1000) },
+      });
+      prisma.groupExpense.aggregate.mockResolvedValue({
+        _sum: { amount: new Decimal(300) },
+      });
+      prisma.withdrawalRequest.create.mockResolvedValue({ id: 'wr-1' });
+
+      const result = await service.groupWithdraw('c-1', 'admin-1', {
+        amount: 500,
+        currency: 'USD',
+      });
+
+      expect(result).toEqual({ id: 'wr-1' });
+      expect(prisma.withdrawalRequest.create).toHaveBeenCalledWith({
+        data: {
+          userId: 'admin-1',
+          campaignId: 'c-1',
+          amount: expect.any(Decimal),
+          currency: 'USD',
+          status: WithdrawalStatus.requested,
+        },
+      });
+    });
+
+    it('succeeds for designated member (canWithdraw: true) with sufficient funds', async () => {
+      prisma.campaign.findUnique.mockResolvedValue(groupCampaign);
+      prisma.groupMember.findUnique.mockResolvedValue({
+        role: GroupMemberRole.member,
+        canWithdraw: true,
+      });
+      prisma.groupContribution.aggregate.mockResolvedValue({
+        _sum: { amount: new Decimal(1000) },
+      });
+      prisma.groupExpense.aggregate.mockResolvedValue({
+        _sum: { amount: new Decimal(300) },
+      });
+      prisma.withdrawalRequest.create.mockResolvedValue({ id: 'wr-1' });
+
+      const result = await service.groupWithdraw('c-1', 'member-1', {
+        amount: 500,
+        currency: 'USD',
+      });
+
+      expect(result).toEqual({ id: 'wr-1' });
+      expect(prisma.withdrawalRequest.create).toHaveBeenCalledWith({
+        data: {
+          userId: 'member-1',
+          campaignId: 'c-1',
+          amount: expect.any(Decimal),
+          currency: 'USD',
+          status: WithdrawalStatus.requested,
+        },
+      });
+    });
+
+    it('rejects regular member (canWithdraw: false)', async () => {
+      prisma.campaign.findUnique.mockResolvedValue(groupCampaign);
+      prisma.groupMember.findUnique.mockResolvedValue({
+        role: GroupMemberRole.member,
+        canWithdraw: false,
+      });
+
+      await expect(
+        service.groupWithdraw('c-1', 'member-1', {
+          amount: 500,
+          currency: 'USD',
+        }),
+      ).rejects.toMatchObject({
+        getStatus: expect.any(Function),
+      });
+      expect(prisma.withdrawalRequest.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects non-member', async () => {
+      prisma.campaign.findUnique.mockResolvedValue(groupCampaign);
+      prisma.groupMember.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.groupWithdraw('c-1', 'stranger', {
+          amount: 500,
+          currency: 'USD',
+        }),
+      ).rejects.toMatchObject({
+        getStatus: expect.any(Function),
+      });
+      expect(prisma.withdrawalRequest.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects insufficient funds', async () => {
+      prisma.campaign.findUnique.mockResolvedValue(groupCampaign);
+      prisma.groupMember.findUnique.mockResolvedValue({
+        role: GroupMemberRole.admin,
+        canWithdraw: false,
+      });
+      prisma.groupContribution.aggregate.mockResolvedValue({
+        _sum: { amount: new Decimal(1000) },
+      });
+      prisma.groupExpense.aggregate.mockResolvedValue({
+        _sum: { amount: new Decimal(300) },
+      });
+
+      await expect(
+        service.groupWithdraw('c-1', 'admin-1', {
+          amount: 800,
+          currency: 'USD',
+        }),
+      ).rejects.toMatchObject({
+        getStatus: expect.any(Function),
+      });
+      expect(prisma.withdrawalRequest.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects high-value group withdrawal for unverified user', async () => {
+      prisma.campaign.findUnique.mockResolvedValue(groupCampaign);
+      prisma.groupMember.findUnique.mockResolvedValue({
+        role: GroupMemberRole.admin,
+        canWithdraw: false,
+      });
+      prisma.groupContribution.aggregate.mockResolvedValue({
+        _sum: { amount: new Decimal(2000) },
+      });
+      prisma.groupExpense.aggregate.mockResolvedValue({
+        _sum: { amount: new Decimal(0) },
+      });
+      prisma.travelerProfile.findUnique.mockResolvedValue({
+        identityVerified: false,
+      });
+
+      await expect(
+        service.groupWithdraw('c-1', 'admin-1', {
+          amount: 1500,
+          currency: 'USD',
+        }),
+      ).rejects.toMatchObject({
+        getStatus: expect.any(Function),
+      });
+      expect(prisma.withdrawalRequest.create).not.toHaveBeenCalled();
+      expect(prisma.travelerProfile.findUnique).toHaveBeenCalledWith({
+        where: { userId: 'admin-1' },
+      });
+    });
+
+    it('succeeds for high-value group withdrawal for verified user', async () => {
+      prisma.campaign.findUnique.mockResolvedValue(groupCampaign);
+      prisma.groupMember.findUnique.mockResolvedValue({
+        role: GroupMemberRole.admin,
+        canWithdraw: false,
+      });
+      prisma.groupContribution.aggregate.mockResolvedValue({
+        _sum: { amount: new Decimal(2000) },
+      });
+      prisma.groupExpense.aggregate.mockResolvedValue({
+        _sum: { amount: new Decimal(0) },
+      });
+      prisma.travelerProfile.findUnique.mockResolvedValue({
+        identityVerified: true,
+      });
+      prisma.withdrawalRequest.create.mockResolvedValue({ id: 'wr-1' });
+
+      const result = await service.groupWithdraw('c-1', 'admin-1', {
+        amount: 1500,
+        currency: 'USD',
+      });
+
+      expect(result).toEqual({ id: 'wr-1' });
+      expect(prisma.withdrawalRequest.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          userId: 'admin-1',
+          campaignId: 'c-1',
+          amount: new Decimal(1500),
+          currency: 'USD',
+          status: WithdrawalStatus.requested,
+        }),
+      });
     });
   });
 });

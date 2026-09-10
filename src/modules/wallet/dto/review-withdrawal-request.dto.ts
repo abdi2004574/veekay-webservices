@@ -11,4 +11,10 @@ export class ReviewWithdrawalRequestDto {
   @IsString()
   @MaxLength(500)
   reason?: string;
+
+  @ApiProperty({ required: false, maxLength: 1000 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  refundNote?: string;
 }

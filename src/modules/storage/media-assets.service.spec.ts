@@ -1,4 +1,11 @@
-import { MediaPurpose, MediaStatus, ProfileVisibility, AgencyStatus, PackageStatus, CampaignPrivacy } from '@prisma/client';
+import {
+  MediaPurpose,
+  MediaStatus,
+  ProfileVisibility,
+  AgencyStatus,
+  PackageStatus,
+  CampaignPrivacy,
+} from '@prisma/client';
 import { MediaAssetsService } from './media-assets.service';
 
 describe('MediaAssetsService', () => {
@@ -98,7 +105,7 @@ describe('MediaAssetsService', () => {
       });
     });
 
-    it('rejects confirming someone else\'s upload', async () => {
+    it("rejects confirming someone else's upload", async () => {
       prisma.mediaAsset.findUnique.mockResolvedValue({
         ...pendingAsset,
         ownerId: 'user-2',
@@ -218,7 +225,10 @@ describe('MediaAssetsService', () => {
       });
 
       await expect(
-        service.getViewUrl('user-1', 'media-1', { entityType: 'post', entityId: 'post-1' }),
+        service.getViewUrl('user-1', 'media-1', {
+          entityType: 'post',
+          entityId: 'post-1',
+        }),
       ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
@@ -226,12 +236,22 @@ describe('MediaAssetsService', () => {
 
     it('agency_document: non-owner denied', async () => {
       prisma.mediaAsset.findUnique.mockResolvedValue(
-        uploadedAsset({ purpose: MediaPurpose.agency_document, ownerId: 'agency-owner' }),
+        uploadedAsset({
+          purpose: MediaPurpose.agency_document,
+          ownerId: 'agency-owner',
+        }),
       );
-      prisma.agencyDocument.findFirst.mockResolvedValue({ id: 'doc-1', mediaId: 'media-1', agencyId: 'agency-1' });
+      prisma.agencyDocument.findFirst.mockResolvedValue({
+        id: 'doc-1',
+        mediaId: 'media-1',
+        agencyId: 'agency-1',
+      });
 
       await expect(
-        service.getViewUrl('user-2', 'media-1', { entityType: 'agency', entityId: 'agency-1' }),
+        service.getViewUrl('user-2', 'media-1', {
+          entityType: 'agency',
+          entityId: 'agency-1',
+        }),
       ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
@@ -244,11 +264,22 @@ describe('MediaAssetsService', () => {
       prisma.mediaAsset.findUnique.mockResolvedValue(
         uploadedAsset({ purpose: MediaPurpose.campaign_photo }),
       );
-      prisma.campaignPhoto.findFirst.mockResolvedValue({ id: 'photo-1', mediaId: 'media-1', campaignId: 'campaign-1' });
-      prisma.campaign.findUnique.mockResolvedValue({ id: 'campaign-1', creatorId: 'creator-1', privacy: CampaignPrivacy.private });
+      prisma.campaignPhoto.findFirst.mockResolvedValue({
+        id: 'photo-1',
+        mediaId: 'media-1',
+        campaignId: 'campaign-1',
+      });
+      prisma.campaign.findUnique.mockResolvedValue({
+        id: 'campaign-1',
+        creatorId: 'creator-1',
+        privacy: CampaignPrivacy.private,
+      });
 
       await expect(
-        service.getViewUrl('user-2', 'media-1', { entityType: 'campaign', entityId: 'campaign-1' }),
+        service.getViewUrl('user-2', 'media-1', {
+          entityType: 'campaign',
+          entityId: 'campaign-1',
+        }),
       ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
@@ -258,10 +289,21 @@ describe('MediaAssetsService', () => {
       prisma.mediaAsset.findUnique.mockResolvedValue(
         uploadedAsset({ purpose: MediaPurpose.campaign_photo }),
       );
-      prisma.campaignPhoto.findFirst.mockResolvedValue({ id: 'photo-1', mediaId: 'media-1', campaignId: 'campaign-1' });
-      prisma.campaign.findUnique.mockResolvedValue({ id: 'campaign-1', creatorId: 'creator-1', privacy: CampaignPrivacy.public });
+      prisma.campaignPhoto.findFirst.mockResolvedValue({
+        id: 'photo-1',
+        mediaId: 'media-1',
+        campaignId: 'campaign-1',
+      });
+      prisma.campaign.findUnique.mockResolvedValue({
+        id: 'campaign-1',
+        creatorId: 'creator-1',
+        privacy: CampaignPrivacy.public,
+      });
 
-      const url = await service.getViewUrl('user-2', 'media-1', { entityType: 'campaign', entityId: 'campaign-1' });
+      const url = await service.getViewUrl('user-2', 'media-1', {
+        entityType: 'campaign',
+        entityId: 'campaign-1',
+      });
 
       expect(url).toEqual('https://download.example/get');
     });
@@ -270,7 +312,11 @@ describe('MediaAssetsService', () => {
       prisma.mediaAsset.findUnique.mockResolvedValue(
         uploadedAsset({ purpose: MediaPurpose.package_visual }),
       );
-      prisma.packageMedia.findFirst.mockResolvedValue({ id: 'pm-1', mediaId: 'media-1', packageId: 'pkg-1' });
+      prisma.packageMedia.findFirst.mockResolvedValue({
+        id: 'pm-1',
+        mediaId: 'media-1',
+        packageId: 'pkg-1',
+      });
       prisma.package.findUnique.mockResolvedValue({
         id: 'pkg-1',
         status: PackageStatus.inactive,
@@ -278,7 +324,10 @@ describe('MediaAssetsService', () => {
       });
 
       await expect(
-        service.getViewUrl('user-2', 'media-1', { entityType: 'package', entityId: 'pkg-1' }),
+        service.getViewUrl('user-2', 'media-1', {
+          entityType: 'package',
+          entityId: 'pkg-1',
+        }),
       ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
@@ -288,15 +337,25 @@ describe('MediaAssetsService', () => {
       prisma.mediaAsset.findUnique.mockResolvedValue(
         uploadedAsset({ purpose: MediaPurpose.package_visual }),
       );
-      prisma.packageMedia.findFirst.mockResolvedValue({ id: 'pm-1', mediaId: 'media-1', packageId: 'pkg-1' });
+      prisma.packageMedia.findFirst.mockResolvedValue({
+        id: 'pm-1',
+        mediaId: 'media-1',
+        packageId: 'pkg-1',
+      });
       prisma.package.findUnique.mockResolvedValue({
         id: 'pkg-1',
         status: PackageStatus.active,
-        agency: { userId: 'agency-owner', status: AgencyStatus.pending_verification },
+        agency: {
+          userId: 'agency-owner',
+          status: AgencyStatus.pending_verification,
+        },
       });
 
       await expect(
-        service.getViewUrl('user-2', 'media-1', { entityType: 'package', entityId: 'pkg-1' }),
+        service.getViewUrl('user-2', 'media-1', {
+          entityType: 'package',
+          entityId: 'pkg-1',
+        }),
       ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
@@ -306,15 +365,25 @@ describe('MediaAssetsService', () => {
       prisma.mediaAsset.findUnique.mockResolvedValue(
         uploadedAsset({ purpose: MediaPurpose.post_media }),
       );
-      prisma.post.findFirst.mockResolvedValue({ id: 'post-1', imageMediaId: 'media-1', authorId: 'author-1' });
+      prisma.post.findFirst.mockResolvedValue({
+        id: 'post-1',
+        imageMediaId: 'media-1',
+        authorId: 'author-1',
+      });
       friendsService.areFriends.mockResolvedValue(false);
 
       await expect(
-        service.getViewUrl('user-2', 'media-1', { entityType: 'post', entityId: 'post-1' }),
+        service.getViewUrl('user-2', 'media-1', {
+          entityType: 'post',
+          entityId: 'post-1',
+        }),
       ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
-      expect(friendsService.areFriends).toHaveBeenCalledWith('user-2', 'author-1');
+      expect(friendsService.areFriends).toHaveBeenCalledWith(
+        'user-2',
+        'author-1',
+      );
     });
 
     it('story_media: non-friend denied', async () => {
@@ -330,7 +399,10 @@ describe('MediaAssetsService', () => {
       friendsService.areFriends.mockResolvedValue(false);
 
       await expect(
-        service.getViewUrl('user-2', 'media-1', { entityType: 'story', entityId: 'story-1' }),
+        service.getViewUrl('user-2', 'media-1', {
+          entityType: 'story',
+          entityId: 'story-1',
+        }),
       ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
@@ -348,7 +420,10 @@ describe('MediaAssetsService', () => {
       });
 
       await expect(
-        service.getViewUrl('user-2', 'media-1', { entityType: 'story', entityId: 'story-1' }),
+        service.getViewUrl('user-2', 'media-1', {
+          entityType: 'story',
+          entityId: 'story-1',
+        }),
       ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
@@ -368,7 +443,10 @@ describe('MediaAssetsService', () => {
       prisma.agencyStaff.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.getViewUrl('user-2', 'media-1', { entityType: 'conversation', entityId: 'conv-1' }),
+        service.getViewUrl('user-2', 'media-1', {
+          entityType: 'conversation',
+          entityId: 'conv-1',
+        }),
       ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
@@ -388,7 +466,10 @@ describe('MediaAssetsService', () => {
       prisma.agencyStaff.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.getViewUrl('user-2', 'media-1', { entityType: 'conversation', entityId: 'conv-1' }),
+        service.getViewUrl('user-2', 'media-1', {
+          entityType: 'conversation',
+          entityId: 'conv-1',
+        }),
       ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
@@ -401,11 +482,16 @@ describe('MediaAssetsService', () => {
       prisma.travelerProfile.findFirst.mockResolvedValue({
         userId: 'profile-owner',
         photoMediaId: 'media-1',
-        user: { privacySetting: { profileVisibility: ProfileVisibility.private } },
+        user: {
+          privacySetting: { profileVisibility: ProfileVisibility.private },
+        },
       });
 
       await expect(
-        service.getViewUrl('user-2', 'media-1', { entityType: 'profile', entityId: 'profile-owner' }),
+        service.getViewUrl('user-2', 'media-1', {
+          entityType: 'profile',
+          entityId: 'profile-owner',
+        }),
       ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
@@ -418,12 +504,17 @@ describe('MediaAssetsService', () => {
       prisma.travelerProfile.findFirst.mockResolvedValue({
         userId: 'profile-owner',
         photoMediaId: 'media-1',
-        user: { privacySetting: { profileVisibility: ProfileVisibility.friends } },
+        user: {
+          privacySetting: { profileVisibility: ProfileVisibility.friends },
+        },
       });
       friendsService.areFriends.mockResolvedValue(false);
 
       await expect(
-        service.getViewUrl('user-2', 'media-1', { entityType: 'profile', entityId: 'profile-owner' }),
+        service.getViewUrl('user-2', 'media-1', {
+          entityType: 'profile',
+          entityId: 'profile-owner',
+        }),
       ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
@@ -436,10 +527,15 @@ describe('MediaAssetsService', () => {
       prisma.travelerProfile.findFirst.mockResolvedValue({
         userId: 'profile-owner',
         photoMediaId: 'media-1',
-        user: { privacySetting: { profileVisibility: ProfileVisibility.public } },
+        user: {
+          privacySetting: { profileVisibility: ProfileVisibility.public },
+        },
       });
 
-      const url = await service.getViewUrl('user-2', 'media-1', { entityType: 'profile', entityId: 'profile-owner' });
+      const url = await service.getViewUrl('user-2', 'media-1', {
+        entityType: 'profile',
+        entityId: 'profile-owner',
+      });
 
       expect(url).toEqual('https://download.example/get');
     });
@@ -452,12 +548,17 @@ describe('MediaAssetsService', () => {
         mediaId: 'media-1',
         userId: 'trip-owner',
         travelerProfile: {
-          user: { privacySetting: { profileVisibility: ProfileVisibility.private } },
+          user: {
+            privacySetting: { profileVisibility: ProfileVisibility.private },
+          },
         },
       });
 
       await expect(
-        service.getViewUrl('user-2', 'media-1', { entityType: 'previousTripPhoto', entityId: 'trip-1' }),
+        service.getViewUrl('user-2', 'media-1', {
+          entityType: 'previousTripPhoto',
+          entityId: 'trip-1',
+        }),
       ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
@@ -474,7 +575,10 @@ describe('MediaAssetsService', () => {
       });
 
       await expect(
-        service.getViewUrl('user-2', 'media-1', { entityType: 'agency', entityId: 'agency-1' }),
+        service.getViewUrl('user-2', 'media-1', {
+          entityType: 'agency',
+          entityId: 'agency-1',
+        }),
       ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
@@ -491,10 +595,69 @@ describe('MediaAssetsService', () => {
       });
 
       await expect(
-        service.getViewUrl('user-2', 'media-1', { entityType: 'campaign', entityId: 'campaign-1' }),
+        service.getViewUrl('user-2', 'media-1', {
+          entityType: 'campaign',
+          entityId: 'campaign-1',
+        }),
       ).rejects.toMatchObject({
         getStatus: expect.any(Function),
       });
+    });
+  });
+
+  describe('cleanupMediaAssets', () => {
+    it('does nothing for an empty input', async () => {
+      await service.cleanupMediaAssets([]);
+      expect(prisma.mediaAsset.findMany).not.toHaveBeenCalled();
+    });
+
+    it('deletes S3 objects and marks assets deleted for uploaded ones', async () => {
+      prisma.mediaAsset.findMany.mockResolvedValue([
+        { id: 'm1', key: 'post_media/u1/m1.jpg', status: MediaStatus.uploaded },
+        { id: 'm2', key: 'post_media/u1/m2.jpg', status: MediaStatus.uploaded },
+      ]);
+      prisma.mediaAsset.update.mockResolvedValue({});
+
+      await service.cleanupMediaAssets(['m1', 'm2']);
+
+      expect(storageService.deleteObject).toHaveBeenCalledWith('post_media/u1/m1.jpg');
+      expect(storageService.deleteObject).toHaveBeenCalledWith('post_media/u1/m2.jpg');
+      expect(prisma.mediaAsset.update).toHaveBeenCalledWith({
+        where: { id: 'm1' },
+        data: { status: MediaStatus.deleted },
+      });
+      expect(prisma.mediaAsset.update).toHaveBeenCalledWith({
+        where: { id: 'm2' },
+        data: { status: MediaStatus.deleted },
+      });
+    });
+
+    it('skips S3 delete for non-uploaded assets but still marks them deleted', async () => {
+      prisma.mediaAsset.findMany.mockResolvedValue([
+        { id: 'm1', key: 'post_media/u1/m1.jpg', status: MediaStatus.pending },
+      ]);
+      prisma.mediaAsset.update.mockResolvedValue({});
+
+      await service.cleanupMediaAssets(['m1']);
+
+      expect(storageService.deleteObject).not.toHaveBeenCalled();
+      expect(prisma.mediaAsset.update).toHaveBeenCalledWith({
+        where: { id: 'm1' },
+        data: { status: MediaStatus.deleted },
+      });
+    });
+
+    it('continues cleanup if one deleteObject throws', async () => {
+      prisma.mediaAsset.findMany.mockResolvedValue([
+        { id: 'm1', key: 'k1', status: MediaStatus.uploaded },
+        { id: 'm2', key: 'k2', status: MediaStatus.uploaded },
+      ]);
+      prisma.mediaAsset.update.mockResolvedValue({});
+      storageService.deleteObject.mockRejectedValueOnce(new Error('S3 error'));
+
+      await service.cleanupMediaAssets(['m1', 'm2']);
+
+      expect(prisma.mediaAsset.update).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -528,3 +691,4 @@ describe('MediaAssetsService', () => {
     });
   });
 });
+

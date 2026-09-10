@@ -1,20 +1,30 @@
-import { Injectable } from '@nestjs/common';
-import { CampaignPrivacy, ProfileVisibility, UserRole } from '@prisma/client';
+import { Injectable, Logger } from '@nestjs/common';
+import { CampaignPrivacy, NotificationType, ProfileVisibility, UserRole, VerificationStatus } from '@prisma/client';
+import { TripRequestStatus } from '@prisma/client';
 import { AppException } from '../../common/errors/app.exception';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/services/notifications.service';
 import { FriendsService } from '../friends/friends.service';
 import { TokenService } from '../auth/token.service';
+import { AdminAuditLogService } from '../admin-audit-log/admin-audit-log.service';
+import { VerifiedBadgesService } from '../verified-badges/verified-badges.service';
 import { ProfileSetupDto } from './dto/profile-setup.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto';
 import { UpdatePrivacySettingsDto } from './dto/update-privacy-settings.dto';
+import { UpdateKycDto } from './dto/update-kyc.dto';
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly friendsService: FriendsService,
     private readonly tokenService: TokenService,
+    private readonly notificationsService: NotificationsService,
+    private readonly adminAuditLogService: AdminAuditLogService,
+    private readonly verifiedBadgesService: VerifiedBadgesService,
   ) {}
 
   async getMe(userId: string) {
@@ -302,9 +312,7 @@ export class UsersService {
         ...(dto.travelStyles
           ? {
               travelStyles: {
-                create: dto.travelStyles.map((travelStyle) => ({
-                  travelStyle,
-                })),
+                create: dto.travelStyles.map((travelStyle) => ({ travelStyle })),
               },
             }
           : {}),
@@ -334,9 +342,7 @@ export class UsersService {
           ? {
               travelStyles: {
                 deleteMany: {},
-                create: dto.travelStyles.map((travelStyle) => ({
-                  travelStyle,
-                })),
+                create: dto.travelStyles.map((travelStyle) => ({ travelStyle })),
               },
             }
           : {}),
@@ -347,34 +353,55 @@ export class UsersService {
   }
 
   async getNotificationPreferences(userId: string) {
-    const prefs = await this.prisma.notificationPreference.findUnique({
+    const prefs = await this.prisma.notificationPreference.findMany({
       where: { userId },
     });
-    return {
-      donationAlerts: prefs?.donationAlerts ?? true,
-      campaignUpdates: prefs?.campaignUpdates ?? true,
-      agencyMessages: prefs?.agencyMessages ?? true,
-    };
+
+    const prefMap = new Map(
+      prefs.map((p) => [p.type, p]),
+    );
+
+    return (Object.values(NotificationType) as NotificationType[]).map((type) => {
+      const existing = prefMap.get(type);
+      return {
+        type,
+        inAppEnabled: existing?.inAppEnabled ?? true,
+        pushEnabled: existing?.pushEnabled ?? true,
+        emailEnabled: existing?.emailEnabled ?? false,
+      };
+    });
   }
 
   async updateNotificationPreferences(
     userId: string,
     dto: UpdateNotificationPreferencesDto,
   ) {
+    const type = dto.type ?? NotificationType.donation;
+
+    const updateData: Record<string, boolean> = {};
+    if (dto.inAppEnabled !== undefined)
+      updateData.inAppEnabled = dto.inAppEnabled;
+    if (dto.pushEnabled !== undefined)
+      updateData.pushEnabled = dto.pushEnabled;
+    if (dto.emailEnabled !== undefined)
+      updateData.emailEnabled = dto.emailEnabled;
+
     const prefs = await this.prisma.notificationPreference.upsert({
-      where: { userId },
+      where: { userId_type: { userId, type } },
       create: {
         userId,
-        donationAlerts: dto.donationAlerts ?? true,
-        campaignUpdates: dto.campaignUpdates ?? true,
-        agencyMessages: dto.agencyMessages ?? true,
+        type,
+        inAppEnabled: dto.inAppEnabled ?? true,
+        pushEnabled: dto.pushEnabled ?? true,
+        emailEnabled: dto.emailEnabled ?? false,
       },
-      update: { ...dto },
+      update: updateData,
     });
     return {
-      donationAlerts: prefs.donationAlerts,
-      campaignUpdates: prefs.campaignUpdates,
-      agencyMessages: prefs.agencyMessages,
+      type: prefs.type,
+      inAppEnabled: prefs.inAppEnabled,
+      pushEnabled: prefs.pushEnabled,
+      emailEnabled: prefs.emailEnabled,
     };
   }
 
@@ -408,7 +435,152 @@ export class UsersService {
     };
   }
 
+  async updateKyc(userId: string, dto: UpdateKycDto) {
+    const profile = await this.prisma.travelerProfile.findUnique({
+      where: { userId },
+    });
+    if (!profile) {
+      throw AppException.notFound('Traveler profile not found.');
+    }
+
+    const updateData: any = {};
+    if (dto.governmentIdMediaId !== undefined) {
+      updateData.governmentIdMediaId = dto.governmentIdMediaId;
+    }
+
+    if (dto.dateOfBirth) {
+      const birthDate = new Date(dto.dateOfBirth);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const m = today.getMonth() - birthDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      updateData.dateOfBirth = birthDate;
+      updateData.isAdult = age >= 18;
+      updateData.requiresAccompaniment = age < 18;
+    }
+
+    if (dto.isAdult !== undefined) {
+      updateData.isAdult = dto.isAdult;
+    }
+    if (dto.requiresAccompaniment !== undefined) {
+      updateData.requiresAccompaniment = dto.requiresAccompaniment;
+    }
+
+    updateData.verificationStatus = VerificationStatus.pending_review;
+
+    const updated = await this.prisma.travelerProfile.update({
+      where: { userId },
+      data: updateData,
+    });
+
+    this.logger.log(
+      JSON.stringify({
+        audit: 'traveler.kyc.submitted',
+        actorUserId: userId,
+      }),
+    );
+
+    return updated;
+  }
+
+  async verifyKyc(
+    targetUserId: string,
+    status: VerificationStatus,
+    note?: string,
+    actorUserId?: string,
+  ) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: targetUserId },
+      include: { travelerProfile: true },
+    });
+    if (!user || !user.travelerProfile) {
+      throw AppException.notFound('Traveler profile not found.');
+    }
+
+    const updateData: any = {
+      verificationStatus: status,
+      identityVerified: status === VerificationStatus.verified,
+    };
+
+    const updated = await this.prisma.travelerProfile.update({
+      where: { userId: targetUserId },
+      data: updateData,
+    });
+
+    await this.adminAuditLogService.record(
+      actorUserId ?? '',
+      status === VerificationStatus.verified ? 'kyc.verified' : 'kyc.rejected',
+      'user',
+      targetUserId,
+      note,
+    );
+
+    if (status !== VerificationStatus.verified) {
+      try {
+        const badge = await this.verifiedBadgesService.findActiveBySubject('user', targetUserId);
+        if (badge) {
+          await this.verifiedBadgesService.revoke(actorUserId ?? '', badge.id);
+        }
+      } catch (error) {
+        // ignore
+      }
+    }
+
+    return updated;
+  }
+
+  async getTopPerformingTravelers(limit = 10) {
+    const travelers = await this.prisma.user.findMany({
+      where: { role: UserRole.traveler },
+      select: {
+        id: true,
+        username: true,
+        displayName: true,
+        travelerProfile: {
+          select: { photoMediaId: true },
+        },
+      },
+    });
+
+    const results = await Promise.all(
+      travelers.map(async (traveler) => {
+        const completedTrips = await this.prisma.tripRequest.count({
+          where: {
+            travelerId: traveler.id,
+            status: TripRequestStatus.completed,
+          },
+        });
+        return {
+          id: traveler.id,
+          username: traveler.username,
+          displayName: traveler.displayName,
+          photoMediaId: traveler.travelerProfile?.photoMediaId ?? null,
+          completedTripCount: completedTrips,
+        };
+      }),
+    );
+
+    return results
+      .filter((t) => t.completedTripCount >= 3)
+      .sort((a, b) => b.completedTripCount - a.completedTripCount)
+      .slice(0, limit);
+  }
   async deactivateAccount(userId: string) {
+    try {
+      await this.notificationsService.create(userId, {
+        type: 'account_status' as any,
+        title: 'Account Deactivated',
+        body: 'Your account has been deactivated. You can reactivate it by contacting support.',
+        deepLinkTarget: 'settings',
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to send account_status notification for user ${userId}: ${(error as Error).message}`,
+      );
+    }
+
     await this.prisma.user.update({
       where: { id: userId },
       data: { isActive: false, deactivatedAt: new Date() },

@@ -46,7 +46,9 @@ export class WalletController {
 
   @Get('withdrawals')
   @RequireRole(UserRole.traveler, UserRole.agency)
-  @ApiOperation({ summary: '[Traveler/Agency] List my own withdrawal requests.' })
+  @ApiOperation({
+    summary: '[Traveler/Agency] List my own withdrawal requests.',
+  })
   async listMyWithdrawals(
     @Query('cursor') cursor: string | undefined,
     @Query('limit') limit: string | undefined,
@@ -76,7 +78,9 @@ export class WalletController {
 
   @Get('withdrawals/:id')
   @RequireRole(UserRole.traveler, UserRole.agency)
-  @ApiOperation({ summary: '[Traveler/Agency] Get one of my withdrawal requests.' })
+  @ApiOperation({
+    summary: '[Traveler/Agency] Get one of my withdrawal requests.',
+  })
   async getWithdrawalDetail(
     @Param('id') id: string,
     @CurrentUser('userId') userId: string,

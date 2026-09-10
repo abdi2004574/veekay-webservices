@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
-import { AgencyStatus } from '@prisma/client';
+import { Injectable, Logger } from '@nestjs/common';
+import { AgencyStatus, NotificationType } from '@prisma/client';
 import { AppException } from '../../common/errors/app.exception';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/services/notifications.service';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { UpdateReviewDto } from './dto/update-review.dto';
 
@@ -17,7 +18,12 @@ function isEditable(editableUntil: Date): boolean {
 
 @Injectable()
 export class ReviewsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(ReviewsService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   private async recomputeReputation(agencyId: string): Promise<void> {
     const { _avg } = await this.prisma.agencyReview.aggregate({
@@ -33,6 +39,7 @@ export class ReviewsService {
   async create(agencyId: string, reviewerId: string, dto: CreateReviewDto) {
     const agency = await this.prisma.agency.findUnique({
       where: { id: agencyId },
+      select: { id: true, userId: true, status: true },
     });
     if (!agency || agency.status !== AgencyStatus.approved) {
       throw AppException.notFound('Agency not found.');
@@ -57,6 +64,27 @@ export class ReviewsService {
       },
     });
     await this.recomputeReputation(agencyId);
+
+    const reviewer = await this.prisma.user.findUnique({
+      where: { id: reviewerId },
+      select: { username: true, displayName: true },
+    });
+    const reviewerName = reviewer?.displayName ?? reviewer?.username ?? 'Someone';
+
+    try {
+      await this.notificationsService.create(agency.userId, {
+        type: NotificationType.review_received,
+        title: 'New Review Received',
+        body: `${reviewerName} left you a ${dto.rating}-star review`,
+        deepLinkTarget: 'agency',
+        deepLinkEntityId: agencyId,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to send review_received notification to agency ${agencyId}: ${(error as Error).message}`,
+      );
+    }
+
     return review;
   }
 

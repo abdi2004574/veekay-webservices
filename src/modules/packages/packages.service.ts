@@ -210,8 +210,18 @@ export class PackagesService {
       }
     });
 
+    let orphanedMediaIds: string[] = [];
     const pkg = await this.prisma.$transaction(async (tx) => {
       if (dto.mediaMediaIds) {
+        const oldMedia = await tx.packageMedia.findMany({
+          where: { packageId },
+          select: { mediaId: true },
+        });
+        const newMediaIds = new Set(dto.mediaMediaIds);
+        orphanedMediaIds = oldMedia
+          .map((m) => m.mediaId)
+          .filter((id) => !newMediaIds.has(id));
+
         await tx.packageMedia.deleteMany({ where: { packageId } });
         await tx.packageMedia.createMany({
           data: dto.mediaMediaIds.map((mediaId, displayOrder) => ({
@@ -239,13 +249,22 @@ export class PackagesService {
       });
     });
 
+    if (orphanedMediaIds.length > 0) {
+      await this.mediaAssetsService.cleanupMediaAssets(orphanedMediaIds);
+    }
+
     const [withUrls] = await this.attachViewUrls([pkg]);
     return withUrls;
   }
-
   async remove(packageId: string, userId: string) {
     await this.findOwnedOrThrow(packageId, userId);
+    const media = await this.prisma.packageMedia.findMany({
+      where: { packageId },
+      select: { mediaId: true },
+    });
+    const mediaIds = media.map((m) => m.mediaId);
     await this.prisma.package.delete({ where: { id: packageId } });
+    await this.mediaAssetsService.cleanupMediaAssets(mediaIds);
   }
 
   async listPublic(

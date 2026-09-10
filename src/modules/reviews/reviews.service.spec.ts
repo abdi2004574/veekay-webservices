@@ -7,6 +7,7 @@ describe('ReviewsService', () => {
 
   beforeEach(() => {
     prisma = {
+      user: { findUnique: jest.fn() },
       agency: { findUnique: jest.fn(), update: jest.fn() },
       agencyReview: {
         findUnique: jest.fn(),
@@ -17,7 +18,8 @@ describe('ReviewsService', () => {
         aggregate: jest.fn(),
       },
     };
-    service = new ReviewsService(prisma);
+    const mockNotificationsService = { create: jest.fn().mockResolvedValue({}), listForUser: jest.fn(), getUnreadCount: jest.fn(), markRead: jest.fn(), markAllRead: jest.fn(), delete: jest.fn() };
+    service = new ReviewsService(prisma, mockNotificationsService as any);
   });
 
   describe('create', () => {
@@ -241,3 +243,5 @@ describe('ReviewsService', () => {
     });
   });
 });
+
+

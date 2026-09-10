@@ -366,4 +366,35 @@ export class MediaAssetsService {
 
     return new Map(urls.map(({ id, url }) => [id, url]));
   }
+
+  /**
+   * Deletes the given media assets (S3/MinIO object + media_assets row).
+   * Used when entities (campaigns, packages, posts) replace their media lists,
+   * to avoid orphaned storage objects growing unboundedly. Safe to call with
+   * a mix of uploaded/pending/deleted assets — it will skip non-uploaded ones
+   * and tolerate missing objects (deleteObject swallows errors). Idempotent.
+   */
+  async cleanupMediaAssets(mediaIds: string[]): Promise<void> {
+    if (mediaIds.length === 0) return;
+    const assets = await this.prisma.mediaAsset.findMany({
+      where: { id: { in: mediaIds } },
+      select: { id: true, key: true, status: true },
+    });
+    await Promise.all(
+      assets.map(async (asset) => {
+        if (asset.status === MediaStatus.uploaded) {
+          try {
+            await this.storageService.deleteObject(asset.key);
+          } catch {
+            // Best-effort: if the object is already gone or the bucket is
+            // unreachable, still mark the row deleted so we don't try again.
+          }
+        }
+        await this.prisma.mediaAsset.update({
+          where: { id: asset.id },
+          data: { status: MediaStatus.deleted },
+        });
+      }),
+    );
+  }
 }

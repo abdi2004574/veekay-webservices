@@ -1,19 +1,25 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsOptional } from 'class-validator';
+import { IsBoolean, IsEnum, IsOptional } from 'class-validator';
+import { NotificationType } from '@prisma/client';
 
 export class UpdateNotificationPreferencesDto {
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, enum: NotificationType })
   @IsOptional()
-  @IsBoolean()
-  donationAlerts?: boolean;
+  @IsEnum(NotificationType)
+  type?: NotificationType;
 
   @ApiProperty({ required: false })
   @IsOptional()
   @IsBoolean()
-  campaignUpdates?: boolean;
+  inAppEnabled?: boolean;
 
   @ApiProperty({ required: false })
   @IsOptional()
   @IsBoolean()
-  agencyMessages?: boolean;
+  pushEnabled?: boolean;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsBoolean()
+  emailEnabled?: boolean;
 }

@@ -24,6 +24,7 @@ export class StoriesService {
     private readonly mediaAssetsService: MediaAssetsService,
   ) {}
 
+  // TODO(Story-orphan-cleanup): covered by scheduled cleanup.orphaned_media job (docs/11-background-jobs.md).
   async create(authorId: string, dto: CreateStoryDto) {
     if (!dto.imageMediaId && !dto.text) {
       throw AppException.badRequest(

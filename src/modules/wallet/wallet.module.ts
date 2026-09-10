@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../prisma/prisma.module';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { AdminAuditLogModule } from '../admin-audit-log/admin-audit-log.module';
 import { ManualFundingProvider } from './funding/manual-funding.provider';
 import { FUNDING_PROVIDER } from './interfaces/funding-provider.interface';
 import { AdminWalletController } from './admin-wallet.controller';
@@ -7,7 +9,7 @@ import { WalletController } from './wallet.controller';
 import { WalletService } from './wallet.service';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, NotificationsModule, AdminAuditLogModule],
   controllers: [WalletController, AdminWalletController],
   providers: [
     WalletService,

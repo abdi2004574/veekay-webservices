@@ -1,13 +1,14 @@
-﻿import { Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { FriendsModule } from '../friends/friends.module';
 import { StorageModule } from '../storage/storage.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { ConversationsService } from './conversations.service';
 import { ConversationsController } from './conversations.controller';
 import { MessagesService } from './messages.service';
 import { MessagesController } from './messages.controller';
 
 @Module({
-  imports: [FriendsModule, StorageModule],
+  imports: [FriendsModule, StorageModule, NotificationsModule],
   controllers: [ConversationsController, MessagesController],
   providers: [ConversationsService, MessagesService],
   exports: [ConversationsService, MessagesService],

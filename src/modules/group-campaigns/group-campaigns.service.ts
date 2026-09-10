@@ -1,26 +1,46 @@
-import { Injectable } from '@nestjs/common';
-import { GroupContributionType, GroupMemberRole } from '@prisma/client';
+﻿import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import {
+  GroupContributionType,
+  GroupMemberRole,
+  WithdrawalStatus,
+} from '@prisma/client';
 import { AppException } from '../../common/errors/app.exception';
 import { PrismaService } from '../prisma/prisma.service';
+import { Decimal } from '@prisma/client/runtime/library';
 import { FriendsService } from '../friends/friends.service';
 import { ConversationsService } from '../chat/conversations.service';
 import { MediaAssetsService } from '../storage/media-assets.service';
 import { AddGroupMemberDto } from './dto/add-group-member.dto';
 import { CreateGroupContributionDto } from './dto/create-group-contribution.dto';
 import { CreateGroupExpenseDto } from './dto/create-group-expense.dto';
+import { GroupWithdrawDto } from './dto/group-withdraw.dto';
+import { UpdateGroupMemberDto } from './dto/update-group-member.dto';
 
 const USER_SELECT = {
   select: { id: true, username: true, displayName: true },
-};
+} as const;
+
+const MEMBER_SELECT = {
+  id: true,
+  userId: true,
+  campaignId: true,
+  role: true,
+  canWithdraw: true,
+  joinedAt: true,
+} as const;
 
 @Injectable()
 export class GroupCampaignsService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
     private readonly friendsService: FriendsService,
     private readonly conversationsService: ConversationsService,
     private readonly mediaAssetsService: MediaAssetsService,
   ) {}
+
+  private readonly logger = new Logger(GroupCampaignsService.name);
 
   private async assertMember(campaignId: string, userId: string) {
     const campaign = await this.prisma.campaign.findUnique({
@@ -31,6 +51,7 @@ export class GroupCampaignsService {
     }
     const membership = await this.prisma.groupMember.findUnique({
       where: { campaignId_userId: { campaignId, userId } },
+      select: MEMBER_SELECT,
     });
     if (!membership) {
       throw AppException.forbidden('You are not a member of this group trip.');
@@ -42,6 +63,15 @@ export class GroupCampaignsService {
     const result = await this.assertMember(campaignId, userId);
     if (result.membership.role !== GroupMemberRole.admin) {
       throw AppException.forbidden('Only a group admin can do this.');
+    }
+    return result;
+  }
+
+  private async assertWithdrawPermission(campaignId: string, userId: string) {
+    const result = await this.assertMember(campaignId, userId);
+    const canWithdraw = result.membership.role === GroupMemberRole.admin || result.membership.canWithdraw;
+    if (!canWithdraw) {
+      throw AppException.forbidden('Only a group admin or designated member can withdraw funds.');
     }
     return result;
   }
@@ -183,6 +213,28 @@ export class GroupCampaignsService {
     }
   }
 
+  async updateMemberWithdrawPermission(
+    campaignId: string,
+    adminId: string,
+    targetUserId: string,
+    canWithdraw: boolean,
+  ) {
+    await this.assertAdmin(campaignId, adminId);
+
+    const membership = await this.prisma.groupMember.findUnique({
+      where: { campaignId_userId: { campaignId, userId: targetUserId } },
+    });
+    if (!membership) {
+      throw AppException.notFound('This user is not a group member.');
+    }
+
+    return this.prisma.groupMember.update({
+      where: { id: membership.id },
+      data: { canWithdraw },
+      include: { user: USER_SELECT },
+    });
+  }
+
   async listContributions(campaignId: string, userId: string) {
     await this.assertMember(campaignId, userId);
     return this.prisma.groupContribution.findMany({
@@ -295,5 +347,59 @@ export class GroupCampaignsService {
         ? (urlsByMediaId.get(c.photos[0].mediaId) ?? null)
         : null,
     }));
+  }
+
+  async groupWithdraw(
+    campaignId: string,
+    userId: string,
+    dto: GroupWithdrawDto,
+  ) {
+    const { membership } = await this.assertWithdrawPermission(campaignId, userId);
+
+    const [contributionSum, expenseSum] = await Promise.all([
+      this.prisma.groupContribution.aggregate({
+        where: { campaignId },
+        _sum: { amount: true },
+      }),
+      this.prisma.groupExpense.aggregate({
+        where: { campaignId },
+        _sum: { amount: true },
+      }),
+    ]);
+
+    const totalRaised = new Decimal(contributionSum._sum.amount ?? 0);
+    const totalSpent = new Decimal(expenseSum._sum.amount ?? 0);
+    const available = totalRaised.minus(totalSpent);
+
+    if (dto.currency !== 'USD') {
+      throw AppException.businessRule('Only USD withdrawals are supported.');
+    }
+
+    const amount = new Decimal(dto.amount);
+    if (amount.greaterThan(available)) {
+      throw AppException.businessRule('Insufficient group funds.');
+    }
+
+    const threshold = this.configService.get('wallet.highValueWithdrawalThreshold', { infer: true });
+    if (dto.amount >= threshold) {
+      const profile = await this.prisma.travelerProfile.findUnique({
+        where: { userId },
+      });
+      if (!profile || !profile.identityVerified) {
+        throw AppException.businessRule(
+          'Identity verification is required for withdrawals of $1,000 or more. Please complete identity verification in your profile.',
+        );
+      }
+    }
+
+    return this.prisma.withdrawalRequest.create({
+      data: {
+        userId,
+        campaignId,
+        amount,
+        currency: dto.currency,
+        status: WithdrawalStatus.requested,
+      },
+    });
   }
 }

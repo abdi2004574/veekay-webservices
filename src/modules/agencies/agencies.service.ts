@@ -1,8 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+﻿import { Injectable, Logger } from '@nestjs/common';
 import { AgencyStaffPermission, AgencyStatus, UserRole } from '@prisma/client';
 import { AppException } from '../../common/errors/app.exception';
 import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/services/notifications.service';
 import { AgencyRegistrationDto } from './dto/agency-registration.dto';
 
 const DIRECTORY_SELECT = {
@@ -38,6 +39,7 @@ export class AgenciesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mailService: MailService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async listDirectory(cursor?: string, limit = 20, search?: string) {
@@ -119,7 +121,9 @@ export class AgenciesService {
         businessAddress: true,
         status: true,
         createdAt: true,
-        user: { select: { id: true, email: true, displayName: true, username: true } },
+        user: {
+          select: { id: true, email: true, displayName: true, username: true },
+        },
         documents: true,
       },
       orderBy: { createdAt: 'asc' },
@@ -156,7 +160,24 @@ export class AgenciesService {
       }),
     );
 
-    await this.mailService.sendAgencyApprovedEmail(updated.user.email, updated.agencyName);
+    try {
+      await this.notificationsService.create(updated.userId, {
+        type: 'verification_status' as any,
+        title: 'Agency Verified',
+        body: 'Congratulations! Your agency has been verified and approved.',
+        deepLinkTarget: 'agency',
+        deepLinkEntityId: agencyId,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to send verification_status notification for agency ${agencyId}: ${(error as Error).message}`,
+      );
+    }
+
+    await this.mailService.sendAgencyApprovedEmail(
+      updated.user.email,
+      updated.agencyName,
+    );
 
     return updated;
   }
@@ -191,6 +212,20 @@ export class AgenciesService {
         reason,
       }),
     );
+
+    try {
+      await this.notificationsService.create(updated.userId, {
+        type: 'verification_status' as any,
+        title: 'Agency Verification Update',
+        body: `Your agency registration was not approved. Reason: ${reason}`,
+        deepLinkTarget: 'agency',
+        deepLinkEntityId: agencyId,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to send verification_status notification for agency ${agencyId}: ${(error as Error).message}`,
+      );
+    }
 
     await this.mailService.sendAgencyRejectedEmail(updated.user.email, reason);
 

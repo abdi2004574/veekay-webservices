@@ -1,13 +1,18 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
+  PlatformRole,
   UserRole,
   WalletTransactionDirection,
   WalletTransactionType,
   WithdrawalStatus,
 } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
+import { ConfigService } from '@nestjs/config';
 import { AppException } from '../../common/errors/app.exception';
+import { AdminAuditLogService } from '../admin-audit-log/admin-audit-log.service';
+import { AppConfig } from '../../config/configuration';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/services/notifications.service';
 import { AdminCreditWalletDto } from './dto/admin-credit-wallet.dto';
 import { CreateWithdrawalRequestDto } from './dto/create-withdrawal-request.dto';
 import { ReviewWithdrawalRequestDto } from './dto/review-withdrawal-request.dto';
@@ -40,9 +45,6 @@ export interface RecordDonationParams {
   idempotencyKey: string;
 }
 
-// Inferred from PrismaService rather than `Prisma.TransactionClient` to
-// avoid the `isolatedModules` + `emitDecoratorMetadata` clash that fires
-// when a Prisma-namespaced type appears in a NestJS-injected method sig.
 export type WalletTxClient = Parameters<
   PrismaService['$transaction']
 >[0] extends (arg: infer C) => unknown
@@ -57,6 +59,9 @@ export class WalletService {
     private readonly prisma: PrismaService,
     @Inject(FUNDING_PROVIDER)
     private readonly fundingProvider: IFundingProvider,
+    private readonly notificationsService: NotificationsService,
+    private readonly configService: ConfigService<AppConfig, true>,
+    private readonly adminAuditLogService: AdminAuditLogService,
   ) {}
 
   async getOrCreateWalletAccount(userId: string, txClient?: WalletTxClient) {
@@ -307,6 +312,40 @@ export class WalletService {
         }),
       );
 
+      try {
+        const donorLabel = params.isAnonymous
+          ? 'Someone'
+          : params.donorDisplayName ?? 'Someone';
+        await this.notificationsService.create(creator.id, {
+          type: 'donation' as any,
+          title: 'New Donation',
+          body: `${donorLabel} donated $${params.amount} to your campaign`,
+          deepLinkTarget: 'campaign',
+          deepLinkEntityId: params.campaignId,
+        });
+      } catch (error) {
+        this.logger.error(
+          `Failed to send donation notification for campaign ${params.campaignId}: ${(error as Error).message}`,
+        );
+      }
+
+      const feePercentage = this.configService.get('wallet.donationFeePercentage', { infer: true });
+      if (feePercentage > 0) {
+        const fee = amount.times(feePercentage).dividedBy(100);
+        if (fee.greaterThan(0)) {
+          await this.debit({
+            userId: creator.id,
+            amount: Number(fee.toString()),
+            currency: params.currency,
+            type: WalletTransactionType.donation_fee,
+            referenceType: 'donation',
+            referenceId: donation.id,
+            idempotencyKey: `${params.idempotencyKey}-fee`,
+            description: `Platform donation fee (${feePercentage}%)`,
+          });
+        }
+      }
+
       return {
         donation: { ...donation, walletTransactionId: transaction.id },
         transaction,
@@ -353,6 +392,18 @@ export class WalletService {
       throw AppException.businessRule('Insufficient wallet balance.');
     }
 
+    const threshold = this.configService.get('wallet.highValueWithdrawalThreshold', { infer: true });
+    if (dto.amount >= threshold) {
+      const profile = await this.prisma.travelerProfile.findUnique({
+        where: { userId },
+      });
+      if (!profile || !profile.identityVerified) {
+        throw AppException.businessRule(
+          'Identity verification is required for withdrawals of \$1,000 or more. Please complete identity verification in your profile.',
+        );
+      }
+    }
+
     const request = await this.prisma.withdrawalRequest.create({
       data: {
         userId,
@@ -360,9 +411,32 @@ export class WalletService {
         amount: new Decimal(dto.amount),
         currency: dto.currency,
         status: WithdrawalStatus.requested,
-        highValueThreshold: null,
+        highValueThreshold: dto.amount >= threshold ? new Decimal(threshold) : null,
       },
     });
+
+    if (dto.amount >= threshold) {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { username: true, email: true },
+      });
+      const admins = await this.prisma.user.findMany({
+        where: { platformRole: PlatformRole.super_admin, isActive: true },
+        select: { id: true },
+      });
+      for (const admin of admins) {
+        try {
+          await this.notificationsService.create(admin.id, {
+            type: 'system_alert' as any,
+            title: 'High-Value Withdrawal Requested',
+            body: `User ${user?.username ?? userId} requested a $${dto.amount} withdrawal.`,
+            deepLinkTarget: 'admin-wallet',
+          });
+        } catch (error) {
+          this.logger.error(`Failed to send high-value withdrawal alert: ${(error as Error).message}`);
+        }
+      }
+    }
 
     this.logger.log(
       JSON.stringify({
@@ -452,16 +526,21 @@ export class WalletService {
     }
 
     if (dto.decision === 'rejected') {
+      try {
+        await this.notificationsService.create(request.userId, {
+          type: 'withdrawal_status' as any,
+          title: 'Withdrawal Update',
+          body: `Your withdrawal request was rejected. Reason: ${dto.reason ?? 'Not specified'}`,
+          deepLinkTarget: 'wallet',
+        });
+      } catch (error) {
+        this.logger.error(
+          `Failed to send withdrawal_status notification for withdrawal ${withdrawalId}: ${(error as Error).message}`,
+        );
+      }
       return this.rejectWithdrawal(adminUserId, withdrawalId, dto.reason);
     }
 
-    // TODO: external payout wiring pending funding-rail decision. When the
-    // client confirms the funding-rail processor (JazzCash / Easypaisa / bank
-    // gateway / Stripe Connect - TBD) we wire the actual external transfer
-    // here. For now, approving a withdrawal simply marks it ready to be
-    // processed - the wallet ledger is NOT yet debited; debit happens when the
-    // processor webhook signals a successful external transfer
-    // (see markWithdrawalPaid).
     const updated = await this.prisma.withdrawalRequest.update({
       where: { id: withdrawalId },
       data: { status: WithdrawalStatus.approved },
@@ -478,6 +557,19 @@ export class WalletService {
       }),
     );
 
+    try {
+      await this.notificationsService.create(request.userId, {
+        type: 'withdrawal_status' as any,
+        title: 'Withdrawal Update',
+        body: 'Your withdrawal request has been approved.',
+        deepLinkTarget: 'wallet',
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to send withdrawal_status notification for withdrawal ${withdrawalId}: ${(error as Error).message}`,
+      );
+    }
+
     return updated;
   }
 
@@ -486,12 +578,6 @@ export class WalletService {
     withdrawalId: string,
     idempotencyKey: string,
   ) {
-    // NOTE: This is intended to be called by the (TBD) processor webhook
-    // handler once a successful external transfer is confirmed. For the MVP
-    // it is exposed via the admin-only `mark-paid` route so ops staff can
-    // manually reconcile transfers that happened outside the system. When
-    // the processor is integrated, remove the admin endpoint and call this
-    // method only from the webhook handler.
     const request = await this.prisma.withdrawalRequest.findUnique({
       where: { id: withdrawalId },
     });
@@ -533,6 +619,19 @@ export class WalletService {
         currency: request.currency,
       }),
     );
+
+    try {
+      await this.notificationsService.create(request.userId, {
+        type: 'withdrawal_status' as any,
+        title: 'Withdrawal Paid',
+        body: 'Your withdrawal has been paid.',
+        deepLinkTarget: 'wallet',
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to send withdrawal_status notification for withdrawal ${withdrawalId}: ${(error as Error).message}`,
+      );
+    }
 
     return updated;
   }
@@ -585,4 +684,34 @@ export class WalletService {
       nextCursor: hasMore ? page[page.length - 1].id : null,
     };
   }
+
+  async updateRefundNote(
+    adminUserId: string,
+    withdrawalId: string,
+    note: string,
+  ) {
+    const request = await this.prisma.withdrawalRequest.findUnique({
+      where: { id: withdrawalId },
+    });
+    if (!request) {
+      throw AppException.notFound('Withdrawal request not found.');
+    }
+
+    const updated = await this.prisma.withdrawalRequest.update({
+      where: { id: withdrawalId },
+      data: { refundNote: note },
+    });
+
+    await this.adminAuditLogService.record(
+      adminUserId,
+      'wallet.withdrawal.refund_note_updated',
+      'withdrawal_request',
+      withdrawalId,
+      undefined,
+      { refundNote: note },
+    );
+
+    return updated;
+  }
 }
+

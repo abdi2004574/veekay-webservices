@@ -74,7 +74,7 @@ export class UpdateCampaignDto {
   })
   @IsOptional()
   @IsArray()
-  @ArrayMinSize(1)
+  @ArrayMinSize(0)
   @ArrayMaxSize(5)
   @IsString({ each: true })
   photoMediaIds?: string[];

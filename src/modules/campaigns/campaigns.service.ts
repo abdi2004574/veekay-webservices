@@ -1,12 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import {
   CampaignPrivacy,
   CampaignStatus,
   GroupMemberRole,
+  VerificationStatus,
 } from '@prisma/client';
 import { AppException } from '../../common/errors/app.exception';
 import { PrismaService } from '../prisma/prisma.service';
 import { MediaAssetsService } from '../storage/media-assets.service';
+import { AdminAuditLogService } from '../admin-audit-log/admin-audit-log.service';
+import { VerifiedBadgesService } from '../verified-badges/verified-badges.service';
 import { CreateCampaignDto } from './dto/create-campaign.dto';
 import { UpdateCampaignDto } from './dto/update-campaign.dto';
 
@@ -16,9 +19,13 @@ const CREATOR_SELECT = {
 
 @Injectable()
 export class CampaignsService {
+  private readonly logger = new Logger(CampaignsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly mediaAssetsService: MediaAssetsService,
+    private readonly adminAuditLogService: AdminAuditLogService,
+    private readonly verifiedBadgesService: VerifiedBadgesService,
   ) {}
 
   private async attachViewUrls(campaigns: any[]) {
@@ -38,7 +45,6 @@ export class CampaignsService {
           url: urlsByMediaId.get(photo.mediaId) ?? null,
         }),
       ),
-      // No Donation model yet (#6) — always 0/empty, never faked.
       contributorsCount: 0,
     }));
   }
@@ -71,9 +77,6 @@ export class CampaignsService {
         story: dto.story,
         tripStartDate: new Date(dto.tripStartDate),
         tripEndDate: dto.tripEndDate ? new Date(dto.tripEndDate) : null,
-        // Group trips are always effectively private — a friend-group's
-        // financial ledger, never public discovery — regardless of what the
-        // privacy field was sent as.
         privacy: isGroup ? CampaignPrivacy.private : dto.privacy,
         giftMode: dto.giftMode,
         giftOccasion: dto.giftMode ? dto.giftOccasion : null,
@@ -119,8 +122,18 @@ export class CampaignsService {
     await this.findOwnedOrThrow(campaignId, creatorId);
     this.validateDateRange(dto.tripStartDate, dto.tripEndDate);
 
+    let orphanedMediaIds: string[] = [];
     const campaign = await this.prisma.$transaction(async (tx) => {
       if (dto.photoMediaIds) {
+        const oldPhotos = await tx.campaignPhoto.findMany({
+          where: { campaignId },
+          select: { mediaId: true },
+        });
+        const newMediaIds = new Set(dto.photoMediaIds);
+        orphanedMediaIds = oldPhotos
+          .map((p) => p.mediaId)
+          .filter((id) => !newMediaIds.has(id));
+
         await tx.campaignPhoto.deleteMany({ where: { campaignId } });
         await tx.campaignPhoto.createMany({
           data: dto.photoMediaIds.map((mediaId, position) => ({
@@ -157,15 +170,22 @@ export class CampaignsService {
       });
     });
 
+    if (orphanedMediaIds.length > 0) {
+      await this.mediaAssetsService.cleanupMediaAssets(orphanedMediaIds);
+    }
+
     const [withUrls] = await this.attachViewUrls([campaign]);
     return withUrls;
   }
-
   async remove(campaignId: string, creatorId: string) {
     await this.findOwnedOrThrow(campaignId, creatorId);
-    // Donation-existence delete guard belongs to #6 — no Donation model
-    // exists yet, so every campaign is freely deletable for now.
+    const photos = await this.prisma.campaignPhoto.findMany({
+      where: { campaignId },
+      select: { mediaId: true },
+    });
+    const mediaIds = photos.map((p) => p.mediaId);
     await this.prisma.campaign.delete({ where: { id: campaignId } });
+    await this.mediaAssetsService.cleanupMediaAssets(mediaIds);
   }
 
   async listMine(creatorId: string) {
@@ -177,7 +197,6 @@ export class CampaignsService {
     return this.attachViewUrls(campaigns);
   }
 
-  /** Public browse/search — mirrors AgenciesService.listDirectory's cursor+search shape. */
   async listPublic(
     cursor?: string,
     limit = 20,
@@ -247,7 +266,6 @@ export class CampaignsService {
     return { ...withUrls, isCreator };
   }
 
-  /** Always empty until #6 (Payments/Donations) exists — never faked. */
   async listTopContributors(campaignId: string, viewerId: string) {
     const campaign = await this.prisma.campaign.findUnique({
       where: { id: campaignId },
@@ -262,5 +280,87 @@ export class CampaignsService {
       throw AppException.notFound('Campaign not found.');
     }
     return { items: [] };
+  }
+
+  async updateVerificationStatus(
+    campaignId: string,
+    status: VerificationStatus,
+    note?: string,
+    actorUserId?: string,
+  ) {
+    const campaign = await this.prisma.campaign.findUnique({
+      where: { id: campaignId },
+      include: { creator: true },
+    });
+    if (!campaign) {
+      throw AppException.notFound('Campaign not found.');
+    }
+
+    const updateData: any = {
+      verificationStatus: status,
+      verificationNote: note ?? null,
+    };
+
+    if (status === VerificationStatus.verified) {
+      updateData.verifiedBadgeAssignedAt = new Date();
+      await this.prisma.travelerProfile.upsert({
+        where: { userId: campaign.creatorId },
+        create: {
+          userId: campaign.creatorId,
+          identityVerified: true,
+          verificationStatus: VerificationStatus.verified,
+        },
+        update: {
+          identityVerified: true,
+          verificationStatus: VerificationStatus.verified,
+        },
+      });
+      try {
+        await this.verifiedBadgesService.assign(actorUserId ?? '', {
+          subjectType: 'user',
+          subjectId: campaign.creatorId,
+        });
+      } catch (error) {
+        // ignore duplicate badge
+      }
+    } else if (status === VerificationStatus.flagged || status === VerificationStatus.rejected) {
+      updateData.verifiedBadgeAssignedAt = null;
+      await this.prisma.travelerProfile.update({
+        where: { userId: campaign.creatorId },
+        data: {
+          identityVerified: false,
+          verificationStatus: status,
+        },
+      });
+      try {
+        const badge = await this.verifiedBadgesService.findActiveBySubject('user', campaign.creatorId);
+        if (badge) {
+          await this.verifiedBadgesService.revoke(actorUserId ?? '', badge.id);
+        }
+      } catch (error) {
+        // ignore no badge
+      }
+    }
+
+    const updated = await this.prisma.campaign.update({
+      where: { id: campaignId },
+      data: updateData,
+      include: {
+        photos: { orderBy: { position: 'asc' } },
+        creator: { select: { id: true, username: true, displayName: true } },
+      },
+    });
+
+    await this.adminAuditLogService.record(
+      actorUserId ?? '',
+      'campaign.verification.updated',
+      'campaign',
+      campaignId,
+      note,
+      { previousStatus: campaign.verificationStatus, newStatus: status },
+    );
+
+    const [withUrls] = await this.attachViewUrls([updated]);
+    return withUrls;
   }
 }

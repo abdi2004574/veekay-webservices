@@ -35,7 +35,11 @@ describe('Wallet (e2e)', () => {
 
   describe('GET /me/wallet', () => {
     it('returns a zero-balance wallet for a new traveler (auto-creates)', async () => {
-      const traveler = await registerAndVerifyTraveler(server, 't-wallet-1@test.com', 'T1');
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        't-wallet-1@test.com',
+        'T1',
+      );
 
       const res = await request(server())
         .get('/api/v1/me/wallet')
@@ -47,7 +51,11 @@ describe('Wallet (e2e)', () => {
     });
 
     it('reflects the updated balance after an admin credit', async () => {
-      const traveler = await registerAndVerifyTraveler(server, 't-wallet-2@test.com', 'T1');
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        't-wallet-2@test.com',
+        'T1',
+      );
       const admin = await registerAndLoginAdmin(server);
 
       await request(server())
@@ -72,7 +80,11 @@ describe('Wallet (e2e)', () => {
 
   describe('GET /me/wallet/transactions', () => {
     it('is empty for a fresh wallet', async () => {
-      const traveler = await registerAndVerifyTraveler(server, 't-wtx-1@test.com', 'T1');
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        't-wtx-1@test.com',
+        'T1',
+      );
       const res = await request(server())
         .get('/api/v1/me/wallet/transactions')
         .set('Authorization', `Bearer ${traveler.accessToken}`)
@@ -82,7 +94,11 @@ describe('Wallet (e2e)', () => {
     });
 
     it('lists transactions after an admin credit', async () => {
-      const traveler = await registerAndVerifyTraveler(server, 't-wtx-2@test.com', 'T1');
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        't-wtx-2@test.com',
+        'T1',
+      );
       const admin = await registerAndLoginAdmin(server);
 
       await request(server())
@@ -103,7 +119,11 @@ describe('Wallet (e2e)', () => {
     });
 
     it('paginates with cursor', async () => {
-      const traveler = await registerAndVerifyTraveler(server, 't-wtx-3@test.com', 'T1');
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        't-wtx-3@test.com',
+        'T1',
+      );
       const admin = await registerAndLoginAdmin(server);
 
       for (let i = 0; i < 3; i++) {
@@ -124,7 +144,9 @@ describe('Wallet (e2e)', () => {
       expect(firstRes.body.data.nextCursor).toBeDefined();
 
       const secondRes = await request(server())
-        .get(`/api/v1/me/wallet/transactions?limit=2&cursor=${firstRes.body.data.nextCursor as string}`)
+        .get(
+          `/api/v1/me/wallet/transactions?limit=2&cursor=${firstRes.body.data.nextCursor as string}`,
+        )
         .set('Authorization', `Bearer ${traveler.accessToken}`)
         .expect(200);
 
@@ -136,7 +158,11 @@ describe('Wallet (e2e)', () => {
   // ===== Block 1 — Admin credit =====
   describe('POST /admin/wallet/wallets/:userId/credit', () => {
     it('returns 403 when a traveler calls the admin credit endpoint', async () => {
-      const traveler = await registerAndVerifyTraveler(server, 't-credit-403@test.com', 'T1');
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        't-credit-403@test.com',
+        'T1',
+      );
       await request(server())
         .post(`/api/v1/admin/wallet/wallets/${traveler.userId}/credit`)
         .set('Authorization', `Bearer ${traveler.accessToken}`)
@@ -148,7 +174,9 @@ describe('Wallet (e2e)', () => {
     it('returns 404 when admin credits an unknown user id', async () => {
       const admin = await registerAndLoginAdmin(server);
       await request(server())
-        .post('/api/v1/admin/wallet/wallets/00000000-0000-0000-0000-000000000000/credit')
+        .post(
+          '/api/v1/admin/wallet/wallets/00000000-0000-0000-0000-000000000000/credit',
+        )
         .set('Authorization', `Bearer ${admin.adminAccessToken}`)
         .set('idempotency-key', IDK('creditUnknown'))
         .send({ amount: 50, currency: 'USD' })
@@ -156,7 +184,11 @@ describe('Wallet (e2e)', () => {
     });
 
     it('returns 404 when admin credits a deactivated user', async () => {
-      const traveler = await registerAndVerifyTraveler(server, 't-credit-deact@test.com', 'T1');
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        't-credit-deact@test.com',
+        'T1',
+      );
       const admin = await registerAndLoginAdmin(server);
       await testPrisma.user.update({
         where: { id: traveler.userId },
@@ -171,7 +203,11 @@ describe('Wallet (e2e)', () => {
     });
 
     it('returns 400 without Idempotency-Key header', async () => {
-      const traveler = await registerAndVerifyTraveler(server, 't-credit-noIdk@test.com', 'T1');
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        't-credit-noIdk@test.com',
+        'T1',
+      );
       const admin = await registerAndLoginAdmin(server);
       await request(server())
         .post(`/api/v1/admin/wallet/wallets/${traveler.userId}/credit`)
@@ -181,7 +217,11 @@ describe('Wallet (e2e)', () => {
     });
 
     it('returns 400 for amount <= 0', async () => {
-      const traveler = await registerAndVerifyTraveler(server, 't-credit-neg@test.com', 'T1');
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        't-credit-neg@test.com',
+        'T1',
+      );
       const admin = await registerAndLoginAdmin(server);
       await request(server())
         .post(`/api/v1/admin/wallet/wallets/${traveler.userId}/credit`)
@@ -192,14 +232,22 @@ describe('Wallet (e2e)', () => {
     });
 
     it('happy path: credits balance, writes ledger row, balance reflects it', async () => {
-      const traveler = await registerAndVerifyTraveler(server, 't-credit-happy@test.com', 'T1');
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        't-credit-happy@test.com',
+        'T1',
+      );
       const admin = await registerAndLoginAdmin(server);
 
       const creditRes = await request(server())
         .post(`/api/v1/admin/wallet/wallets/${traveler.userId}/credit`)
         .set('Authorization', `Bearer ${admin.adminAccessToken}`)
         .set('idempotency-key', IDK('creditHappy'))
-        .send({ amount: 250, currency: 'USD', description: 'manual test credit' })
+        .send({
+          amount: 250,
+          currency: 'USD',
+          description: 'manual test credit',
+        })
         .expect(200);
       expect(creditRes.body.data.amount).toBe('250');
 
@@ -221,7 +269,11 @@ describe('Wallet (e2e)', () => {
     });
 
     it('idempotency replay: same key + same body returns original, no double credit', async () => {
-      const traveler = await registerAndVerifyTraveler(server, 't-credit-replay@test.com', 'T1');
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        't-credit-replay@test.com',
+        'T1',
+      );
       const admin = await registerAndLoginAdmin(server);
 
       const key = IDK('creditReplaySame');
@@ -257,7 +309,11 @@ describe('Wallet (e2e)', () => {
     });
 
     it('idempotency replay: same key + different body returns ORIGINAL transaction, NOT 409', async () => {
-      const traveler = await registerAndVerifyTraveler(server, 't-credit-replay2@test.com', 'T1');
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        't-credit-replay2@test.com',
+        'T1',
+      );
       const admin = await registerAndLoginAdmin(server);
 
       const key = IDK('creditReplayDiff');
@@ -272,7 +328,11 @@ describe('Wallet (e2e)', () => {
         .post(`/api/v1/admin/wallet/wallets/${traveler.userId}/credit`)
         .set('Authorization', `Bearer ${admin.adminAccessToken}`)
         .set('idempotency-key', key)
-        .send({ amount: 999, currency: 'USD', description: 'should be ignored' })
+        .send({
+          amount: 999,
+          currency: 'USD',
+          description: 'should be ignored',
+        })
         .expect(200);
 
       const wallet = await request(server())
@@ -348,7 +408,11 @@ describe('Wallet (e2e)', () => {
     });
 
     it('agency with sufficient balance can create a withdrawal', async () => {
-      const { agencyAccessToken } = await registerApprovedAgency(server, 'a-wd@test.com', 'Agency WD');
+      const { agencyAccessToken } = await registerApprovedAgency(
+        server,
+        'a-wd@test.com',
+        'Agency WD',
+      );
       const admin = await registerAndLoginAdmin(server);
       const agencyUser = await testPrisma.user.findFirstOrThrow({
         where: { email: 'a-wd@test.com' },
@@ -380,7 +444,11 @@ describe('Wallet (e2e)', () => {
 
   // ===== Block 3 — My withdrawals =====
   describe('GET /me/wallet/withdrawals', () => {
-    async function seedAndWithdraw(email: string, balance: number, withdraw: number): Promise<string> {
+    async function seedAndWithdraw(
+      email: string,
+      balance: number,
+      withdraw: number,
+    ): Promise<string> {
       const accessToken = await (async () => {
         const traveler = await registerAndVerifyTraveler(server, email, 'T1');
         const admin = await registerAndLoginAdmin(server);
@@ -402,7 +470,11 @@ describe('Wallet (e2e)', () => {
     }
 
     it('returns an empty list for a new traveler', async () => {
-      const traveler = await registerAndVerifyTraveler(server, 't-mwd-empty@test.com', 'T1');
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        't-mwd-empty@test.com',
+        'T1',
+      );
       const res = await request(server())
         .get('/api/v1/me/wallet/withdrawals')
         .set('Authorization', `Bearer ${traveler.accessToken}`)
@@ -446,25 +518,32 @@ describe('Wallet (e2e)', () => {
       expect(detailRes.body.data.status).toBe('requested');
     });
 
-    it('returns 404 for another user' + "'" + 's withdrawal (no leak)', async () => {
-      const aToken = await seedAndWithdraw('t-mwd-iso-a@test.com', 500, 100);
-      const bToken = await seedAndWithdraw('t-mwd-iso-b@test.com', 500, 200);
-      const aList = await request(server())
-        .get('/api/v1/me/wallet/withdrawals')
-        .set('Authorization', `Bearer ${aToken}`)
-        .expect(200);
-      const aId = aList.body.data.items[0].id;
+    it(
+      'returns 404 for another user' + "'" + 's withdrawal (no leak)',
+      async () => {
+        const aToken = await seedAndWithdraw('t-mwd-iso-a@test.com', 500, 100);
+        const bToken = await seedAndWithdraw('t-mwd-iso-b@test.com', 500, 200);
+        const aList = await request(server())
+          .get('/api/v1/me/wallet/withdrawals')
+          .set('Authorization', `Bearer ${aToken}`)
+          .expect(200);
+        const aId = aList.body.data.items[0].id;
 
-      await request(server())
-        .get(`/api/v1/me/wallet/withdrawals/${aId}`)
-        .set('Authorization', `Bearer ${bToken}`)
-        .expect(404);
-    });
+        await request(server())
+          .get(`/api/v1/me/wallet/withdrawals/${aId}`)
+          .set('Authorization', `Bearer ${bToken}`)
+          .expect(404);
+      },
+    );
   });
 
   // ===== Block 4 — Admin review =====
   describe('PATCH /admin/wallet/withdrawals/:id/review', () => {
-    async function setupRequested(email: string, balance: number, withdraw: number): Promise<{ withdrawalId: string; travelerToken: string }> {
+    async function setupRequested(
+      email: string,
+      balance: number,
+      withdraw: number,
+    ): Promise<{ withdrawalId: string; travelerToken: string }> {
       const traveler = await registerAndVerifyTraveler(server, email, 'T1');
       const admin = await registerAndLoginAdmin(server);
       await request(server())
@@ -479,11 +558,18 @@ describe('Wallet (e2e)', () => {
         .set('idempotency-key', IDK(`wd-${email}`))
         .send({ amount: withdraw, currency: 'USD' })
         .expect(201);
-      return { withdrawalId: createRes.body.data.id, travelerToken: traveler.accessToken };
+      return {
+        withdrawalId: createRes.body.data.id,
+        travelerToken: traveler.accessToken,
+      };
     }
 
     it('admin approves a requested withdrawal, balance unchanged (debit waits on mark-paid)', async () => {
-      const { withdrawalId, travelerToken } = await setupRequested('t-rev-approve@test.com', 500, 200);
+      const { withdrawalId, travelerToken } = await setupRequested(
+        't-rev-approve@test.com',
+        500,
+        200,
+      );
       const admin = await registerAndLoginAdmin(server);
 
       const res = await request(server())
@@ -502,21 +588,34 @@ describe('Wallet (e2e)', () => {
     });
 
     it('admin rejects a requested withdrawal with reason, status + reason stored', async () => {
-      const { withdrawalId } = await setupRequested('t-rev-reject@test.com', 500, 200);
+      const { withdrawalId } = await setupRequested(
+        't-rev-reject@test.com',
+        500,
+        200,
+      );
       const admin = await registerAndLoginAdmin(server);
 
       const res = await request(server())
         .patch(`/api/v1/admin/wallet/withdrawals/${withdrawalId}/review`)
         .set('Authorization', `Bearer ${admin.adminAccessToken}`)
         .set('idempotency-key', IDK('revReject'))
-        .send({ decision: 'rejected', reason: 'Insufficient campaign completion.' })
+        .send({
+          decision: 'rejected',
+          reason: 'Insufficient campaign completion.',
+        })
         .expect(200);
       expect(res.body.data.status).toBe('rejected');
-      expect(res.body.data.rejectionReason).toBe('Insufficient campaign completion.');
+      expect(res.body.data.rejectionReason).toBe(
+        'Insufficient campaign completion.',
+      );
     });
 
     it('returns 422 when reviewing an already-approved withdrawal', async () => {
-      const { withdrawalId } = await setupRequested('t-rev-twice@test.com', 500, 200);
+      const { withdrawalId } = await setupRequested(
+        't-rev-twice@test.com',
+        500,
+        200,
+      );
       const admin = await registerAndLoginAdmin(server);
       await request(server())
         .patch(`/api/v1/admin/wallet/withdrawals/${withdrawalId}/review`)
@@ -534,7 +633,11 @@ describe('Wallet (e2e)', () => {
     });
 
     it('returns 403 when traveler calls admin review', async () => {
-      const { withdrawalId, travelerToken } = await setupRequested('t-rev-403@test.com', 500, 200);
+      const { withdrawalId, travelerToken } = await setupRequested(
+        't-rev-403@test.com',
+        500,
+        200,
+      );
       await request(server())
         .patch(`/api/v1/admin/wallet/withdrawals/${withdrawalId}/review`)
         .set('Authorization', `Bearer ${travelerToken}`)
@@ -544,7 +647,11 @@ describe('Wallet (e2e)', () => {
     });
 
     it('returns 400 without Idempotency-Key', async () => {
-      const { withdrawalId } = await setupRequested('t-rev-noIdk@test.com', 500, 200);
+      const { withdrawalId } = await setupRequested(
+        't-rev-noIdk@test.com',
+        500,
+        200,
+      );
       const admin = await registerAndLoginAdmin(server);
       await request(server())
         .patch(`/api/v1/admin/wallet/withdrawals/${withdrawalId}/review`)
@@ -556,7 +663,9 @@ describe('Wallet (e2e)', () => {
 
   // ===== Block 5 — Admin mark-paid =====
   describe('POST /admin/wallet/withdrawals/:id/mark-paid', () => {
-    async function setupApproved(email: string): Promise<{ withdrawalId: string; travelerToken: string }> {
+    async function setupApproved(
+      email: string,
+    ): Promise<{ withdrawalId: string; travelerToken: string }> {
       const traveler = await registerAndVerifyTraveler(server, email, 'T1');
       const admin = await registerAndLoginAdmin(server);
       await request(server())
@@ -577,11 +686,16 @@ describe('Wallet (e2e)', () => {
         .set('idempotency-key', IDK(`rev-${email}`))
         .send({ decision: 'approved' })
         .expect(200);
-      return { withdrawalId: wd.body.data.id, travelerToken: traveler.accessToken };
+      return {
+        withdrawalId: wd.body.data.id,
+        travelerToken: traveler.accessToken,
+      };
     }
 
     it('marks approved withdrawal paid, debits balance, writes debit tx, sets walletTransactionId', async () => {
-      const { withdrawalId, travelerToken } = await setupApproved('t-paid-happy@test.com');
+      const { withdrawalId, travelerToken } = await setupApproved(
+        't-paid-happy@test.com',
+      );
       const admin = await registerAndLoginAdmin(server);
 
       const res = await request(server())
@@ -599,18 +713,33 @@ describe('Wallet (e2e)', () => {
       expect(wallet.body.data.balance).toBe(300);
 
       const debitTx = await testPrisma.walletTransaction.findFirst({
-        where: { walletAccount: { userId: (await testPrisma.user.findFirstOrThrow({ where: { email: 't-paid-happy@test.com' } })).id }, direction: 'debit' },
+        where: {
+          walletAccount: {
+            userId: (
+              await testPrisma.user.findFirstOrThrow({
+                where: { email: 't-paid-happy@test.com' },
+              })
+            ).id,
+          },
+          direction: 'debit',
+        },
       });
       expect(debitTx).not.toBeNull();
       expect(Number(debitTx?.amount.toString())).toBe(200);
       expect(debitTx?.type).toBe('withdrawal');
 
-      const wdRow = await testPrisma.withdrawalRequest.findUniqueOrThrow({ where: { id: withdrawalId } });
+      const wdRow = await testPrisma.withdrawalRequest.findUniqueOrThrow({
+        where: { id: withdrawalId },
+      });
       expect(wdRow.walletTransactionId).toBe(debitTx?.id);
     });
 
     it('returns 422 when marking a requested (not approved) withdrawal as paid', async () => {
-      const traveler = await registerAndVerifyTraveler(server, 't-paid-req@test.com', 'T1');
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        't-paid-req@test.com',
+        'T1',
+      );
       const admin = await registerAndLoginAdmin(server);
       await request(server())
         .post(`/api/v1/admin/wallet/wallets/${traveler.userId}/credit`)
@@ -658,7 +787,9 @@ describe('Wallet (e2e)', () => {
     });
 
     it('returns 403 when traveler calls admin mark-paid', async () => {
-      const { withdrawalId, travelerToken } = await setupApproved('t-paid-403@test.com');
+      const { withdrawalId, travelerToken } = await setupApproved(
+        't-paid-403@test.com',
+      );
       await request(server())
         .post(`/api/v1/admin/wallet/withdrawals/${withdrawalId}/mark-paid`)
         .set('Authorization', `Bearer ${travelerToken}`)
@@ -670,7 +801,11 @@ describe('Wallet (e2e)', () => {
   // ===== Block 6 — Transaction list =====
   describe('GET /me/wallet/transactions (filters + isolation)', () => {
     it('type=donation_received shows only credits, type=withdrawal shows only debits', async () => {
-      const traveler = await registerAndVerifyTraveler(server, 't-tx-filter@test.com', 'T1');
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        't-tx-filter@test.com',
+        'T1',
+      );
       const admin = await registerAndLoginAdmin(server);
       await request(server())
         .post(`/api/v1/admin/wallet/wallets/${traveler.userId}/credit`)
@@ -717,30 +852,41 @@ describe('Wallet (e2e)', () => {
       expect(allTx.body.data.items).toHaveLength(2);
     });
 
-    it('cross-user isolation: another traveler' + "'" + 's txs never appear', async () => {
-      const a = await registerAndVerifyTraveler(server, 't-tx-iso-a@test.com', 'A');
-      const b = await registerAndVerifyTraveler(server, 't-tx-iso-b@test.com', 'B');
-      const admin = await registerAndLoginAdmin(server);
-      await request(server())
-        .post(`/api/v1/admin/wallet/wallets/${b.userId}/credit`)
-        .set('Authorization', `Bearer ${admin.adminAccessToken}`)
-        .set('idempotency-key', IDK('txIsoB'))
-        .send({ amount: 50, currency: 'USD' })
-        .expect(200);
+    it(
+      'cross-user isolation: another traveler' + "'" + 's txs never appear',
+      async () => {
+        const a = await registerAndVerifyTraveler(
+          server,
+          't-tx-iso-a@test.com',
+          'A',
+        );
+        const b = await registerAndVerifyTraveler(
+          server,
+          't-tx-iso-b@test.com',
+          'B',
+        );
+        const admin = await registerAndLoginAdmin(server);
+        await request(server())
+          .post(`/api/v1/admin/wallet/wallets/${b.userId}/credit`)
+          .set('Authorization', `Bearer ${admin.adminAccessToken}`)
+          .set('idempotency-key', IDK('txIsoB'))
+          .send({ amount: 50, currency: 'USD' })
+          .expect(200);
 
-      const aList = await request(server())
-        .get('/api/v1/me/wallet/transactions')
-        .set('Authorization', `Bearer ${a.accessToken}`)
-        .expect(200);
-      expect(aList.body.data.items).toEqual([]);
+        const aList = await request(server())
+          .get('/api/v1/me/wallet/transactions')
+          .set('Authorization', `Bearer ${a.accessToken}`)
+          .expect(200);
+        expect(aList.body.data.items).toEqual([]);
 
-      const bList = await request(server())
-        .get('/api/v1/me/wallet/transactions')
-        .set('Authorization', `Bearer ${b.accessToken}`)
-        .expect(200);
-      expect(bList.body.data.items).toHaveLength(1);
-      expect(bList.body.data.items[0].direction).toBe('credit');
-    });
+        const bList = await request(server())
+          .get('/api/v1/me/wallet/transactions')
+          .set('Authorization', `Bearer ${b.accessToken}`)
+          .expect(200);
+        expect(bList.body.data.items).toHaveLength(1);
+        expect(bList.body.data.items[0].direction).toBe('credit');
+      },
+    );
   });
 
   // ===== Block 7 — Role guards =====
@@ -754,12 +900,15 @@ describe('Wallet (e2e)', () => {
     });
 
     it('traveler is blocked from /admin/wallet/* (PlatformRoleGuard)', async () => {
-      const traveler = await registerAndVerifyTraveler(server, 't-role-iso@test.com', 'T1');
+      const traveler = await registerAndVerifyTraveler(
+        server,
+        't-role-iso@test.com',
+        'T1',
+      );
       await request(server())
         .get('/api/v1/admin/wallet/withdrawals')
         .set('Authorization', `Bearer ${traveler.accessToken}`)
         .expect(403);
     });
   });
-
 });

@@ -22,6 +22,12 @@ import { GroupCampaignsModule } from './modules/group-campaigns/group-campaigns.
 import { PackagesModule } from './modules/packages/packages.module';
 import { TripRequestsModule } from './modules/trip-requests/trip-requests.module';
 import { WalletModule } from './modules/wallet/wallet.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { AdminInvitesModule } from './modules/admin-invites/admin-invites.module';
+import { ReportsModule } from './modules/reports/reports.module';
+import { AdminAuditLogModule } from './modules/admin-audit-log/admin-audit-log.module';
+import { VerifiedBadgesModule } from './modules/verified-badges/verified-badges.module';
+import { FraudModule } from './modules/fraud/fraud.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
@@ -55,10 +61,6 @@ import { AppConfig } from './config/configuration';
           name: 'default',
           ttl: config.get('throttle.ttlMs', { infer: true }),
           limit: config.get('throttle.limit', { infer: true }),
-          // HTTP-layer throttling is a defense-in-depth extra on top of the
-          // Redis-backed login lockout and OTP cooldown, which are the
-          // actual security controls under test. Disabling it in the test
-          // env keeps E2E tests decoupled from unrelated request-count limits.
           skipIf: () => config.get('nodeEnv', { infer: true }) === 'test',
         },
       ],
@@ -79,6 +81,12 @@ import { AppConfig } from './config/configuration';
     PackagesModule,
     TripRequestsModule,
     WalletModule,
+    NotificationsModule,
+    AdminInvitesModule,
+    ReportsModule,
+    AdminAuditLogModule,
+    VerifiedBadgesModule,
+    FraudModule,
   ],
   controllers: [AppController],
   providers: [

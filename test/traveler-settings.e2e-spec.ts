@@ -6,6 +6,7 @@ import { resetDb, disconnectDb } from './utils/reset-db';
 import { resetRedis, disconnectRedis } from './utils/reset-redis';
 import { clearMailhog } from './utils/mailhog';
 import { registerAndVerifyTraveler } from './utils/register-traveler';
+import { NotificationType } from '@prisma/client';
 
 describe('Traveler Settings (e2e)', () => {
   let app: INestApplication<App>;
@@ -98,27 +99,34 @@ describe('Traveler Settings (e2e)', () => {
         .get('/api/v1/me/notification-preferences')
         .set('Authorization', `Bearer ${alice.accessToken}`)
         .expect(200);
-      expect(defaultsRes.body.data).toEqual({
-        donationAlerts: true,
-        campaignUpdates: true,
-        agencyMessages: true,
-      });
+      expect(defaultsRes.body.data).toHaveLength(
+        Object.keys(NotificationType).length,
+      );
+      const donationPref = defaultsRes.body.data.find(
+        (p: { type: NotificationType }) =>
+          p.type === NotificationType.donation,
+      );
+      expect(donationPref.inAppEnabled).toBe(true);
+      expect(donationPref.pushEnabled).toBe(true);
+      expect(donationPref.emailEnabled).toBe(false);
 
       await request(server())
         .patch('/api/v1/me/notification-preferences')
         .set('Authorization', `Bearer ${alice.accessToken}`)
-        .send({ donationAlerts: false })
+        .send({ type: NotificationType.donation, inAppEnabled: false })
         .expect(200);
 
       const updatedRes = await request(server())
         .get('/api/v1/me/notification-preferences')
         .set('Authorization', `Bearer ${alice.accessToken}`)
         .expect(200);
-      expect(updatedRes.body.data).toEqual({
-        donationAlerts: false,
-        campaignUpdates: true,
-        agencyMessages: true,
-      });
+      const updatedDonation = updatedRes.body.data.find(
+        (p: { type: NotificationType }) =>
+          p.type === NotificationType.donation,
+      );
+      expect(updatedDonation.inAppEnabled).toBe(false);
+      expect(updatedDonation.pushEnabled).toBe(true);
+      expect(updatedDonation.emailEnabled).toBe(false);
     });
   });
 

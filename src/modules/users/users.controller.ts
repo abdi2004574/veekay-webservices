@@ -16,6 +16,7 @@ import { ProfileSetupDto } from './dto/profile-setup.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto';
 import { UpdatePrivacySettingsDto } from './dto/update-privacy-settings.dto';
+import { UpdateKycDto } from './dto/update-kyc.dto';
 
 @ApiTags('me')
 @ApiBearerAuth()
@@ -80,6 +81,15 @@ export class UsersController {
     @CurrentUser('userId') userId: string,
   ) {
     return this.usersService.updatePrivacySettings(userId, dto);
+  }
+
+  @Patch('kyc')
+  @ApiOperation({ summary: 'Submit or update your KYC information.' })
+  async updateKyc(
+    @Body() dto: UpdateKycDto,
+    @CurrentUser('userId') userId: string,
+  ) {
+    return this.usersService.updateKyc(userId, dto);
   }
 
   @Delete()

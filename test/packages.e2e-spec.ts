@@ -10,6 +10,7 @@ import {
   approveAgency,
 } from './utils/register-agency';
 import { registerAndVerifyTraveler } from './utils/register-traveler';
+import { testPrisma } from './utils/reset-db';
 
 describe('Packages (e2e)', () => {
   let app: INestApplication<App>;
@@ -213,6 +214,88 @@ describe('Packages (e2e)', () => {
         .get(`/api/v1/packages/${pkgId}`)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(404);
+    });
+
+    it('rejects creating a package with more than 6 media items', async () => {
+      const { agencyId, accessToken } = await registerAndVerifyAgency(
+        server,
+        'agency-media-max@e2e.test',
+        'Test Agency',
+      );
+      await approveAgency(agencyId);
+
+      const mediaIds = Array.from({ length: 7 }, (_, i) => `m${i + 1}`);
+
+      await request(server())
+        .post('/api/v1/packages')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          title: 'Too Many Media',
+          basePrice: 100,
+          currency: 'USD',
+          mediaMediaIds: mediaIds,
+        })
+        .expect(400);
+    });
+
+    it('rejects updating a package with more than 6 media items', async () => {
+      const { agencyId, accessToken } = await registerAndVerifyAgency(
+        server,
+        'agency-media-max-update@e2e.test',
+        'Test Agency',
+      );
+      await approveAgency(agencyId);
+
+      const createRes = await request(server())
+        .post('/api/v1/packages')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ title: 'Original', basePrice: 100, currency: 'USD' })
+        .expect(201);
+      const pkgId = createRes.body.data.id;
+
+      const mediaIds = Array.from({ length: 7 }, (_, i) => `m${i + 1}`);
+
+      await request(server())
+        .patch(`/api/v1/packages/${pkgId}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ mediaMediaIds: mediaIds })
+        .expect(400);
+    });
+
+    it('removes orphaned media when replacing package visuals', async () => {
+      const { agencyId, accessToken } = await registerAndVerifyAgency(
+        server,
+        'agency-visual-cleanup@e2e.test',
+        'Test Agency',
+      );
+      await approveAgency(agencyId);
+
+      const oldMedia = await uploadVisual(accessToken);
+      const newMedia = await uploadVisual(accessToken);
+
+      const createRes = await request(server())
+        .post('/api/v1/packages')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          title: 'Original Visuals',
+          basePrice: 100,
+          currency: 'USD',
+          mediaMediaIds: [oldMedia],
+        })
+        .expect(201);
+      const pkgId = createRes.body.data.id;
+
+      await request(server())
+        .patch(`/api/v1/packages/${pkgId}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ mediaMediaIds: [newMedia] })
+        .expect(200);
+
+      const oldAsset = await testPrisma.mediaAsset.findUnique({ where: { id: oldMedia } });
+      expect(oldAsset?.status).toEqual('deleted');
+
+      const newAsset = await testPrisma.mediaAsset.findUnique({ where: { id: newMedia } });
+      expect(newAsset?.status).toEqual('uploaded');
     });
   });
 

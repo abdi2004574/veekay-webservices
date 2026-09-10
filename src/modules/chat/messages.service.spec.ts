@@ -19,10 +19,14 @@ describe('MessagesService', () => {
     mediaAssetsService = {
       resolveViewUrls: jest.fn().mockResolvedValue(new Map()),
     };
+    const mockNotificationsService = {
+      create: jest.fn().mockResolvedValue({}),
+    };
     service = new MessagesService(
       prisma,
       conversationsService,
       mediaAssetsService,
+      mockNotificationsService as any,
     );
   });
 

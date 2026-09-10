@@ -4,6 +4,14 @@ const prisma = new PrismaClient();
 
 export async function resetDb(): Promise<void> {
   await prisma.$transaction([
+    prisma.contentReport.deleteMany(),
+    prisma.verifiedBadge.deleteMany(),
+    prisma.adminAuditLog.deleteMany(),
+    prisma.adminInvite.deleteMany(),
+    prisma.notification.deleteMany(),
+    prisma.notificationPreference.deleteMany(),
+    prisma.pushDevice.deleteMany(),
+    prisma.milestoneNotificationLog.deleteMany(),
     prisma.otpCode.deleteMany(),
     prisma.campaignPhoto.deleteMany(),
     prisma.campaign.deleteMany(),
@@ -37,6 +45,7 @@ export async function resetDb(): Promise<void> {
     prisma.walletTransaction.deleteMany(),
     prisma.withdrawalRequest.deleteMany(),
     prisma.walletAccount.deleteMany(),
+    prisma.fraudFlag.deleteMany(),
     prisma.user.deleteMany(),
   ]);
 }

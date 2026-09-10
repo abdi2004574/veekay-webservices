@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
+﻿import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -7,6 +7,8 @@ import { GroupCampaignsService } from './group-campaigns.service';
 import { AddGroupMemberDto } from './dto/add-group-member.dto';
 import { CreateGroupContributionDto } from './dto/create-group-contribution.dto';
 import { CreateGroupExpenseDto } from './dto/create-group-expense.dto';
+import { GroupWithdrawDto } from './dto/group-withdraw.dto';
+import { UpdateGroupMemberDto } from './dto/update-group-member.dto';
 
 @ApiTags('group-campaigns')
 @ApiBearerAuth()
@@ -55,6 +57,17 @@ export class GroupCampaignsController {
     await this.groupCampaignsService.removeMember(id, userId, targetUserId);
   }
 
+  @Patch('members/:userId')
+  @ApiOperation({ summary: "Update a member's withdraw permission (admin-only)." })
+  async updateMemberWithdrawPermission(
+    @Param('id') id: string,
+    @Param('userId') targetUserId: string,
+    @Body() dto: UpdateGroupMemberDto,
+    @CurrentUser('userId') adminId: string,
+  ) {
+    return this.groupCampaignsService.updateMemberWithdrawPermission(id, adminId, targetUserId, dto.canWithdraw);
+  }
+
   @Get('contributions')
   @ApiOperation({ summary: 'List group trip contributions (member-only).' })
   async listContributions(
@@ -101,5 +114,15 @@ export class GroupCampaignsController {
     @CurrentUser('userId') userId: string,
   ) {
     await this.groupCampaignsService.removeExpense(id, expenseId, userId);
+  }
+
+  @Post('withdraw')
+  @ApiOperation({ summary: 'Withdraw group funds (admin-only).' })
+  async groupWithdraw(
+    @Param('id') id: string,
+    @Body() dto: GroupWithdrawDto,
+    @CurrentUser('userId') userId: string,
+  ) {
+    return this.groupCampaignsService.groupWithdraw(id, userId, dto);
   }
 }

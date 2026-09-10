@@ -74,7 +74,11 @@ export class AdminWalletController {
     @Param('id') id: string,
     @IdempotencyKey() idempotencyKey: string,
   ) {
-    return this.walletService.markWithdrawalPaid('admin-mvp-ops', id, idempotencyKey);
+    return this.walletService.markWithdrawalPaid(
+      'admin-mvp-ops',
+      id,
+      idempotencyKey,
+    );
   }
 
   @Post('wallets/:userId/credit')
@@ -93,5 +97,16 @@ export class AdminWalletController {
       dto,
       idempotencyKey,
     );
+  }
+
+  @Patch('withdrawals/:id/refund-note')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '[Super Admin] Update refund note on a withdrawal.' })
+  async updateRefundNote(
+    @Param('id') id: string,
+    @Body('refundNote') refundNote: string,
+    @CurrentUser('userId') adminUserId: string,
+  ) {
+    return this.walletService.updateRefundNote(adminUserId, id, refundNote);
   }
 }

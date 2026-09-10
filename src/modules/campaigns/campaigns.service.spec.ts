@@ -8,6 +8,8 @@ import { CampaignsService } from './campaigns.service';
 describe('CampaignsService', () => {
   let prisma: any;
   let mediaAssetsService: any;
+  let adminAuditLogService: any;
+  let verifiedBadgesService: any;
   let service: CampaignsService;
 
   beforeEach(() => {
@@ -19,13 +21,23 @@ describe('CampaignsService', () => {
         findMany: jest.fn(),
         findUnique: jest.fn(),
       },
-      campaignPhoto: { deleteMany: jest.fn(), createMany: jest.fn() },
+      campaignPhoto: { deleteMany: jest.fn(), createMany: jest.fn(), findMany: jest.fn() },
       $transaction: jest.fn((cb: any) => cb(prisma)),
+      travelerProfile: { upsert: jest.fn(), update: jest.fn() },
     };
     mediaAssetsService = {
       resolveViewUrls: jest.fn().mockResolvedValue(new Map()),
+      cleanupMediaAssets: jest.fn().mockResolvedValue(undefined),
     };
-    service = new CampaignsService(prisma, mediaAssetsService);
+    adminAuditLogService = {
+      record: jest.fn().mockResolvedValue({}),
+    };
+    verifiedBadgesService = {
+      assign: jest.fn().mockResolvedValue({ id: 'badge-1' }),
+      findActiveBySubject: jest.fn().mockResolvedValue(null),
+      revoke: jest.fn().mockResolvedValue({}),
+    };
+    service = new CampaignsService(prisma, mediaAssetsService, adminAuditLogService, verifiedBadgesService);
   });
 
   const baseDto = {
@@ -113,6 +125,7 @@ describe('CampaignsService', () => {
         id: 'c-1',
         creatorId: 'user-1',
       });
+      prisma.campaignPhoto.findMany.mockResolvedValue([]);
       prisma.campaign.update.mockResolvedValue({ id: 'c-1', photos: [] });
 
       await service.update('c-1', 'user-1', {
@@ -149,6 +162,7 @@ describe('CampaignsService', () => {
         id: 'c-1',
         creatorId: 'user-1',
       });
+      prisma.campaignPhoto.findMany.mockResolvedValue([]);
 
       await service.remove('c-1', 'user-1');
 
@@ -208,7 +222,7 @@ describe('CampaignsService', () => {
   });
 
   describe('listTopContributors', () => {
-    it('always returns an empty list â€” no Donation model exists yet', async () => {
+    it('always returns an empty list — no Donation model exists yet', async () => {
       prisma.campaign.findUnique.mockResolvedValue({
         id: 'c-1',
         creatorId: 'owner-1',

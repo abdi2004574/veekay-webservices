@@ -45,12 +45,14 @@ export class StorageController {
     @CurrentUser('userId') userId: string,
   ) {
     if (!entityType || !entityId) {
-      throw AppException.badRequest('entityType and entityId query parameters are required.');
+      throw AppException.badRequest(
+        'entityType and entityId query parameters are required.',
+      );
     }
-    const url = await this.mediaAssetsService.getViewUrl(userId, mediaId, { entityType, entityId });
+    const url = await this.mediaAssetsService.getViewUrl(userId, mediaId, {
+      entityType,
+      entityId,
+    });
     return { url };
   }
 }
-
-
-

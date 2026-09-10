@@ -61,6 +61,7 @@ export class StorageService implements OnModuleInit {
       storage.region,
       storage.accessKey,
       storage.secretKey,
+      storage.forcePathStyle,
     );
     this.publicClient =
       storage.publicEndpoint === storage.endpoint
@@ -70,6 +71,7 @@ export class StorageService implements OnModuleInit {
             storage.region,
             storage.accessKey,
             storage.secretKey,
+            storage.forcePathStyle,
           );
   }
 
