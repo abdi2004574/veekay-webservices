@@ -7,20 +7,26 @@ describe('OtpService', () => {
   let redis: any;
   let config: any;
   let service: OtpService;
+  let otpCodeMock: any;
 
   beforeEach(() => {
+    otpCodeMock = {
+      updateMany: jest.fn(),
+      create: jest.fn(),
+      findFirst: jest.fn(),
+      update: jest.fn(),
+    };
+    const txMock = {
+      otpCode: otpCodeMock,
+    };
     prisma = {
-      otpCode: {
-        updateMany: jest.fn(),
-        create: jest.fn(),
-        findFirst: jest.fn(),
-        update: jest.fn(),
-      },
+      otpCode: otpCodeMock,
+      $transaction: jest.fn(async (cb) => cb(txMock)),
     };
     passwordService = {
-      hash: jest.fn((value: string) => Promise.resolve(`hashed:${value}`)),
-      verify: jest.fn((plain: string, hash: string) =>
-        Promise.resolve(hash === `hashed:${plain}`),
+      hash: jest.fn((value) => Promise.resolve('hashed:' + value)),
+      verify: jest.fn((plain, hash) =>
+        Promise.resolve(hash === 'hashed:' + plain),
       ),
     };
     redis = {
@@ -28,14 +34,14 @@ describe('OtpService', () => {
       set: jest.fn(),
     };
     config = {
-      get: jest.fn((key: string) => {
-        const values: Record<string, number> = {
+      get: (key) => {
+        const values = {
           'otp.expiryMinutes': 10,
           'otp.resendCooldownSeconds': 60,
           'otp.maxAttempts': 5,
         };
         return values[key];
-      }),
+      },
     };
 
     service = new OtpService(prisma, passwordService, redis, config);
@@ -81,7 +87,7 @@ describe('OtpService', () => {
           data: expect.objectContaining({
             identifier: 'traveler@example.com',
             type: OtpType.email_verify,
-            codeHash: `hashed:${code}`,
+            codeHash: 'hashed:' + code,
           }),
         }),
       );
@@ -96,14 +102,14 @@ describe('OtpService', () => {
 
   describe('verify', () => {
     it('throws when no unused OTP row exists', async () => {
-      prisma.otpCode.findFirst.mockResolvedValue(null);
+      otpCodeMock.findFirst.mockResolvedValue(null);
       await expect(
         service.verify('traveler@example.com', OtpType.email_verify, '123456'),
       ).rejects.toMatchObject({ getStatus: expect.any(Function) });
     });
 
     it('throws and does not mark used when the OTP is expired', async () => {
-      prisma.otpCode.findFirst.mockResolvedValue({
+      otpCodeMock.findFirst.mockResolvedValue({
         id: 'otp-1',
         codeHash: 'hashed:123456',
         expiresAt: new Date(Date.now() - 1000),
@@ -113,14 +119,14 @@ describe('OtpService', () => {
       await expect(
         service.verify('traveler@example.com', OtpType.email_verify, '123456'),
       ).rejects.toMatchObject({ getStatus: expect.any(Function) });
-      expect(prisma.otpCode.update).not.toHaveBeenCalled();
+      expect(otpCodeMock.update).not.toHaveBeenCalled();
     });
 
     it('throws once max attempts have been reached', async () => {
-      prisma.otpCode.findFirst.mockResolvedValue({
+      otpCodeMock.findFirst.mockResolvedValue({
         id: 'otp-1',
         codeHash: 'hashed:123456',
-        expiresAt: new Date(Date.now() + 60_000),
+        expiresAt: new Date(Date.now() + 60000),
         attempts: 5,
       });
 
@@ -130,10 +136,10 @@ describe('OtpService', () => {
     });
 
     it('increments attempts and throws on an incorrect code', async () => {
-      prisma.otpCode.findFirst.mockResolvedValue({
+      otpCodeMock.findFirst.mockResolvedValue({
         id: 'otp-1',
         codeHash: 'hashed:123456',
-        expiresAt: new Date(Date.now() + 60_000),
+        expiresAt: new Date(Date.now() + 60000),
         attempts: 1,
       });
 
@@ -141,17 +147,17 @@ describe('OtpService', () => {
         service.verify('traveler@example.com', OtpType.email_verify, '999999'),
       ).rejects.toMatchObject({ getStatus: expect.any(Function) });
 
-      expect(prisma.otpCode.update).toHaveBeenCalledWith({
+      expect(otpCodeMock.update).toHaveBeenCalledWith({
         where: { id: 'otp-1' },
         data: { attempts: { increment: 1 } },
       });
     });
 
     it('marks the OTP used on a correct code', async () => {
-      prisma.otpCode.findFirst.mockResolvedValue({
+      otpCodeMock.findFirst.mockResolvedValue({
         id: 'otp-1',
         codeHash: 'hashed:123456',
-        expiresAt: new Date(Date.now() + 60_000),
+        expiresAt: new Date(Date.now() + 60000),
         attempts: 0,
       });
 
@@ -161,7 +167,7 @@ describe('OtpService', () => {
         '123456',
       );
 
-      expect(prisma.otpCode.update).toHaveBeenCalledWith({
+      expect(otpCodeMock.update).toHaveBeenCalledWith({
         where: { id: 'otp-1' },
         data: { isUsed: true },
       });

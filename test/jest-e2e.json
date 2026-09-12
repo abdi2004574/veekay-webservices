@@ -7,7 +7,9 @@
     "^.+\\.(t|j)s$": "ts-jest"
   },
   "moduleNameMapper": {
-    "^otplib$": "<rootDir>/__mocks__/otplib.js"
+    "^otplib$": "<rootDir>/__mocks__/otplib.js",
+    "^bullmq$": "<rootDir>/test/__mocks__/bullmq.js",
+    "^@nestjs/bullmq$": "<rootDir>/test/__mocks__/bullmq.js"
   },
   "setupFiles": ["<rootDir>/test/setup-env.ts"],
   "testTimeout": 20000

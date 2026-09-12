@@ -171,7 +171,7 @@ export class CampaignLifecycleService {
     return (
       (campaign.status === CampaignStatus.funded ||
         campaign.status === CampaignStatus.completed) &&
-      campaign.status !== CampaignStatus.flagged
+      (campaign.status as string) !== CampaignStatus.flagged
     );
   }
 

@@ -91,8 +91,6 @@ export class CallsService {
 
   async end(sessionId: string, callerId: string): Promise<void> {
     await this.callProvider.endSession(sessionId);
-    this.logger.log(
-      `Call ${sessionId} ended by user ${callerId}`,
-    );
+    this.logger.log(`Call ${sessionId} ended by user ${callerId}`);
   }
 }

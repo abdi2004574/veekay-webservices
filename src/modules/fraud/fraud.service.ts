@@ -25,7 +25,7 @@ export class FraudService {
     userId: string,
     dto: {
       type: FraudFlagType;
-      severity: FraudFlagSeverity;
+      severity?: FraudFlagSeverity;
       description: string;
       metadata?: string;
     },
@@ -173,71 +173,6 @@ export class FraudService {
           updatesInWindow: recentUpdates,
           threshold,
           windowDays,
-        }),
-      });
-    }
-
-    return null;
-  }
-
-  async checkPaymentMethodMismatch(
-    userId: string,
-    paymentDetails: { nameOnCard?: string; billingZip?: string },
-  ): Promise<FraudFlag | null> {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: { travelerProfile: true },
-    });
-
-    if (!user || !user.travelerProfile) return null;
-
-    const mismatches: string[] = [];
-    if (
-      paymentDetails.nameOnCard &&
-      user.displayName &&
-      paymentDetails.nameOnCard.toLowerCase() !== user.displayName.toLowerCase()
-    ) {
-      mismatches.push('name');
-    }
-
-    if (mismatches.length > 0) {
-      return this.create(userId, {
-        type: FraudFlagType.payment_method_mismatch,
-        severity: FraudFlagSeverity.medium,
-        description: `Payment details mismatch: ${mismatches.join(', ')}.`,
-        metadata: JSON.stringify({ mismatches, paymentDetails }),
-      });
-    }
-
-    return null;
-  }
-
-  async checkWithdrawalAnomaly(
-    userId: string,
-    amount: number,
-    currency: string,
-  ): Promise<FraudFlag | null> {
-    const threshold = this.configService.get(
-      'wallet.highValueWithdrawalThreshold',
-      { infer: true },
-    );
-
-    if (amount >= threshold) {
-      const recentWithdrawals = await this.prisma.withdrawalRequest.findMany({
-        where: { userId, status: { in: ['approved', 'paid'] as any } },
-        orderBy: { createdAt: 'desc' },
-        take: 3,
-      });
-
-      return this.create(userId, {
-        type: FraudFlagType.withdrawal_anomaly,
-        severity: FraudFlagSeverity.high,
-        description: `High-value withdrawal of $${amount} ${currency} requested (threshold: $${threshold}).`,
-        metadata: JSON.stringify({
-          amount,
-          currency,
-          threshold,
-          recentWithdrawalCount: recentWithdrawals.length,
         }),
       });
     }

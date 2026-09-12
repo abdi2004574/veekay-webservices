@@ -26,7 +26,15 @@ describe('PostsService', () => {
     mediaAssetsService = {
       resolveViewUrls: jest.fn().mockResolvedValue(new Map()),
     };
-    service = new PostsService(prisma, friendsService, mediaAssetsService);
+    const mockNotificationsService = {
+      create: jest.fn().mockResolvedValue({}),
+    };
+    service = new PostsService(
+      prisma,
+      friendsService,
+      mediaAssetsService,
+      mockNotificationsService as any,
+    );
   });
 
   describe('create', () => {

@@ -127,7 +127,7 @@ describe('WalletService', () => {
         .spyOn((service as any).logger, 'log')
         .mockImplementation(() => {});
       await service.credit(creditParams());
-      const logged = JSON.parse(logSpy.mock.calls[0][0]);
+      const logged = JSON.parse(logSpy.mock.calls[0][0] as string);
       expect(logged.audit).toBe('wallet.transaction');
       expect(logged.amount).toBe(50);
       expect(logged.direction).toBe('credit');
@@ -185,7 +185,7 @@ describe('WalletService', () => {
         .spyOn((service as any).logger, 'log')
         .mockImplementation(() => {});
       await service.debit(creditParams({ amount: 25 }));
-      const logged = JSON.parse(logSpy.mock.calls[0][0]);
+      const logged = JSON.parse(logSpy.mock.calls[0][0] as string);
       expect(logged.audit).toBe('wallet.transaction');
       expect(logged.direction).toBe('debit');
       expect(logged.amount).toBe(25);
@@ -376,7 +376,7 @@ describe('WalletService', () => {
           highValueThreshold: null,
         },
       });
-      const logged = JSON.parse(logSpy.mock.calls[0][0]);
+      const logged = JSON.parse(logSpy.mock.calls[0][0] as string);
       expect(logged.audit).toBe('wallet.withdrawal.requested');
     });
     it('throws businessRule on insufficient balance', async () => {
@@ -475,7 +475,7 @@ describe('WalletService', () => {
         where: { id: 'wr-1' },
         data: { status: WithdrawalStatus.approved },
       });
-      const logged = JSON.parse(logSpy.mock.calls[0][0]);
+      const logged = JSON.parse(logSpy.mock.calls[0][0] as string);
       expect(logged.audit).toBe('wallet.withdrawal.reviewed');
       expect(logged.decision).toBe('approved');
     });
@@ -502,7 +502,7 @@ describe('WalletService', () => {
           rejectionReason: 'insufficient docs',
         },
       });
-      const logged = JSON.parse(logSpy.mock.calls[0][0]);
+      const logged = JSON.parse(logSpy.mock.calls[0][0] as string);
       expect(logged.decision).toBe('rejected');
     });
     it('throws businessRule if status is not requested', async () => {
@@ -565,7 +565,7 @@ describe('WalletService', () => {
         },
       });
       const logged = JSON.parse(
-        logSpy.mock.calls[logSpy.mock.calls.length - 1][0],
+        logSpy.mock.calls[logSpy.mock.calls.length - 1][0] as string,
       );
       expect(logged.audit).toBe('wallet.withdrawal.paid');
     });
@@ -593,7 +593,7 @@ describe('WalletService', () => {
           rejectionReason: 'duplicate',
         },
       });
-      const logged = JSON.parse(logSpy.mock.calls[0][0]);
+      const logged = JSON.parse(logSpy.mock.calls[0][0] as string);
       expect(logged.audit).toBe('wallet.withdrawal.reviewed');
       expect(logged.decision).toBe('rejected');
     });

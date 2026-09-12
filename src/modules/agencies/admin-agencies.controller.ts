@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RequirePlatformRole } from '../../common/decorators/require-platform-role.decorator';
@@ -17,6 +17,15 @@ export class AdminAgenciesController {
   @ApiOperation({ summary: 'List agencies pending verification.' })
   async listPending() {
     return this.agenciesService.findPending();
+  }
+
+  @Get('top-performers')
+  @ApiOperation({
+    summary:
+      'Get top performing agencies by reputation, bookings, and revenue.',
+  })
+  async getTopPerformers(@Query('limit') limit?: number) {
+    return this.agenciesService.getTopPerformingAgencies(limit ?? 10);
   }
 
   @Post(':id/approve')

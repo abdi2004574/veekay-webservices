@@ -32,24 +32,26 @@ export class OtpService {
       );
     }
 
-    await this.prisma.otpCode.updateMany({
-      where: { identifier, type, isUsed: false },
-      data: { isUsed: true },
-    });
-
     const code = this.generateCode();
     const codeHash = await this.passwordService.hash(code);
     const expiryMinutes = this.config.get('otp.expiryMinutes', {
       infer: true,
     });
 
-    await this.prisma.otpCode.create({
-      data: {
-        identifier,
-        type,
-        codeHash,
-        expiresAt: new Date(Date.now() + expiryMinutes * 60_000),
-      },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.otpCode.updateMany({
+        where: { identifier, type, isUsed: false },
+        data: { isUsed: true },
+      });
+
+      await tx.otpCode.create({
+        data: {
+          identifier,
+          type,
+          codeHash,
+          expiresAt: new Date(Date.now() + expiryMinutes * 60_000),
+        },
+      });
     });
 
     const cooldownSeconds = this.config.get('otp.resendCooldownSeconds', {
@@ -61,38 +63,41 @@ export class OtpService {
   }
 
   async verify(identifier: string, type: OtpType, code: string): Promise<void> {
-    const otp = await this.prisma.otpCode.findFirst({
-      where: { identifier, type, isUsed: false },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    if (!otp) {
-      throw AppException.badRequest('Invalid or expired code.');
-    }
-
-    if (otp.expiresAt < new Date()) {
-      throw AppException.badRequest('Invalid or expired code.');
-    }
-
     const maxAttempts = this.config.get('otp.maxAttempts', { infer: true });
-    if (otp.attempts >= maxAttempts) {
-      throw AppException.badRequest(
-        'Too many incorrect attempts, request a new code.',
-      );
-    }
 
-    const isValid = await this.passwordService.verify(code, otp.codeHash);
-    if (!isValid) {
-      await this.prisma.otpCode.update({
-        where: { id: otp.id },
-        data: { attempts: { increment: 1 } },
+    await this.prisma.$transaction(async (tx) => {
+      const otp = await tx.otpCode.findFirst({
+        where: { identifier, type, isUsed: false },
+        orderBy: { createdAt: 'desc' },
       });
-      throw AppException.badRequest('Invalid or expired code.');
-    }
 
-    await this.prisma.otpCode.update({
-      where: { id: otp.id },
-      data: { isUsed: true },
+      if (!otp) {
+        throw AppException.badRequest('Invalid or expired code.');
+      }
+
+      if (otp.expiresAt < new Date()) {
+        throw AppException.badRequest('Invalid or expired code.');
+      }
+
+      if (otp.attempts >= maxAttempts) {
+        throw AppException.badRequest(
+          'Too many incorrect attempts, request a new code.',
+        );
+      }
+
+      const isValid = await this.passwordService.verify(code, otp.codeHash);
+      if (!isValid) {
+        await tx.otpCode.update({
+          where: { id: otp.id },
+          data: { attempts: { increment: 1 } },
+        });
+        throw AppException.badRequest('Invalid or expired code.');
+      }
+
+      await tx.otpCode.update({
+        where: { id: otp.id },
+        data: { isUsed: true },
+      });
     });
   }
 }

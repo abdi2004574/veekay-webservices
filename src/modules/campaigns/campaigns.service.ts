@@ -3,6 +3,7 @@ import {
   CampaignPrivacy,
   CampaignStatus,
   GroupMemberRole,
+  NotificationType,
   VerificationStatus,
 } from '@prisma/client';
 import { AppException } from '../../common/errors/app.exception';
@@ -10,6 +11,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { MediaAssetsService } from '../storage/media-assets.service';
 import { AdminAuditLogService } from '../admin-audit-log/admin-audit-log.service';
 import { VerifiedBadgesService } from '../verified-badges/verified-badges.service';
+import { NotificationsService } from '../notifications/services/notifications.service';
 import { CreateCampaignDto } from './dto/create-campaign.dto';
 import { UpdateCampaignDto } from './dto/update-campaign.dto';
 import { AdminCampaignFilterDto } from './dto/admin-campaign-filter.dto';
@@ -34,6 +36,7 @@ export class CampaignsService {
     private readonly mediaAssetsService: MediaAssetsService,
     private readonly adminAuditLogService: AdminAuditLogService,
     private readonly verifiedBadgesService: VerifiedBadgesService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   private async attachViewUrls(campaigns: any[]) {
@@ -188,6 +191,13 @@ export class CampaignsService {
 
   async remove(campaignId: string, creatorId: string) {
     await this.findOwnedOrThrow(campaignId, creatorId);
+
+    const photos = await this.prisma.campaignPhoto.findMany({
+      where: { campaignId },
+      select: { mediaId: true },
+    });
+    const mediaIds = photos.map((p) => p.mediaId);
+
     await this.prisma.campaign.update({
       where: { id: campaignId },
       data: {
@@ -195,6 +205,10 @@ export class CampaignsService {
         deletedById: creatorId,
       },
     });
+
+    if (mediaIds.length > 0) {
+      await this.mediaAssetsService.cleanupMediaAssets(mediaIds);
+    }
   }
 
   async listMine(creatorId: string) {
@@ -424,6 +438,25 @@ export class CampaignsService {
       reason ?? undefined,
     );
 
+    try {
+      await this.notificationsService.create(campaign.creatorId, {
+        type: NotificationType.campaign_flagged,
+        title: 'Campaign Flagged',
+        body:
+          'Your campaign has been flagged for review. Reason: ' +
+          (reason ?? 'Not specified'),
+        deepLinkTarget: 'campaign',
+        deepLinkEntityId: campaignId,
+      });
+    } catch (error) {
+      this.logger.error(
+        'Failed to send campaign_flagged notification for campaign ' +
+          campaignId +
+          ': ' +
+          (error as Error).message,
+      );
+    }
+
     return this.toAdminCampaign(updated);
   }
 
@@ -453,6 +486,23 @@ export class CampaignsService {
       'campaign',
       campaignId,
     );
+
+    try {
+      await this.notificationsService.create(campaign.creatorId, {
+        type: NotificationType.verification_status,
+        title: 'Campaign Review Complete',
+        body: 'Your campaign has been reviewed and is no longer flagged.',
+        deepLinkTarget: 'campaign',
+        deepLinkEntityId: campaignId,
+      });
+    } catch (error) {
+      this.logger.error(
+        'Failed to send verification_status notification for campaign ' +
+          campaignId +
+          ': ' +
+          (error as Error).message,
+      );
+    }
 
     return this.toAdminCampaign(updated);
   }

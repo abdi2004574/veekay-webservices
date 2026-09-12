@@ -1,4 +1,4 @@
-﻿import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import Stripe from 'stripe';
@@ -8,7 +8,7 @@ import { AgencySubscriptionTier } from '@prisma/client';
 @Injectable()
 export class AgencySubscriptionService {
   private readonly logger = new Logger(AgencySubscriptionService.name);
-  private readonly stripe: Stripe;
+  private readonly stripe: Stripe | null;
 
   constructor(
     private readonly configService: ConfigService<AppConfig, true>,
@@ -17,7 +17,7 @@ export class AgencySubscriptionService {
     const secretKey = this.configService.get('stripe.secretKey', {
       infer: true,
     });
-    this.stripe = new Stripe(secretKey);
+    this.stripe = secretKey ? new Stripe(secretKey) : null;
   }
 
   async createOrUpdateSubscription(
@@ -41,6 +41,10 @@ export class AgencySubscriptionService {
     const existing = await this.prisma.$queryRaw<
       { id: string }[]
     >`SELECT id FROM "StripeCustomer" WHERE "agencyId" = ${agencyId} LIMIT 1`;
+
+    if (!this.stripe) {
+      throw new Error('Stripe is not configured.');
+    }
 
     let stripeCustomerId: string;
     if (existing.length > 0) {
@@ -101,6 +105,9 @@ export class AgencySubscriptionService {
     }
 
     const stripeCustomerId = existing[0].id;
+    if (!this.stripe) {
+      return;
+    }
     const subscriptions = await this.stripe.subscriptions.list({
       customer: stripeCustomerId,
       status: 'active',

@@ -1,4 +1,4 @@
-﻿import { Test, TestingModule } from '@nestjs/testing';
+import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { AgencySubscriptionService } from './subscription.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -35,6 +35,7 @@ describe('AgencySubscriptionService', () => {
           provide: ConfigService,
           useValue: {
             get: jest.fn((key: string) => {
+              if (key === 'stripe.secretKey') return 'sk_test_123';
               if (key === 'stripe.subscriptionPrices') {
                 return {
                   basic: 'price_basic',

@@ -19,11 +19,11 @@ describe('UsersService admin operations', () => {
     adminAuditLogService = { record: jest.fn() };
     service = new UsersService(
       prisma,
-      { getFriendIds: jest.fn() },
+      { getFriendIds: jest.fn() } as any,
       tokenService,
-      { create: jest.fn() },
+      { create: jest.fn() } as any,
       adminAuditLogService,
-      { findActiveBySubject: jest.fn(), revoke: jest.fn() },
+      { findActiveBySubject: jest.fn(), revoke: jest.fn() } as any,
     );
   });
 

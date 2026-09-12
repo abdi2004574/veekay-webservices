@@ -1,4 +1,4 @@
-﻿import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { AgencyStaffPermission, AgencyStatus, UserRole } from '@prisma/client';
 import { AppException } from '../../common/errors/app.exception';
 import { MailService } from '../mail/mail.service';
@@ -31,6 +31,16 @@ function toDirectoryEntry(agency: {
       agency.reputationScore === null ? null : Number(agency.reputationScore),
     reviewCount: agency._count.reviews,
   };
+}
+
+export interface TopPerformingAgency {
+  id: string;
+  agencyName: string;
+  reputationScore: number | null;
+  totalBookings: number;
+  totalRevenue: number;
+  status: AgencyStatus;
+  subscriptionTier: string;
 }
 
 @Injectable()
@@ -140,7 +150,9 @@ export class AgenciesService {
     }
     if (agency.status !== AgencyStatus.pending_verification) {
       throw AppException.businessRule(
-        `Agency is already ${agency.status}. Only pending agencies can be approved.`,
+        'Agency is already ' +
+          agency.status +
+          '. Only pending agencies can be approved.',
       );
     }
 
@@ -170,7 +182,10 @@ export class AgenciesService {
       });
     } catch (error) {
       this.logger.error(
-        `Failed to send verification_status notification for agency ${agencyId}: ${(error as Error).message}`,
+        'Failed to send verification_status notification for agency ' +
+          agencyId +
+          ': ' +
+          (error as Error).message,
       );
     }
 
@@ -192,7 +207,9 @@ export class AgenciesService {
     }
     if (agency.status !== AgencyStatus.pending_verification) {
       throw AppException.businessRule(
-        `Agency is already ${agency.status}. Only pending agencies can be rejected.`,
+        'Agency is already ' +
+          agency.status +
+          '. Only pending agencies can be rejected.',
       );
     }
 
@@ -217,18 +234,75 @@ export class AgenciesService {
       await this.notificationsService.create(updated.userId, {
         type: 'verification_status',
         title: 'Agency Verification Update',
-        body: `Your agency registration was not approved. Reason: ${reason}`,
+        body: 'Your agency registration was not approved. Reason: ' + reason,
         deepLinkTarget: 'agency',
         deepLinkEntityId: agencyId,
       });
     } catch (error) {
       this.logger.error(
-        `Failed to send verification_status notification for agency ${agencyId}: ${(error as Error).message}`,
+        'Failed to send verification_status notification for agency ' +
+          agencyId +
+          ': ' +
+          (error as Error).message,
       );
     }
 
     await this.mailService.sendAgencyRejectedEmail(updated.user.email, reason);
 
     return updated;
+  }
+
+  async getTopPerformingAgencies(limit = 10): Promise<TopPerformingAgency[]> {
+    const agencies = await this.prisma.agency.findMany({
+      where: { status: AgencyStatus.approved },
+      select: {
+        id: true,
+        agencyName: true,
+        reputationScore: true,
+        status: true,
+        subscriptionTier: true,
+        _count: {
+          select: {
+            tripBookings: true,
+            reviews: true,
+          },
+        },
+        tripBookings: {
+          where: { status: 'completed' },
+          select: { amount: true, currency: true },
+        },
+      },
+    });
+
+    const results = agencies.map((agency) => {
+      const totalRevenue = agency.tripBookings.reduce(
+        (sum, booking) => sum + Number(booking.amount ?? 0),
+        0,
+      );
+      return {
+        id: agency.id,
+        agencyName: agency.agencyName,
+        reputationScore:
+          agency.reputationScore === null
+            ? null
+            : Number(agency.reputationScore),
+        totalBookings: agency._count.tripBookings,
+        totalRevenue,
+        status: agency.status,
+        subscriptionTier: agency.subscriptionTier,
+      };
+    });
+
+    return results
+      .sort((a, b) => {
+        if (b.reputationScore !== a.reputationScore) {
+          return (b.reputationScore ?? 0) - (a.reputationScore ?? 0);
+        }
+        if (b.totalBookings !== a.totalBookings) {
+          return b.totalBookings - a.totalBookings;
+        }
+        return b.totalRevenue - a.totalRevenue;
+      })
+      .slice(0, limit);
   }
 }

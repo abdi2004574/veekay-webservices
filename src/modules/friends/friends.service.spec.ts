@@ -17,7 +17,10 @@ describe('FriendsService', () => {
         delete: jest.fn(),
       },
     };
-    service = new FriendsService(prisma);
+    const mockNotificationsService = {
+      create: jest.fn().mockResolvedValue({}),
+    };
+    service = new FriendsService(prisma, mockNotificationsService as any);
   });
 
   describe('sendRequest', () => {

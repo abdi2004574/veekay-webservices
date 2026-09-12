@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import { NotificationType } from '@prisma/client';
 import { AppException } from '../../common/errors/app.exception';
 import { PrismaService } from '../prisma/prisma.service';
 import { FriendsService } from '../friends/friends.service';
 import { MediaAssetsService } from '../storage/media-assets.service';
+import { NotificationsService } from '../notifications/services/notifications.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 
@@ -21,6 +23,7 @@ export class PostsService {
     private readonly prisma: PrismaService,
     private readonly friendsService: FriendsService,
     private readonly mediaAssetsService: MediaAssetsService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   private async attachViewerContext(posts: any[], viewerId: string) {
@@ -105,7 +108,7 @@ export class PostsService {
   }
 
   async like(postId: string, userId: string) {
-    await this.findByIdOrThrow(postId);
+    const post = await this.findByIdOrThrow(postId);
     const existing = await this.prisma.postLike.findUnique({
       where: { postId_userId: { postId, userId } },
     });
@@ -113,6 +116,20 @@ export class PostsService {
       throw AppException.conflict('You already liked this post.');
     }
     await this.prisma.postLike.create({ data: { postId, userId } });
+
+    if (post.authorId !== userId) {
+      try {
+        await this.notificationsService.create(post.authorId, {
+          type: NotificationType.like,
+          title: 'New Like',
+          body: 'Someone liked your post.',
+          deepLinkTarget: 'post',
+          deepLinkEntityId: postId,
+        });
+      } catch (error) {
+        // Log error but don't fail the like operation
+      }
+    }
   }
 
   async unlike(postId: string, userId: string) {
@@ -126,14 +143,30 @@ export class PostsService {
   }
 
   async repost(postId: string, authorId: string, caption?: string) {
-    await this.findByIdOrThrow(postId);
-    return this.prisma.post.create({
+    const originalPost = await this.findByIdOrThrow(postId);
+    const newPost = await this.prisma.post.create({
       data: {
         authorId,
         text: caption ?? '',
         repostOfId: postId,
       },
     });
+
+    if (originalPost.authorId !== authorId) {
+      try {
+        await this.notificationsService.create(originalPost.authorId, {
+          type: NotificationType.share,
+          title: 'Post Shared',
+          body: 'Someone shared your post.',
+          deepLinkTarget: 'post',
+          deepLinkEntityId: newPost.id,
+        });
+      } catch (error) {
+        // Log error but don't fail the repost operation
+      }
+    }
+
+    return newPost;
   }
 
   async getFeed(viewerId: string, cursor?: string, limit = 20) {

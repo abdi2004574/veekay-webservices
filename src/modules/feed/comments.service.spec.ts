@@ -24,7 +24,14 @@ describe('CommentsService', () => {
     postsService = {
       findByIdOrThrow: jest.fn().mockResolvedValue({ id: 'post-1' }),
     };
-    service = new CommentsService(prisma, postsService);
+    const mockNotificationsService = {
+      create: jest.fn().mockResolvedValue({}),
+    };
+    service = new CommentsService(
+      prisma,
+      postsService,
+      mockNotificationsService as any,
+    );
   });
 
   describe('create', () => {

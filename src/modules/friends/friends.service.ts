@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
+import { NotificationType } from '@prisma/client';
 import { FriendRequestStatus } from '@prisma/client';
 import { AppException } from '../../common/errors/app.exception';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/services/notifications.service';
 
 const USER_SELECT = {
   select: {
@@ -14,7 +16,10 @@ const USER_SELECT = {
 
 @Injectable()
 export class FriendsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async getFriendIds(userId: string): Promise<string[]> {
     const requests = await this.prisma.friendRequest.findMany({
@@ -112,9 +117,23 @@ export class FriendsService {
       );
     }
 
-    return this.prisma.friendRequest.create({
+    const request = await this.prisma.friendRequest.create({
       data: { requesterId, addresseeId },
     });
+
+    try {
+      await this.notificationsService.create(addresseeId, {
+        type: NotificationType.friend_request,
+        title: 'New Friend Request',
+        body: 'Someone sent you a friend request.',
+        deepLinkTarget: 'friend_request',
+        deepLinkEntityId: request.id,
+      });
+    } catch (error) {
+      // Log error but don't fail the friend request
+    }
+
+    return request;
   }
 
   private async findPendingRequestForAddressee(

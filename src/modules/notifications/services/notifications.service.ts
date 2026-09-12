@@ -30,7 +30,7 @@ interface NotificationListItem {
   pushSentAt: Date | null;
 }
 
-interface ListForUserResult {
+export interface ListForUserResult {
   items: NotificationListItem[];
   nextCursor: string | null;
 }

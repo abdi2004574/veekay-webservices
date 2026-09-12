@@ -24,11 +24,15 @@ describe('CampaignsService admin operations', () => {
     mediaAssetsService = { resolveViewUrls: jest.fn() };
     adminAuditLogService = { record: jest.fn() };
     verifiedBadgesService = { assign: jest.fn(), revoke: jest.fn() };
+    const mockNotificationsService = {
+      create: jest.fn().mockResolvedValue({}),
+    };
     service = new CampaignsService(
       prisma,
       mediaAssetsService,
       adminAuditLogService,
       verifiedBadgesService,
+      mockNotificationsService as any,
     );
   });
 

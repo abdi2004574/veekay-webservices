@@ -42,6 +42,7 @@ export class TokenService {
       deviceId?: string;
       deviceName?: string;
       twoFactorConfirmed?: boolean;
+      agencyId?: string;
     } = {},
   ): Promise<TokenPair> {
     const jwt = this.config.get('jwt', { infer: true });
@@ -50,6 +51,7 @@ export class TokenService {
       sub: user.id,
       jti: randomUUID(),
       twoFactorConfirmed: options.twoFactorConfirmed,
+      agencyId: options.agencyId,
     };
     const accessToken = this.jwtService.sign(accessPayload, {
       secret: jwt.accessSecret,
@@ -109,6 +111,7 @@ export class TokenService {
 
     const user = await this.prisma.user.findUnique({
       where: { id: stored.userId },
+      include: { agency: { select: { id: true } } },
     });
     if (!user) {
       throw AppException.unauthorized('Invalid or expired refresh token.');
@@ -122,6 +125,7 @@ export class TokenService {
     const tokens = await this.issueTokenPair(user, {
       deviceId: stored.deviceId ?? undefined,
       deviceName: stored.deviceName ?? undefined,
+      agencyId: user.agency?.id,
     });
 
     return { user, tokens };

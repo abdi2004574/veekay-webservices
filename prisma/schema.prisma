@@ -25,6 +25,7 @@ model User {
   username                 String                    @unique
   adminTwoFactor           AdminTwoFactor?
   agency                   Agency?
+  agencyStaff            AgencyStaff[]
   agencyReviews            AgencyReview[]
   campaigns                Campaign[]
   commentLikes             CommentLike[]
@@ -261,6 +262,7 @@ model AgencyStaff {
   permission AgencyStaffPermission @default(owner)
   createdAt  DateTime              @default(now()) @map("created_at")
   agency     Agency                @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  user       User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([agencyId, userId])
   @@map("agency_staff")
@@ -881,6 +883,8 @@ enum AgencySubscriptionTier {
 
 enum AgencyStaffPermission {
   owner
+  admin
+  support
   staff
 }
 
@@ -1249,4 +1253,17 @@ model FraudFlag {
   @@index([userId, status])
   @@index([createdAt])
   @@map("fraud_flags")
+}
+
+
+model PlatformSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       Json
+  description String?
+  category    String
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("platform_settings")
 }

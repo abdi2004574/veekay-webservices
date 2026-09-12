@@ -12,13 +12,13 @@ import {
 export class StripeFundingProvider implements IFundingProvider {
   readonly name = 'stripe';
   private readonly logger = new Logger(StripeFundingProvider.name);
-  private readonly stripe: Stripe;
+  private readonly stripe: Stripe | null;
 
   constructor(private readonly configService: ConfigService<AppConfig, true>) {
     const secretKey = this.configService.get('stripe.secretKey', {
       infer: true,
     });
-    this.stripe = new Stripe(secretKey);
+    this.stripe = secretKey ? new Stripe(secretKey) : null;
   }
 
   async deposit(
@@ -26,6 +26,10 @@ export class StripeFundingProvider implements IFundingProvider {
   ): Promise<FundingProviderResult> {
     if (!request.amount || request.amount <= 0) {
       return { ok: false, message: 'Amount must be greater than zero.' };
+    }
+
+    if (!this.stripe) {
+      return { ok: false, message: 'Stripe is not configured.' };
     }
 
     try {
@@ -74,7 +78,7 @@ export class StripeFundingProvider implements IFundingProvider {
     }
   }
 
-  getStripeInstance(): Stripe {
+  getStripeInstance(): Stripe | null {
     return this.stripe;
   }
 }

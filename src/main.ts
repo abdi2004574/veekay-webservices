@@ -5,6 +5,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger } from 'nestjs-pino';
 import helmet from 'helmet';
 import compression from 'compression';
+import express from 'express';
 import { AppModule } from './app.module';
 import { AppConfig } from './config/configuration';
 
@@ -26,6 +27,14 @@ async function bootstrap() {
   app.setGlobalPrefix('api/v1', {
     exclude: ['health'],
   });
+
+  app.use(
+    express.json({
+      verify: (req: any, _res: any, buffer: Buffer) => {
+        req.rawBody = buffer;
+      },
+    }),
+  );
 
   app.useGlobalPipes(
     new ValidationPipe({

@@ -1,5 +1,6 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import express from 'express';
 import { AppModule } from '../../src/app.module';
 
 export async function createTestApp(): Promise<INestApplication> {
@@ -9,6 +10,15 @@ export async function createTestApp(): Promise<INestApplication> {
 
   const app = moduleRef.createNestApplication();
   app.setGlobalPrefix('api/v1', { exclude: ['health'] });
+
+  app.use(
+    express.json({
+      verify: (req: any, _res: any, buffer: Buffer) => {
+        req.rawBody = buffer;
+      },
+    }),
+  );
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

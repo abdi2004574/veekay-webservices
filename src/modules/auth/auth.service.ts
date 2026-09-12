@@ -50,9 +50,7 @@ export class AuthService {
 
     for (let attempt = 0; attempt < 20; attempt++) {
       const candidate =
-        attempt === 0
-          ? base
-          : `${base}${Math.floor(1000 + Math.random() * 9000)}`;
+        attempt === 0 ? base : base + Math.floor(1000 + Math.random() * 9000);
       const existing = await this.prisma.user.findUnique({
         where: { username: candidate },
       });
@@ -123,6 +121,7 @@ export class AuthService {
   ): Promise<{ user: User; tokens: TokenPair }> {
     const user = await this.prisma.user.findUnique({
       where: { id: dto.userId },
+      include: { agency: { select: { id: true } } },
     });
     if (!user) {
       throw AppException.badRequest('Invalid or expired code.');
@@ -133,9 +132,12 @@ export class AuthService {
     const updated = await this.prisma.user.update({
       where: { id: user.id },
       data: { isEmailVerified: true, lastLoginAt: new Date() },
+      include: { agency: { select: { id: true } } },
     });
 
-    const tokens = await this.tokenService.issueTokenPair(updated);
+    const tokens = await this.tokenService.issueTokenPair(updated, {
+      agencyId: updated.agency?.id,
+    });
     return { user: updated, tokens };
   }
 
@@ -229,6 +231,7 @@ export class AuthService {
     } else if (dto.otp) {
       const found = await this.prisma.user.findUnique({
         where: { email: dto.email },
+        include: { agency: { select: { id: true } } },
       });
       if (!found) {
         throw AppException.unauthorized('Invalid or expired code.');
@@ -254,11 +257,13 @@ export class AuthService {
     const updated = await this.prisma.user.update({
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
+      include: { agency: { select: { id: true } } },
     });
 
     const tokens = await this.tokenService.issueTokenPair(updated, {
       deviceId: dto.deviceId,
       deviceName: dto.deviceName,
+      agencyId: updated.agency?.id,
     });
 
     return { user: updated, tokens };
@@ -462,7 +467,7 @@ export class AuthService {
     });
   }
 
-  // ── Admin ────────────────────────────────────────────────
+  // Admin
 
   async adminLogin(dto: AdminLoginDto): Promise<{ pendingToken: string }> {
     const user = await this.prisma.user.findUnique({

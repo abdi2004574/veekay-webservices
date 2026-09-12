@@ -50,25 +50,39 @@ describe('CallsService', () => {
   describe('create', () => {
     it('rejects a call in a non-agency conversation', async () => {
       conversationsService.assertAccess.mockResolvedValue({
-        conversation: { id: 'conv-1', type: ConversationType.direct, agencyId: null },
+        conversation: {
+          id: 'conv-1',
+          type: ConversationType.direct,
+          agencyId: null,
+        },
         participant: { id: 'p-1' },
         isAgencyStaff: false,
       });
 
       await expect(
-        service.create('conv-1', 'user-1', { conversationId: 'conv-1', type: 'video' }),
+        service.create('conv-1', 'user-1', {
+          conversationId: 'conv-1',
+          type: 'video',
+        }),
       ).rejects.toMatchObject({ getStatus: expect.any(Function) });
     });
 
     it('creates a call session when a traveler initiates', async () => {
       conversationsService.assertAccess.mockResolvedValue({
-        conversation: { id: 'conv-1', type: ConversationType.agency, agencyId: 'agency-1' },
+        conversation: {
+          id: 'conv-1',
+          type: ConversationType.agency,
+          agencyId: 'agency-1',
+        },
         participant: { id: 'p-1' },
         isAgencyStaff: false,
       });
       prisma.agency.findUnique.mockResolvedValue({ userId: 'agency-user-1' });
 
-      const result = await service.create('conv-1', 'user-1', { conversationId: 'conv-1', type: 'audio' });
+      const result = await service.create('conv-1', 'user-1', {
+        conversationId: 'conv-1',
+        type: 'audio',
+      });
 
       expect(callProvider.createSession).toHaveBeenCalledWith({
         conversationId: 'conv-1',
@@ -77,18 +91,21 @@ describe('CallsService', () => {
         travelerId: 'user-1',
         type: 'audio',
       });
-      expect(notificationsService.create).toHaveBeenCalledWith('agency-user-1', {
-        type: 'new_call',
-        title: 'Traveler is calling',
-        body: 'Traveler started a audio consultation call.',
-        deepLinkTarget: 'chat',
-        deepLinkEntityId: 'conv-1',
-        metadata: {
-          callSessionId: result.id,
-          conversationId: 'conv-1',
-          type: 'audio',
+      expect(notificationsService.create).toHaveBeenCalledWith(
+        'agency-user-1',
+        {
+          type: 'new_call',
+          title: 'Traveler is calling',
+          body: 'Traveler started a audio consultation call.',
+          deepLinkTarget: 'chat',
+          deepLinkEntityId: 'conv-1',
+          metadata: {
+            callSessionId: result.id,
+            conversationId: 'conv-1',
+            type: 'audio',
+          },
         },
-      });
+      );
       expect(result.conversationId).toBe('conv-1');
       expect(result.agencyId).toBe('agency-1');
       expect(result.travelerId).toBe('user-1');
@@ -98,13 +115,22 @@ describe('CallsService', () => {
 
     it('creates a call session when agency staff initiates', async () => {
       conversationsService.assertAccess.mockResolvedValue({
-        conversation: { id: 'conv-1', type: ConversationType.agency, agencyId: 'agency-1' },
+        conversation: {
+          id: 'conv-1',
+          type: ConversationType.agency,
+          agencyId: 'agency-1',
+        },
         participant: null,
         isAgencyStaff: true,
       });
-      prisma.conversationParticipant.findFirst.mockResolvedValue({ userId: 'traveler-1' });
+      prisma.conversationParticipant.findFirst.mockResolvedValue({
+        userId: 'traveler-1',
+      });
 
-      const result = await service.create('conv-1', 'agency-staff-1', { conversationId: 'conv-1', type: 'video' });
+      const result = await service.create('conv-1', 'agency-staff-1', {
+        conversationId: 'conv-1',
+        type: 'video',
+      });
 
       expect(callProvider.createSession).toHaveBeenCalledWith({
         conversationId: 'conv-1',
@@ -130,14 +156,21 @@ describe('CallsService', () => {
 
     it('rejects if agency conversation has no traveler participant', async () => {
       conversationsService.assertAccess.mockResolvedValue({
-        conversation: { id: 'conv-1', type: ConversationType.agency, agencyId: 'agency-1' },
+        conversation: {
+          id: 'conv-1',
+          type: ConversationType.agency,
+          agencyId: 'agency-1',
+        },
         participant: null,
         isAgencyStaff: true,
       });
       prisma.conversationParticipant.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.create('conv-1', 'agency-staff-1', { conversationId: 'conv-1', type: 'video' }),
+        service.create('conv-1', 'agency-staff-1', {
+          conversationId: 'conv-1',
+          type: 'video',
+        }),
       ).rejects.toMatchObject({ getStatus: expect.any(Function) });
     });
   });

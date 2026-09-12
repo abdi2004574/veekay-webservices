@@ -2,52 +2,75 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+const MAILHOG_API = 'http://localhost:58025/api/v2';
+
+// Use actual PostgreSQL table names (Prisma uses snake_case plural by default)
+const TABLES = [
+  'content_reports',
+  'verified_badges',
+  'admin_audit_logs',
+  'admin_invites',
+  'notifications',
+  'notification_preferences',
+  'push_devices',
+  'milestone_notification_logs',
+  'otp_codes',
+  'campaign_photos',
+  'campaigns',
+  'refresh_tokens',
+  'social_identities',
+  'admin_two_factor',
+  'agency_reviews',
+  'agency_documents',
+  'agency_staff',
+  'agencies',
+  'trip_requests',
+  'smart_reply_templates',
+  'traveler_previous_trip_photos',
+  'traveler_destination_preferences',
+  'traveler_travel_style_preferences',
+  'traveler_profiles',
+  'post_likes',
+  'comment_likes',
+  'comments',
+  'posts',
+  'story_likes',
+  'story_views',
+  'stories',
+  'friend_requests',
+  'message_receipts',
+  'messages',
+  'conversation_participants',
+  'conversations',
+  'media_assets',
+  'donations',
+  'wallet_transactions',
+  'withdrawal_requests',
+  'wallet_accounts',
+  'fraud_flags',
+  'users',
+];
+
 export async function resetDb(): Promise<void> {
-  await prisma.$transaction([
-    prisma.contentReport.deleteMany(),
-    prisma.verifiedBadge.deleteMany(),
-    prisma.adminAuditLog.deleteMany(),
-    prisma.adminInvite.deleteMany(),
-    prisma.notification.deleteMany(),
-    prisma.notificationPreference.deleteMany(),
-    prisma.pushDevice.deleteMany(),
-    prisma.milestoneNotificationLog.deleteMany(),
-    prisma.otpCode.deleteMany(),
-    prisma.campaignPhoto.deleteMany(),
-    prisma.campaign.deleteMany(),
-    prisma.refreshToken.deleteMany(),
-    prisma.socialIdentity.deleteMany(),
-    prisma.adminTwoFactor.deleteMany(),
-    prisma.agencyReview.deleteMany(),
-    prisma.agencyDocument.deleteMany(),
-    prisma.agencyStaff.deleteMany(),
-    prisma.agency.deleteMany(),
-    prisma.tripRequest.deleteMany(),
-    prisma.smartReplyTemplate.deleteMany(),
-    prisma.travelerPreviousTripPhoto.deleteMany(),
-    prisma.travelerDestinationPreference.deleteMany(),
-    prisma.travelerTravelStylePreference.deleteMany(),
-    prisma.travelerProfile.deleteMany(),
-    prisma.postLike.deleteMany(),
-    prisma.commentLike.deleteMany(),
-    prisma.comment.deleteMany(),
-    prisma.post.deleteMany(),
-    prisma.storyLike.deleteMany(),
-    prisma.storyView.deleteMany(),
-    prisma.story.deleteMany(),
-    prisma.friendRequest.deleteMany(),
-    prisma.messageReceipt.deleteMany(),
-    prisma.message.deleteMany(),
-    prisma.conversationParticipant.deleteMany(),
-    prisma.conversation.deleteMany(),
-    prisma.mediaAsset.deleteMany(),
-    prisma.donation.deleteMany(),
-    prisma.walletTransaction.deleteMany(),
-    prisma.withdrawalRequest.deleteMany(),
-    prisma.walletAccount.deleteMany(),
-    prisma.fraudFlag.deleteMany(),
-    prisma.user.deleteMany(),
-  ]);
+  const maxAttempts = 5;
+  const delayMs = 50;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      await prisma.$executeRawUnsafe(
+        `TRUNCATE TABLE ${TABLES.join(', ')} RESTART IDENTITY CASCADE;`,
+      );
+      break;
+    } catch (err: any) {
+      const code = err?.code;
+      if (code === '40P01' && attempt < maxAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        continue;
+      }
+      throw err;
+    }
+  }
+  // Clear Mailhog emails to prevent stale OTP codes from previous tests
+  await fetch('http://localhost:58025/api/v1/messages', { method: 'DELETE' }).catch(() => {});
 }
 
 export async function disconnectDb(): Promise<void> {

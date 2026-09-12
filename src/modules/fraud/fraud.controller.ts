@@ -9,7 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PlatformRole } from '@prisma/client';
+import { PlatformRole, FraudFlagSeverity } from '@prisma/client';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RequirePlatformRole } from '../../common/decorators/require-platform-role.decorator';
 import { PlatformRoleGuard } from '../../common/guards/platform-role.guard';
@@ -32,7 +32,10 @@ export class FraudController {
     @Body() dto: CreateFraudFlagDto,
     @CurrentUser('userId') userId: string,
   ) {
-    return this.fraudService.create(userId, dto);
+    return this.fraudService.create(userId, {
+      ...dto,
+      severity: dto.severity ?? FraudFlagSeverity.low,
+    });
   }
 
   @Get('/')

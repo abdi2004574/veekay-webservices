@@ -535,6 +535,25 @@ export class UsersService {
       targetUserId,
       note,
     );
+    try {
+      await this.notificationsService.create(targetUserId, {
+        type: NotificationType.verification_status,
+        title:
+          status === VerificationStatus.verified
+            ? 'Identity Verified'
+            : 'Verification Update',
+        body:
+          status === VerificationStatus.verified
+            ? 'Your identity has been verified. You can now make high-value withdrawals.'
+            : 'Your identity verification was not approved. Reason: ' +
+              (note ?? 'Not specified'),
+        deepLinkTarget: 'profile',
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to send verification_status notification for user ${targetUserId}: ${(error as Error).message}`,
+      );
+    }
 
     if (status !== VerificationStatus.verified) {
       try {

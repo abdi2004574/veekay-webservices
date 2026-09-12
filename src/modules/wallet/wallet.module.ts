@@ -4,12 +4,10 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { AdminAuditLogModule } from '../admin-audit-log/admin-audit-log.module';
 import { ManualFundingProvider } from './funding/manual-funding.provider';
-import { StripeFundingProvider } from './funding/stripe-funding.provider';
 import { FUNDING_PROVIDER } from './interfaces/funding-provider.interface';
 import { AdminWalletController } from './admin-wallet.controller';
 import { WalletController } from './wallet.controller';
 import { WalletService } from './wallet.service';
-import { StripeConnectService } from '../payments/stripe-connect.service';
 
 @Module({
   imports: [
@@ -22,18 +20,11 @@ import { StripeConnectService } from '../payments/stripe-connect.service';
   providers: [
     WalletService,
     ManualFundingProvider,
-    StripeFundingProvider,
-    StripeConnectService,
     {
       provide: FUNDING_PROVIDER,
-      useExisting: StripeFundingProvider,
+      useExisting: ManualFundingProvider,
     },
   ],
-  exports: [
-    WalletService,
-    FUNDING_PROVIDER,
-    StripeConnectService,
-    StripeFundingProvider,
-  ],
+  exports: [WalletService, FUNDING_PROVIDER],
 })
 export class WalletModule {}

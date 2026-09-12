@@ -30,7 +30,7 @@ export class MediaAssetsService {
     const rule = MEDIA_PURPOSE_RULES[dto.purpose];
     if (!rule.contentTypes.includes(dto.contentType)) {
       throw AppException.badRequest(
-        `Content type "${dto.contentType}" isn'\''t allowed for ${dto.purpose}. Allowed: ${rule.contentTypes.join("'", "'")}.`,
+        `Content type "${dto.contentType}" isn'\''t allowed for ${dto.purpose}. Allowed: ${rule.contentTypes.join("', '")}.`,
       );
     }
 
@@ -371,7 +371,7 @@ export class MediaAssetsService {
    * Deletes the given media assets (S3/MinIO object + media_assets row).
    * Used when entities (campaigns, packages, posts) replace their media lists,
    * to avoid orphaned storage objects growing unboundedly. Safe to call with
-   * a mix of uploaded/pending/deleted assets — it will skip non-uploaded ones
+   * a mix of uploaded/pending/deleted assets ï¿½ it will skip non-uploaded ones
    * and tolerate missing objects (deleteObject swallows errors). Idempotent.
    */
   async cleanupMediaAssets(mediaIds: string[]): Promise<void> {

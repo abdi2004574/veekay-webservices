@@ -1,4 +1,4 @@
-﻿export interface AppConfig {
+export interface AppConfig {
   nodeEnv: string;
   port: number;
   appUrl: string;
@@ -57,6 +57,11 @@
   fraud: {
     profileChangeThreshold: number;
     profileChangeWindowDays: number;
+  };
+  revenuecat: {
+    webhookSecret: string;
+    timestampToleranceSeconds: number;
+    tierMapping: Record<string, string>;
   };
   stripe: {
     secretKey: string;
@@ -152,6 +157,20 @@ export default (): AppConfig => ({
       process.env.FRAUD_PROFILE_CHANGE_WINDOW_DAYS ?? '30',
       10,
     ),
+  },
+  revenuecat: {
+    webhookSecret: process.env.REVENUECAT_WEBHOOK_SECRET ?? '',
+    timestampToleranceSeconds: parseInt(
+      process.env.REVENUECAT_TIMESTAMP_TOLERANCE_SECONDS ?? '300',
+      10,
+    ),
+    tierMapping: (() => {
+      try {
+        return JSON.parse(process.env.REVENUECAT_TIER_MAPPING ?? '');
+      } catch {
+        return {};
+      }
+    })(),
   },
   stripe: {
     secretKey: process.env.STRIPE_SECRET_KEY as string,

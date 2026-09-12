@@ -1,82 +1,78 @@
-﻿import { Body, Controller, Param, Post, Req } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import type { Request } from 'express';
-import { Public } from '../../common/decorators/public.decorator';
+﻿import { Body, Controller, Param, Post, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { UserRole } from '@prisma/client';
+import { Decimal } from '@prisma/client/runtime/library';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { IdempotencyKey } from '../../common/decorators/idempotency-key.decorator';
+import { RequireRole } from '../../common/decorators/require-role.decorator';
+import { IdempotencyKeyGuard } from '../../common/guards/idempotency-key.guard';
+import { AppException } from '../../common/errors/app.exception';
 import { CampaignsService } from './campaigns.service';
-import { DonateDto } from './dto/donate.dto';
-import { StripeConnectService } from '../payments/stripe-connect.service';
-import { StripeFundingProvider } from '../wallet/funding/stripe-funding.provider';
-import { ConfigService } from '@nestjs/config';
-import { AppConfig } from '../../config/configuration';
+import { ManualDonateDto } from './dto/manual-donate.dto';
+import { WalletService } from '../wallet/wallet.service';
+
+interface CampaignView {
+  creatorId: string;
+  raisedAmount: Decimal;
+}
 
 @ApiTags('campaigns')
 @Controller('campaigns')
 export class DonateController {
   constructor(
     private readonly campaignsService: CampaignsService,
-    private readonly stripeConnectService: StripeConnectService,
-    private readonly stripeFundingProvider: StripeFundingProvider,
-    private readonly configService: ConfigService<AppConfig, true>,
+    private readonly walletService: WalletService,
   ) {}
 
-  @Post(':id/donate')
-  @Public()
+  @Post(':id/donate-manual')
+  @ApiBearerAuth()
+  @RequireRole(UserRole.traveler)
+  @UseGuards(IdempotencyKeyGuard)
   @ApiOperation({
-    summary: 'Create a Stripe PaymentIntent for a campaign donation.',
+    summary:
+      'Manually credit a campaign donation without a payment processor (MVP).',
   })
-  async createDonation(
+  async manualDonate(
     @Param('id') campaignId: string,
-    @Body() dto: DonateDto,
-    @Req() req: Request,
-    @CurrentUser('userId') userId?: string,
+    @Body() dto: ManualDonateDto,
+    @IdempotencyKey() idempotencyKeyHeader: string,
+    @CurrentUser('userId') userId: string,
   ) {
-    const campaign = await this.campaignsService.getDetail(
+    const campaign = (await this.campaignsService.getDetail(
       campaignId,
-      userId ?? 'anonymous',
-    );
+      userId,
+    )) as CampaignView;
 
-    const platformFeePercent = this.configService.get(
-      'stripe.platformFeePercent',
-      { infer: true },
-    );
-
-    const feeAmount =
-      platformFeePercent > 0
-        ? Math.round(((dto.amount * platformFeePercent) / 100) * 100)
-        : 0;
-
-    const metadata: Record<string, string> = {
-      campaignId,
-      donorUserId: userId ?? 'anonymous',
-      donorDisplayName: dto.donorDisplayName ?? 'Anonymous',
-      isAnonymous: String(dto.isAnonymous ?? false),
-      isGift: String(dto.isGift ?? false),
-      giftMessage: dto.giftMessage ?? '',
-    };
-
-    const paymentIntent = await this.stripeFundingProvider
-      .getStripeInstance()
-      .paymentIntents.create(
-        {
-          amount: Math.round(dto.amount * 100),
-          currency: dto.currency.toLowerCase(),
-          metadata,
-          description: dto.isGift
-            ? `Gift donation for campaign ${campaignId}`
-            : `Donation for campaign ${campaignId}`,
-          application_fee_amount: feeAmount > 0 ? feeAmount : undefined,
-        },
-        {
-          idempotencyKey: `donate-${campaignId}-${Date.now()}`,
-        },
+    if (campaign.creatorId === userId) {
+      throw AppException.businessRule(
+        'You cannot donate to your own campaign.',
       );
+    }
+
+    const idempotencyKey = `${idempotencyKeyHeader}-${userId}-${campaignId}`;
+
+    const result = await this.walletService.recordDonation({
+      campaignId,
+      donorUserId: userId,
+      donorDisplayName: dto.donorDisplayName ?? null,
+      amount: dto.amount,
+      currency: dto.currency ?? 'USD',
+      isAnonymous: dto.isAnonymous ?? false,
+      isGift: dto.isGift ?? false,
+      giftMessage: dto.giftMessage,
+      idempotencyKey,
+    });
+
+    const updated = (await this.campaignsService.getDetail(
+      campaignId,
+      userId,
+    )) as CampaignView;
 
     return {
-      clientSecret: paymentIntent.client_secret,
-      paymentIntentId: paymentIntent.id,
       amount: dto.amount,
-      currency: dto.currency,
+      currency: dto.currency ?? 'USD',
+      raisedAmount: Number(updated.raisedAmount),
+      walletTransactionId: result.transaction.id,
     };
   }
 }

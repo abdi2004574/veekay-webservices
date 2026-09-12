@@ -24,5 +24,5 @@ export async function fetchLatestOtp(email: string): Promise<string> {
 }
 
 export async function clearMailhog(): Promise<void> {
-  await fetch(`${MAILHOG_API}/messages`, { method: 'DELETE' });
+  await fetch('http://localhost:58025/api/v1/messages', { method: 'DELETE' }).catch(() => {});
 }

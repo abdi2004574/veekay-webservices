@@ -9,4 +9,5 @@ export interface AuthenticatedUser {
   isEmailVerified: boolean;
   isActive: boolean;
   twoFactorConfirmed?: boolean;
+  agencyId?: string;
 }

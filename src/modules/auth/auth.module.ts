@@ -10,7 +10,6 @@ import { TokenService } from './token.service';
 import { SocialAuthService } from './social-auth.service';
 import { TwoFactorService } from './two-factor.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
-import { LocalStrategy } from './strategies/local.strategy';
 
 @Module({
   imports: [PassportModule, JwtModule.register({})],
@@ -23,7 +22,6 @@ import { LocalStrategy } from './strategies/local.strategy';
     SocialAuthService,
     TwoFactorService,
     JwtStrategy,
-    LocalStrategy,
   ],
   exports: [AuthService, PasswordService, TokenService],
 })
