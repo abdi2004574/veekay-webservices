@@ -1,10 +1,49 @@
 import { Injectable } from '@nestjs/common';
-import { AgencyStatus, DestinationType, PackageStatus } from '@prisma/client';
+import {
+  Agency,
+  AgencyStatus,
+  DestinationType,
+  Package,
+  PackageMedia,
+  PackageStatus,
+  Prisma,
+} from '@prisma/client';
 import { AppException } from '../../common/errors/app.exception';
 import { PrismaService } from '../prisma/prisma.service';
 import { MediaAssetsService } from '../storage/media-assets.service';
 import { CreatePackageDto } from './dto/create-package.dto';
 import { UpdatePackageDto } from './dto/update-package.dto';
+
+export interface PackageMediaEntry {
+  mediaId: string;
+  displayOrder: number;
+  url: string | null;
+}
+
+export interface PackageAgencySummary {
+  id: string;
+  agencyName: string;
+  reputationScore: number | null;
+}
+
+export interface PackageViewModel {
+  id: string;
+  agencyId: string;
+  title: string;
+  description: string | null;
+  basePrice: number;
+  currency: string;
+  destinationType: DestinationType | null;
+  season: string | null;
+  theme: string | null;
+  itinerary: string | null;
+  status: PackageStatus;
+  isDynamicPricing: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  media: PackageMediaEntry[];
+  agency: PackageAgencySummary | null;
+}
 
 @Injectable()
 export class PackagesService {
@@ -13,7 +52,9 @@ export class PackagesService {
     private readonly mediaAssetsService: MediaAssetsService,
   ) {}
 
-  private async attachViewUrls(packages: any[]) {
+  private async attachViewUrls(
+    packages: (Package & { media: PackageMedia[]; agency: Agency })[],
+  ): Promise<PackageViewModel[]> {
     const mediaIds = packages.flatMap(
       (p) => p.media?.map((m: { mediaId: string }) => m.mediaId) ?? [],
     );
@@ -86,7 +127,10 @@ export class PackagesService {
     }
   }
 
-  async create(userId: string, dto: CreatePackageDto) {
+  async create(
+    userId: string,
+    dto: CreatePackageDto,
+  ): Promise<PackageViewModel> {
     const agencyId = await this.resolveAgencyId(userId);
     await this.assertAgencyApproved(agencyId);
     const mediaData =
@@ -122,11 +166,13 @@ export class PackagesService {
       },
     });
 
-    const [withUrls] = await this.attachViewUrls([pkg]);
+    const [withUrls] = await this.attachViewUrls([
+      pkg as Package & { media: PackageMedia[]; agency: Agency },
+    ]);
     return withUrls;
   }
 
-  async listMine(userId: string) {
+  async listMine(userId: string): Promise<PackageViewModel[]> {
     const agencyId = await this.resolveAgencyId(userId);
     const packages = await this.prisma.package.findMany({
       where: { agencyId },
@@ -143,10 +189,15 @@ export class PackagesService {
         },
       },
     });
-    return this.attachViewUrls(packages);
+    return this.attachViewUrls(
+      packages as (Package & { media: PackageMedia[]; agency: Agency })[],
+    );
   }
 
-  async getDetail(packageId: string, viewerId: string) {
+  async getDetail(
+    packageId: string,
+    viewerId: string,
+  ): Promise<PackageViewModel> {
     const pkg = await this.prisma.package.findUnique({
       where: { id: packageId },
       include: {
@@ -184,14 +235,20 @@ export class PackagesService {
       }
     }
 
-    const [withUrls] = await this.attachViewUrls([pkg]);
+    const [withUrls] = await this.attachViewUrls([
+      pkg as Package & { media: PackageMedia[]; agency: Agency },
+    ]);
     return withUrls;
   }
 
-  async update(packageId: string, userId: string, dto: UpdatePackageDto) {
+  async update(
+    packageId: string,
+    userId: string,
+    dto: UpdatePackageDto,
+  ): Promise<PackageViewModel> {
     await this.findOwnedOrThrow(packageId, userId);
 
-    const updateData: any = {
+    const updateData: Prisma.PackageUpdateInput = {
       title: dto.title,
       description: dto.description,
       basePrice: dto.basePrice,
@@ -253,10 +310,13 @@ export class PackagesService {
       await this.mediaAssetsService.cleanupMediaAssets(orphanedMediaIds);
     }
 
-    const [withUrls] = await this.attachViewUrls([pkg]);
+    const [withUrls] = await this.attachViewUrls([
+      pkg as Package & { media: PackageMedia[]; agency: Agency },
+    ]);
     return withUrls;
   }
-  async remove(packageId: string, userId: string) {
+
+  async remove(packageId: string, userId: string): Promise<void> {
     await this.findOwnedOrThrow(packageId, userId);
     const media = await this.prisma.packageMedia.findMany({
       where: { packageId },
@@ -273,13 +333,13 @@ export class PackagesService {
     destinationType?: string,
     season?: string,
     theme?: string,
-  ) {
-    const where: any = {
+  ): Promise<{ items: PackageViewModel[]; nextCursor: string | null }> {
+    const where: Prisma.PackageWhereInput = {
       status: PackageStatus.active,
       agency: { status: AgencyStatus.approved },
     };
     if (destinationType) {
-      where.destinationType = destinationType;
+      where.destinationType = destinationType as DestinationType;
     }
     if (season) {
       where.season = { contains: season, mode: 'insensitive' };
@@ -308,7 +368,9 @@ export class PackagesService {
 
     const hasMore = packages.length > limit;
     const page = hasMore ? packages.slice(0, limit) : packages;
-    const items = await this.attachViewUrls(page);
+    const items = await this.attachViewUrls(
+      page as (Package & { media: PackageMedia[]; agency: Agency })[],
+    );
 
     return {
       items,
@@ -320,7 +382,7 @@ export class PackagesService {
     packageId: string,
     campaignId: string,
     travelerId: string,
-  ) {
+  ): Promise<void> {
     const pkg = await this.prisma.package.findUnique({
       where: { id: packageId },
       select: { id: true, status: true },
@@ -355,7 +417,7 @@ export class PackagesService {
     packageId: string,
     campaignId: string,
     travelerId: string,
-  ) {
+  ): Promise<void> {
     const campaign = await this.prisma.campaign.findUnique({
       where: { id: campaignId },
       select: { id: true, creatorId: true },

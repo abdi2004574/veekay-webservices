@@ -1,13 +1,20 @@
-import { Injectable } from '@nestjs/common';
-import { AgencyStatus, CampaignStatus, DestinationType } from '@prisma/client';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Decimal } from '@prisma/client/runtime/library';
+import {
+  AgencyStatus,
+  CampaignStatus,
+  DestinationType,
+  WithdrawalStatus,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { PaymentStatsDto } from './dto/dashboard-response.dto';
 import { FundingTrendRange } from './dto/funding-trends-query.dto';
 
 @Injectable()
 export class AdminDashboardService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getMetrics() {
+  async getMetrics(): Promise<{ totalUsers: number; totalAgencies: number; totalCampaigns: number; totalDonations: number; activeCampaigns: number; pendingAgencies: number }> {
     const [
       totalUsers,
       totalAgencies,
@@ -38,7 +45,40 @@ export class AdminDashboardService {
     };
   }
 
-  async getFundingTrends(range: FundingTrendRange = '30d') {
+  async getPaymentStats(): Promise<PaymentStatsDto> {
+    const rows = await this.prisma.withdrawalRequest.groupBy({
+      by: ['status'],
+      _count: { _all: true },
+      _sum: { amount: true },
+    });
+    const stats: PaymentStatsDto = {
+      totalWithdrawn: 0,
+      pendingReview: 0,
+      approved: 0,
+      rejected: 0,
+    };
+
+    for (const row of rows) {
+      switch (row.status) {
+        case WithdrawalStatus.paid:
+          stats.totalWithdrawn = this.toSafeNumber(row._sum.amount);
+          break;
+        case WithdrawalStatus.requested:
+          stats.pendingReview = row._count._all;
+          break;
+        case WithdrawalStatus.approved:
+          stats.approved = row._count._all;
+          break;
+        case WithdrawalStatus.rejected:
+          stats.rejected = row._count._all;
+          break;
+      }
+    }
+
+    return stats;
+  }
+
+  async getFundingTrends(range: FundingTrendRange = '30d'): Promise<{ trends: { date: string; amount: number }[] }> {
     const days = Number(range.slice(0, -1));
     const end = new Date();
     end.setUTCHours(23, 59, 59, 999);
@@ -70,14 +110,14 @@ export class AdminDashboardService {
     return { trends };
   }
 
-  async getTopDestinations() {
+  async getTopDestinations(): Promise<{ name: string; count: number }[]> {
     const rows = (await this.prisma.campaign.groupBy({
       by: ['destination'],
       where: { deletedAt: null },
       _count: { _all: true },
       orderBy: { destination: 'asc' },
       take: 10,
-    })) as any;
+    }))
 
     return rows
       .map((row) => ({
@@ -87,7 +127,7 @@ export class AdminDashboardService {
       .sort((a, b) => b.count - a.count);
   }
 
-  async getTravelerPreferences() {
+  async getTravelerPreferences(): Promise<{ label: DestinationType; count: number }[]> {
     const profiles = await this.prisma.travelerProfile.findMany({
       select: {
         destinationTypes: { select: { destinationType: true } },
@@ -110,5 +150,17 @@ export class AdminDashboardService {
         count: counts.get(destinationType) ?? 0,
       }),
     );
+  }
+
+  private toSafeNumber(amount: Decimal | null): number {
+    const value = Number(amount?.toString() ?? 0);
+
+    if (!Number.isFinite(value)) {
+      throw new InternalServerErrorException(
+        'Withdrawal total exceeds the supported numeric range.',
+      );
+    }
+
+    return value;
   }
 }

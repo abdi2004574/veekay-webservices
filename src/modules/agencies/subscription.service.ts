@@ -63,7 +63,7 @@ export class AgencySubscriptionService {
       expand: ['latest_invoice.payment_intent'],
     });
 
-    const invoice = subscription.latest_invoice as any;
+    const invoice = subscription.latest_invoice as Stripe.Invoice | null | undefined;
     const clientSecret = invoice?.payment_intent?.client_secret;
 
     await this.prisma.agency.update({

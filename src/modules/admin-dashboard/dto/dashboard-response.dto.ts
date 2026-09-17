@@ -20,6 +20,20 @@ export class DashboardMetricsDto {
   pendingAgencies: number;
 }
 
+export class PaymentStatsDto {
+  @ApiProperty({ description: 'Total amount of paid withdrawals.' })
+  totalWithdrawn: number;
+
+  @ApiProperty({ description: 'Number of withdrawals awaiting review.' })
+  pendingReview: number;
+
+  @ApiProperty({ description: 'Number of approved withdrawals.' })
+  approved: number;
+
+  @ApiProperty({ description: 'Number of rejected withdrawals.' })
+  rejected: number;
+}
+
 export class FundingTrendPointDto {
   @ApiProperty()
   date: string;

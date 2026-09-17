@@ -1,16 +1,12 @@
-import { Injectable, Inject, Logger } from '@nestjs/common';
-import { ConversationType } from '@prisma/client';
-import { AppException } from '../../../common/errors/app.exception';
-import { PrismaService } from '../../prisma/prisma.service';
-import { ConversationsService } from '../conversations.service';
-import { NotificationsService } from '../../notifications/services/notifications.service';
-import {
-  CALL_PROVIDER,
-  CreateCallSessionPayload,
-} from '../../../common/interfaces/call-provider.interface';
-import type { ICallProvider } from '../../../common/interfaces/call-provider.interface';
-import { CreateCallDto } from './dto/create-call.dto';
-import { NotificationType } from '@prisma/client';
+﻿import { Injectable, Logger } from "@nestjs/common";
+import { ConversationType } from "@prisma/client";
+import { AppException } from "../../../common/errors/app.exception";
+import { PrismaService } from "../../prisma/prisma.service";
+import { ConversationsService } from "../conversations.service";
+import { NotificationsService } from "../../notifications/services/notifications.service";
+import { NoopCallProvider, CreateCallSessionPayload } from "../../../common/providers/noop-call.provider";
+import { CreateCallDto } from "./dto/create-call.dto";
+import { NotificationType } from "@prisma/client";
 
 @Injectable()
 export class CallsService {
@@ -20,16 +16,16 @@ export class CallsService {
     private readonly prisma: PrismaService,
     private readonly conversationsService: ConversationsService,
     private readonly notificationsService: NotificationsService,
-    @Inject(CALL_PROVIDER) private readonly callProvider: ICallProvider,
+    private readonly callProvider: NoopCallProvider,
   ) {}
 
   async create(conversationId: string, callerId: string, dto: CreateCallDto) {
-    const { conversation, participant, isAgencyStaff } =
+    const { conversation, isAgencyStaff } =
       await this.conversationsService.assertAccess(conversationId, callerId);
 
     if (conversation.type !== ConversationType.agency) {
       throw AppException.businessRule(
-        'Calls are only available in agency conversations.',
+        "Calls are only available in agency conversations.",
       );
     }
 
@@ -45,7 +41,7 @@ export class CallsService {
           select: { userId: true },
         });
       if (!travelerParticipant) {
-        throw AppException.notFound('No traveler found in this conversation.');
+        throw AppException.notFound("No traveler found in this conversation.");
       }
       travelerId = travelerParticipant.userId;
     } else {
@@ -55,7 +51,7 @@ export class CallsService {
         select: { userId: true },
       });
       if (!agency) {
-        throw AppException.notFound('Agency not found.');
+        throw AppException.notFound("Agency not found.");
       }
       agencyUserId = agency.userId;
     }
@@ -71,13 +67,13 @@ export class CallsService {
     const session = await this.callProvider.createSession(payload);
 
     const recipientId = isAgencyStaff ? travelerId : agencyUserId;
-    const callerLabel = isAgencyStaff ? 'Agency' : 'Traveler';
+    const callerLabel = isAgencyStaff ? "Agency" : "Traveler";
 
     await this.notificationsService.create(recipientId, {
       type: NotificationType.new_call,
       title: `${callerLabel} is calling`,
       body: `${callerLabel} started a ${dto.type} consultation call.`,
-      deepLinkTarget: 'chat',
+      deepLinkTarget: "chat",
       deepLinkEntityId: conversationId,
       metadata: {
         callSessionId: session.id,

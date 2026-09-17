@@ -1,4 +1,9 @@
-import { AgencyStatus, CampaignStatus, DestinationType } from '@prisma/client';
+import {
+  CampaignStatus,
+  DestinationType,
+  WithdrawalStatus,
+} from '@prisma/client';
+import { Decimal } from '@prisma/client/runtime/library';
 import { AdminDashboardService } from './admin-dashboard.service';
 
 describe('AdminDashboardService', () => {
@@ -12,6 +17,7 @@ describe('AdminDashboardService', () => {
       campaign: { count: jest.fn(), groupBy: jest.fn() },
       donation: { count: jest.fn(), findMany: jest.fn() },
       travelerProfile: { findMany: jest.fn() },
+      withdrawalRequest: { groupBy: jest.fn() },
     };
     service = new AdminDashboardService(prisma);
   });
@@ -35,6 +41,73 @@ describe('AdminDashboardService', () => {
     });
     expect(prisma.campaign.count).toHaveBeenCalledWith({
       where: { status: CampaignStatus.active, deletedAt: null },
+    });
+  });
+
+  describe('getPaymentStats', () => {
+    it('maps paid amounts and requested, approved, and rejected counts', async () => {
+      prisma.withdrawalRequest.groupBy.mockResolvedValue([
+        {
+          status: WithdrawalStatus.requested,
+          _count: { _all: 3 },
+          _sum: { amount: new Decimal('30.25') },
+        },
+        {
+          status: WithdrawalStatus.approved,
+          _count: { _all: 2 },
+          _sum: { amount: new Decimal('20') },
+        },
+        {
+          status: WithdrawalStatus.rejected,
+          _count: { _all: 1 },
+          _sum: { amount: new Decimal('10') },
+        },
+        {
+          status: WithdrawalStatus.paid,
+          _count: { _all: 4 },
+          _sum: { amount: new Decimal('125.50') },
+        },
+      ]);
+
+      await expect(service.getPaymentStats()).resolves.toEqual({
+        totalWithdrawn: 125.5,
+        pendingReview: 3,
+        approved: 2,
+        rejected: 1,
+      });
+      expect(prisma.withdrawalRequest.groupBy).toHaveBeenCalledWith({
+        by: ['status'],
+        _count: { _all: true },
+        _sum: { amount: true },
+      });
+    });
+
+    it('returns zero payment stats when no withdrawals exist', async () => {
+      prisma.withdrawalRequest.groupBy.mockResolvedValue([]);
+
+      await expect(service.getPaymentStats()).resolves.toEqual({
+        totalWithdrawn: 0,
+        pendingReview: 0,
+        approved: 0,
+        rejected: 0,
+      });
+    });
+
+    it('fills missing withdrawal statuses with zero values', async () => {
+      prisma.withdrawalRequest.groupBy.mockResolvedValue([
+        {
+          status: WithdrawalStatus.paid,
+          _count: { _all: 1 },
+          _sum: { amount: new Decimal('7.25') },
+        },
+      ]);
+
+      await expect(service.getPaymentStats()).resolves.toEqual({
+        totalWithdrawn: 7.25,
+        pendingReview: 0,
+        approved: 0,
+        rejected: 0,
+      });
     });
   });
 

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+﻿import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
 import { PrismaModule } from '../prisma/prisma.module';
@@ -13,7 +13,6 @@ import { PushDeviceService } from './services/push-device.service';
 import { MilestoneNotificationService } from './services/milestone-notification.service';
 import { NotificationBroadcastService } from './services/notification-broadcast.service';
 import { FirebasePushProvider } from './providers/firebase-push.provider';
-import { FIREBASE_PUSH_PROVIDER } from './interfaces/firebase-push.interface';
 import { AppConfig } from '../../config/configuration';
 
 function parseRedisUrl(url: string): {
@@ -52,10 +51,6 @@ function parseRedisUrl(url: string): {
     NotificationBroadcastService,
     NotificationDispatchProcessor,
     FirebasePushProvider,
-    {
-      provide: FIREBASE_PUSH_PROVIDER,
-      useExisting: FirebasePushProvider,
-    },
   ],
   exports: [
     NotificationsService,

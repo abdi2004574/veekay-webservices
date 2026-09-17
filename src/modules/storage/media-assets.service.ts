@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import {
+  MediaAsset,
   MediaPurpose,
   MediaStatus,
   ProfileVisibility,
@@ -26,7 +27,7 @@ export class MediaAssetsService {
     private readonly friendsService: FriendsService,
   ) {}
 
-  async createUploadUrl(ownerId: string, dto: CreateUploadUrlDto) {
+  async createUploadUrl(ownerId: string, dto: CreateUploadUrlDto): Promise<{ uploadUrl: string; mediaId: string; key: string }> {
     const rule = MEDIA_PURPOSE_RULES[dto.purpose];
     if (!rule.contentTypes.includes(dto.contentType)) {
       throw AppException.badRequest(
@@ -52,7 +53,7 @@ export class MediaAssetsService {
     return { uploadUrl, mediaId, key };
   }
 
-  async confirmUpload(ownerId: string, mediaId: string) {
+  async confirmUpload(ownerId: string, mediaId: string): Promise<MediaAsset> {
     const asset = await this.prisma.mediaAsset.findUnique({
       where: { id: mediaId },
     });
@@ -123,7 +124,7 @@ export class MediaAssetsService {
 
   private async assertViewAccess(
     viewerId: string,
-    asset: any,
+    asset: MediaAsset,
     context: { entityType: string; entityId: string },
   ): Promise<void> {
     switch (asset.purpose) {

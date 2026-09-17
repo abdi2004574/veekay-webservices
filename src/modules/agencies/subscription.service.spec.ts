@@ -2,7 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { AgencySubscriptionService } from './subscription.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { AppConfig } from '../../config/configuration';
 import { AgencySubscriptionTier } from '@prisma/client';
 
 jest.mock('stripe', () => {
@@ -99,3 +98,4 @@ describe('AgencySubscriptionService', () => {
     ).rejects.toThrow('Agency not found');
   });
 });
+

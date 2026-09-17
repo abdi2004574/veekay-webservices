@@ -7,6 +7,11 @@ import type { Request } from 'express';
 
 const prisma = new PrismaClient();
 
+type AgencyRequest = Request & {
+  agencyStaffPermission: AgencyStaffPermission;
+  agencyId: string;
+};
+
 @Injectable()
 export class AgencyStaffPermissionGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
@@ -69,8 +74,9 @@ export class AgencyStaffPermissionGuard implements CanActivate {
     }
 
     // Attach to request for use in controllers
-    (request as any).agencyStaffPermission = userPermission;
-    (request as any).agencyId = agency.id;
+    const agencyRequest = request as AgencyRequest;
+    agencyRequest.agencyStaffPermission = userPermission;
+    agencyRequest.agencyId = agency.id;
 
     return true;
   }

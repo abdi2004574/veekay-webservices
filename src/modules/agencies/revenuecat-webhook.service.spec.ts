@@ -1,4 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { RevenueCatWebhookService } from './revenuecat-webhook.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -11,9 +11,7 @@ import {
   determineTierFromEvent,
   isActiveSubscriptionEvent,
   isCancellationOrExpirationEvent,
-  SUBSCRIPTION_EVENT_TYPES,
 } from './revenuecat-webhook.dto';
-import Redis from 'ioredis';
 import crypto from 'crypto';
 
 jest.mock('crypto', () => ({
@@ -40,7 +38,7 @@ describe('RevenueCatWebhookService', () => {
 
   beforeEach(async () => {
     const configService = {
-      get: jest.fn((key: string, opts?: any) => {
+      get: jest.fn((key: string) => {
         if (key === 'revenuecat.webhookSecret') return 'test-secret';
         if (key === 'revenuecat.tierMapping')
           return {
@@ -691,3 +689,4 @@ describe('RevenueCatWebhookService', () => {
     );
   });
 });
+

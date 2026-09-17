@@ -1,10 +1,19 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { AgencyStaffPermission, AgencyStatus, UserRole } from '@prisma/client';
+import {
+  AgencyStaffPermission,
+  AgencyStatus,
+  UserRole,
+  AgencySubscriptionTier,
+} from '@prisma/client';
 import { AppException } from '../../common/errors/app.exception';
 import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/services/notifications.service';
 import { AgencyRegistrationDto } from './dto/agency-registration.dto';
+import {
+  encodeCursor,
+  decodeCursor,
+} from '../../common/utils/cursor-pagination.util';
 
 const DIRECTORY_SELECT = {
   id: true,
@@ -41,6 +50,27 @@ export interface TopPerformingAgency {
   totalRevenue: number;
   status: AgencyStatus;
   subscriptionTier: string;
+}
+
+export interface AdminAgencyListItem {
+  id: string;
+  agencyName: string;
+  businessContact: string | null;
+  businessAddress: string | null;
+  status: AgencyStatus;
+  rejectionReason: string | null;
+  reputationScore: number | null;
+  subscriptionTier: AgencySubscriptionTier;
+  createdAt: Date;
+  userId: string;
+  userEmail: string;
+  userDisplayName: string | null;
+}
+
+export interface AdminAgenciesPage {
+  items: AdminAgencyListItem[];
+  cursor: string | null;
+  hasMore: boolean;
 }
 
 @Injectable()
@@ -138,6 +168,81 @@ export class AgenciesService {
       },
       orderBy: { createdAt: 'asc' },
     });
+  }
+
+  async listAdmin(
+    search?: string,
+    status?: AgencyStatus,
+    subscriptionTier?: AgencySubscriptionTier,
+    cursor?: string,
+    limit = 20,
+  ): Promise<AdminAgenciesPage> {
+    const decodedCursor = decodeCursor(cursor);
+
+    const where: Record<string, unknown> = {};
+    if (search) {
+      where.agencyName = { contains: search, mode: 'insensitive' };
+    }
+    if (status) {
+      where.status = status;
+    }
+    if (subscriptionTier) {
+      where.subscriptionTier = subscriptionTier;
+    }
+
+    const agencies = await this.prisma.agency.findMany({
+      where,
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: limit + 1,
+      ...(decodedCursor ? { cursor: { id: decodedCursor.id }, skip: 1 } : {}),
+      select: {
+        id: true,
+        agencyName: true,
+        businessContact: true,
+        businessAddress: true,
+        status: true,
+        rejectionReason: true,
+        reputationScore: true,
+        subscriptionTier: true,
+        createdAt: true,
+        userId: true,
+        user: {
+          select: {
+            id: true,
+            email: true,
+            displayName: true,
+          },
+        },
+      },
+    });
+
+    const hasMore = agencies.length > limit;
+    const page = hasMore ? agencies.slice(0, limit) : agencies;
+
+    const items: AdminAgencyListItem[] = page.map((a) => ({
+      id: a.id,
+      agencyName: a.agencyName,
+      businessContact: a.businessContact,
+      businessAddress: a.businessAddress,
+      status: a.status,
+      rejectionReason: a.rejectionReason,
+      reputationScore:
+        a.reputationScore === null ? null : Number(a.reputationScore),
+      subscriptionTier: a.subscriptionTier,
+      createdAt: a.createdAt,
+      userId: a.userId,
+      userEmail: a.user.email,
+      userDisplayName: a.user.displayName,
+    }));
+
+    const nextCursor = hasMore
+      ? encodeCursor({
+          createdAt: page[page.length - 1].createdAt,
+          id: page[page.length - 1].id,
+        })
+      : null;
+
+    return { items, cursor: nextCursor, hasMore };
   }
 
   async approve(agencyId: string, actorUserId: string) {

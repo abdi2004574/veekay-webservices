@@ -4,6 +4,7 @@ import { AppException } from '../../common/errors/app.exception';
 import { ConfigService } from '@nestjs/config';
 import { AppConfig } from '../../config/configuration';
 import {
+  Prisma,
   FraudFlag,
   FraudFlagStatus,
   FraudFlagType,
@@ -45,7 +46,7 @@ export class FraudService {
         type: dto.type,
         severity: dto.severity ?? FraudFlagSeverity.low,
         description: dto.description,
-        metadata: parsedMetadata as any,
+        metadata: parsedMetadata as Prisma.JsonValue,
       },
     });
 
@@ -63,13 +64,21 @@ export class FraudService {
   }
 
   async findAll(
-    filter: { type?: FraudFlagType; status?: FraudFlagStatus; userId?: string },
+    filter: {
+      type?: FraudFlagType;
+      status?: FraudFlagStatus;
+      severity?: FraudFlagSeverity;
+      search?: string;
+      userId?: string;
+    },
     cursor?: string,
     limit = 20,
   ): Promise<{ items: FraudFlag[]; nextCursor: string | null }> {
-    const where: any = {};
+    const where: Prisma.FraudFlagWhereInput = {};
     if (filter.type) where.type = filter.type;
     if (filter.status) where.status = filter.status;
+    if (filter.severity) where.severity = filter.severity;
+    if (filter.search) where.description = { contains: filter.search };
     if (filter.userId) where.userId = filter.userId;
 
     const items = await this.prisma.fraudFlag.findMany({
@@ -90,7 +99,6 @@ export class FraudService {
       nextCursor: hasMore ? page[page.length - 1].id : null,
     };
   }
-
   async findOne(id: string): Promise<FraudFlag> {
     const flag = await this.prisma.fraudFlag.findUnique({
       where: { id },

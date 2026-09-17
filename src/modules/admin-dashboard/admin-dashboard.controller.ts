@@ -10,6 +10,7 @@ import { RequirePlatformRole } from '../../common/decorators/require-platform-ro
 import {
   DashboardMetricsDto,
   FundingTrendsResponseDto,
+  PaymentStatsDto,
   TopDestinationDto,
   TravelerPreferenceDto,
 } from './dto/dashboard-response.dto';
@@ -28,6 +29,13 @@ export class AdminDashboardController {
   @ApiOkResponse({ type: DashboardMetricsDto })
   async getMetrics() {
     return this.dashboardService.getMetrics();
+  }
+
+  @Get('payment-stats')
+  @ApiOperation({ summary: 'Get withdrawal payment statistics.' })
+  @ApiOkResponse({ type: PaymentStatsDto })
+  async getPaymentStats() {
+    return this.dashboardService.getPaymentStats();
   }
 
   @Get('funding-trends')

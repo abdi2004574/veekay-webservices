@@ -9,6 +9,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RequirePlatformRole } from '../../common/decorators/require-platform-role.decorator';
 import { PlatformRole } from '@prisma/client';
 import { CampaignsService } from './campaigns.service';
+import type { CampaignItem, AdminCampaignItem } from './campaigns.service';
 import { UpdateCampaignVerificationDto } from './dto/update-campaign-verification.dto';
 import { AdminCampaignFilterDto } from './dto/admin-campaign-filter.dto';
 import { UpdateCampaignFlagDto } from './dto/update-campaign-flag.dto';
@@ -27,7 +28,7 @@ export class AdminCampaignsController {
     @Param('id') id: string,
     @Body() dto: UpdateCampaignVerificationDto,
     @CurrentUser('userId') userId: string,
-  ) {
+  ): Promise<CampaignItem> {
     return this.campaignsService.updateVerificationStatus(
       id,
       dto.status,
@@ -58,7 +59,7 @@ export class AdminCampaignsController {
       },
     },
   })
-  async list(@Query() filter: AdminCampaignFilterDto) {
+  async list(@Query() filter: AdminCampaignFilterDto): Promise<{ data: AdminCampaignItem[]; meta: { cursor: string | null; hasMore: boolean } }> {
     return this.campaignsService.listAdminCampaigns(
       filter,
       filter.cursor,
@@ -73,7 +74,7 @@ export class AdminCampaignsController {
     @Param('id') id: string,
     @Body() dto: UpdateCampaignFlagDto,
     @CurrentUser('userId') userId: string,
-  ) {
+  ): Promise<AdminCampaignItem> {
     if (dto.reason?.trim()) {
       return this.campaignsService.flagCampaign(id, dto, userId);
     }

@@ -1,9 +1,11 @@
-﻿import { AdminInvite, AdminInviteStatus, PlatformRole } from '@prisma/client';
+import { AdminInvite, AdminInviteStatus, PlatformRole } from '@prisma/client';
+import { ConfigService } from '@nestjs/config';
 import { AdminInvitesService } from './admin-invites.service';
 
 describe('AdminInvitesService', () => {
   let prisma: any;
   let mailService: any;
+  let configService: any;
   let service: AdminInvitesService;
 
   beforeEach(() => {
@@ -21,11 +23,14 @@ describe('AdminInvitesService', () => {
     mailService = {
       send: jest.fn().mockResolvedValue(undefined),
     };
-    service = new AdminInvitesService(prisma, mailService);
+    configService = {
+      get: jest.fn().mockReturnValue('http://localhost:57800'),
+    };
+    service = new AdminInvitesService(prisma, mailService, configService);
   });
 
   describe('create', () => {
-    it('generates token, hashes it, stores invite, and sends email', async () => {
+    it('generates token, hashes it, stores invite, and sends email with token in URL', async () => {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7);
 
@@ -59,12 +64,172 @@ describe('AdminInvitesService', () => {
           expiresAt: expect.any(Date),
         },
       });
+      expect(result.rawToken).toBeDefined();
+      expect(typeof result.rawToken).toBe('string');
+      expect(result.acceptUrl).toBeDefined();
+      expect(result.acceptUrl).toContain(result.rawToken);
       expect(mailService.send).toHaveBeenCalledWith({
         to: dto.email,
-        subject: "You'\''ve been invited to Veakay Admin",
-        html: expect.stringContaining(dto.acceptUrl),
+        subject: "You've been invited to Veakay Admin",
+        html: expect.stringContaining(result.rawToken),
       });
       expect(result.id).toBe('invite-1');
+    });
+
+    it('appends token to acceptUrl when supplied URL has no token', async () => {
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+
+      const storedInvite = {
+        id: 'invite-2',
+        email: 'no.token@example.com',
+        token: 'hashed-token-here',
+        invitedById: 'actor-1',
+        status: AdminInviteStatus.pending,
+        expiresAt,
+        acceptedAt: null,
+        createdAt: new Date(),
+      };
+
+      prisma.adminInvite.create.mockResolvedValue(storedInvite);
+
+      const dto = {
+        email: 'no.token@example.com',
+        platformRole: 'super_admin' as const,
+        acceptUrl: 'http://localhost:57800/admin/invites/accept',
+      };
+
+      const result = await service.create('actor-1', dto);
+
+      expect(result.acceptUrl).toContain('token=' + result.rawToken);
+      expect(result.acceptUrl).toContain(
+        'http://localhost:57800/admin/invites/accept',
+      );
+      expect(result.acceptUrl).not.toContain('token=RAW_TOKEN');
+    });
+
+    it('appends token to acceptUrl when supplied URL has existing query params', async () => {
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+
+      const storedInvite = {
+        id: 'invite-3',
+        email: 'existing.query@example.com',
+        token: 'hashed-token-here',
+        invitedById: 'actor-1',
+        status: AdminInviteStatus.pending,
+        expiresAt,
+        acceptedAt: null,
+        createdAt: new Date(),
+      };
+
+      prisma.adminInvite.create.mockResolvedValue(storedInvite);
+
+      const dto = {
+        email: 'existing.query@example.com',
+        platformRole: 'super_admin' as const,
+        acceptUrl:
+          'http://localhost:57800/admin/invites/accept?source=admin&lang=en',
+      };
+
+      const result = await service.create('actor-1', dto);
+
+      expect(result.acceptUrl).toContain('token=' + result.rawToken);
+      expect(result.acceptUrl).toContain('source=admin');
+      expect(result.acceptUrl).toContain('lang=en');
+    });
+
+    it('replaces existing token param and preserves other query params', async () => {
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+
+      const storedInvite = {
+        id: 'invite-4',
+        email: 'replace.token@example.com',
+        token: 'hashed-token-here',
+        invitedById: 'actor-1',
+        status: AdminInviteStatus.pending,
+        expiresAt,
+        acceptedAt: null,
+        createdAt: new Date(),
+      };
+
+      prisma.adminInvite.create.mockResolvedValue(storedInvite);
+
+      const dto = {
+        email: 'replace.token@example.com',
+        platformRole: 'super_admin' as const,
+        acceptUrl:
+          'http://localhost:57800/admin/invites/accept?token=old&source=admin',
+      };
+
+      const result = await service.create('actor-1', dto);
+
+      expect(result.acceptUrl).toContain('token=' + result.rawToken);
+      expect(result.acceptUrl).not.toContain('token=old');
+      expect(result.acceptUrl).toContain('source=admin');
+    });
+
+    it('uses configured frontend URL when acceptUrl is omitted', async () => {
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+
+      const storedInvite = {
+        id: 'invite-5',
+        email: 'omit.url@example.com',
+        token: 'hashed-token-here',
+        invitedById: 'actor-1',
+        status: AdminInviteStatus.pending,
+        expiresAt,
+        acceptedAt: null,
+        createdAt: new Date(),
+      };
+
+      prisma.adminInvite.create.mockResolvedValue(storedInvite);
+      configService.get.mockReturnValue('http://localhost:57800');
+
+      const dto = {
+        email: 'omit.url@example.com',
+        platformRole: 'super_admin' as const,
+        acceptUrl: '',
+      };
+
+      const result = await service.create('actor-1', dto);
+
+      expect(result.acceptUrl).toBe(
+        'http://localhost:57800/admin/invites/accept?token=' + result.rawToken,
+      );
+    });
+
+    it('uses configured frontend URL when acceptUrl is falsy', async () => {
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+
+      const storedInvite = {
+        id: 'invite-6',
+        email: 'falsy.url@example.com',
+        token: 'hashed-token-here',
+        invitedById: 'actor-1',
+        status: AdminInviteStatus.pending,
+        expiresAt,
+        acceptedAt: null,
+        createdAt: new Date(),
+      };
+
+      prisma.adminInvite.create.mockResolvedValue(storedInvite);
+      configService.get.mockReturnValue('http://localhost:57800');
+
+      const dto = {
+        email: 'falsy.url@example.com',
+        platformRole: 'super_admin' as const,
+        acceptUrl: undefined as any,
+      };
+
+      const result = await service.create('actor-1', dto);
+
+      expect(result.acceptUrl).toBe(
+        'http://localhost:57800/admin/invites/accept?token=' + result.rawToken,
+      );
     });
   });
 

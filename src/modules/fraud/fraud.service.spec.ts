@@ -163,6 +163,166 @@ describe('FraudService', () => {
         }),
       );
     });
+
+    it('filters by severity', async () => {
+      prisma.fraudFlag.findMany.mockResolvedValue([
+        {
+          id: 'flag-1',
+          type: FraudFlagType.payment_method_mismatch,
+          status: FraudFlagStatus.open,
+          severity: FraudFlagSeverity.high,
+          description: 'High severity',
+          user: { id: 'user-1', username: 'u1', email: 'u1@test.com' },
+          reviewedBy: null,
+          createdAt: new Date('2024-01-01'),
+        },
+      ]);
+
+      const result = await service.findAll(
+        { severity: FraudFlagSeverity.high },
+        undefined,
+        10,
+      );
+
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0].severity).toBe(FraudFlagSeverity.high);
+      expect(prisma.fraudFlag.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { severity: FraudFlagSeverity.high },
+        }),
+      );
+    });
+
+    it('filters by search (description contains)', async () => {
+      prisma.fraudFlag.findMany.mockResolvedValue([
+        {
+          id: 'flag-1',
+          type: FraudFlagType.payment_method_mismatch,
+          status: FraudFlagStatus.open,
+          severity: FraudFlagSeverity.low,
+          description: 'Duplicate payment detected',
+          user: { id: 'user-1', username: 'u1', email: 'u1@test.com' },
+          reviewedBy: null,
+          createdAt: new Date('2024-01-01'),
+        },
+      ]);
+
+      const result = await service.findAll(
+        { search: 'Duplicate' },
+        undefined,
+        10,
+      );
+
+      expect(result.items).toHaveLength(1);
+      expect(prisma.fraudFlag.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { description: { contains: 'Duplicate' } },
+        }),
+      );
+    });
+
+    it('combines severity and search filters', async () => {
+      prisma.fraudFlag.findMany.mockResolvedValue([
+        {
+          id: 'flag-1',
+          type: FraudFlagType.withdrawal_anomaly,
+          status: FraudFlagStatus.reviewing,
+          severity: FraudFlagSeverity.critical,
+          description: 'Critical withdrawal anomaly',
+          user: { id: 'user-1', username: 'u1', email: 'u1@test.com' },
+          reviewedBy: null,
+          createdAt: new Date('2024-01-01'),
+        },
+      ]);
+
+      const result = await service.findAll(
+        {
+          severity: FraudFlagSeverity.critical,
+          search: 'withdrawal',
+          status: FraudFlagStatus.reviewing,
+        },
+        undefined,
+        10,
+      );
+
+      expect(result.items).toHaveLength(1);
+      expect(prisma.fraudFlag.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            severity: FraudFlagSeverity.critical,
+            status: FraudFlagStatus.reviewing,
+            description: { contains: 'withdrawal' },
+          },
+        }),
+      );
+    });
+
+    it('preserves cursor and limit behavior', async () => {
+      const flags = [
+        {
+          id: 'flag-3',
+          type: FraudFlagType.payment_method_mismatch,
+          status: FraudFlagStatus.open,
+          severity: FraudFlagSeverity.low,
+          description: 'Third flag',
+          user: { id: 'user-3', username: 'u3', email: 'u3@test.com' },
+          reviewedBy: null,
+          createdAt: new Date('2024-01-03'),
+        },
+        {
+          id: 'flag-2',
+          type: FraudFlagType.withdrawal_anomaly,
+          status: FraudFlagStatus.reviewing,
+          severity: FraudFlagSeverity.medium,
+          description: 'Second flag',
+          user: { id: 'user-2', username: 'u2', email: 'u2@test.com' },
+          reviewedBy: null,
+          createdAt: new Date('2024-01-02'),
+        },
+        {
+          id: 'flag-1',
+          type: FraudFlagType.payment_method_mismatch,
+          status: FraudFlagStatus.open,
+          severity: FraudFlagSeverity.high,
+          description: 'First flag',
+          user: { id: 'user-1', username: 'u1', email: 'u1@test.com' },
+          reviewedBy: null,
+          createdAt: new Date('2024-01-01'),
+        },
+      ];
+      prisma.fraudFlag.findMany.mockResolvedValue(flags);
+
+      const result = await service.findAll(
+        { status: FraudFlagStatus.open },
+        'flag-3',
+        2,
+      );
+
+      expect(result.items).toHaveLength(2);
+      expect(result.nextCursor).toBe('flag-2');
+      expect(prisma.fraudFlag.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { status: FraudFlagStatus.open },
+          cursor: { id: 'flag-3' },
+          skip: 1,
+          take: 3,
+          orderBy: { createdAt: 'desc' },
+        }),
+      );
+    });
+
+    it('returns no items for non-matching search', async () => {
+      prisma.fraudFlag.findMany.mockResolvedValue([]);
+
+      const result = await service.findAll(
+        { search: 'nonexistent' },
+        undefined,
+        10,
+      );
+
+      expect(result.items).toHaveLength(0);
+      expect(result.nextCursor).toBeNull();
+    });
   });
 
   describe('findOne', () => {

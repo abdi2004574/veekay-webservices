@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { AdminInvite, AdminInviteStatus, PlatformRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { AppException } from '../../common/errors/app.exception';
@@ -17,6 +18,7 @@ export class AdminInvitesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mailService: MailService,
+    private readonly configService: ConfigService,
   ) {}
 
   private generateRawToken(): string {
@@ -33,10 +35,27 @@ export class AdminInvitesService {
     return bcrypt.compare(raw, hash);
   }
 
+  private buildAcceptUrl(rawToken: string, acceptUrl?: string): string {
+    const frontendUrl =
+      this.configService.get<string>('appUrl') ?? 'http://localhost:57800';
+
+    if (!acceptUrl) {
+      return `${frontendUrl}/admin/invites/accept?token=${rawToken}`;
+    }
+
+    try {
+      const url = new URL(acceptUrl);
+      url.searchParams.set('token', rawToken);
+      return url.toString();
+    } catch {
+      return `${acceptUrl}${acceptUrl.includes('?') ? '&' : '?'}token=${rawToken}`;
+    }
+  }
+
   async create(
     actorUserId: string,
     dto: CreateAdminInviteDto,
-  ): Promise<AdminInvite> {
+  ): Promise<AdminInvite & { rawToken: string; acceptUrl: string }> {
     const rawToken = this.generateRawToken();
     const tokenHash = await this.hashToken(rawToken);
     const expiresAt = new Date();
@@ -46,16 +65,17 @@ export class AdminInvitesService {
       data: {
         email: dto.email,
         token: tokenHash,
-
         invitedById: actorUserId,
         expiresAt,
       },
     });
 
+    const emailAcceptUrl = this.buildAcceptUrl(rawToken, dto.acceptUrl);
+
     await this.mailService.send({
       to: dto.email,
-      subject: "You'\''ve been invited to Veakay Admin",
-      html: `You have been invited to join the Veakay admin panel. Click here to accept: ${dto.acceptUrl}. This link expires in ${INVITE_EXPIRY_DAYS} days.`,
+      subject: "You've been invited to Veakay Admin",
+      html: `You have been invited to join the Veakay admin panel. Click here to accept: ${emailAcceptUrl}. This link expires in ${INVITE_EXPIRY_DAYS} days.`,
     });
 
     this.logger.log(
@@ -67,7 +87,7 @@ export class AdminInvitesService {
       }),
     );
 
-    return invite;
+    return { ...invite, rawToken, acceptUrl: emailAcceptUrl };
   }
 
   async findAll(): Promise<AdminInvite[]> {

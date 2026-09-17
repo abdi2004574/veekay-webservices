@@ -29,7 +29,7 @@ export class AgenciesStaffController {
   constructor(private readonly agenciesStaffService: AgenciesStaffService) {}
 
   private getAgencyId(req: Request): string {
-    const agencyId = (req as any).agencyId;
+    const agencyId = (req as Request & { agencyId: string }).agencyId;
     if (!agencyId) {
       throw new Error('Agency ID not found on request');
     }

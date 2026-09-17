@@ -1,12 +1,10 @@
 ﻿import { Injectable, Logger } from '@nestjs/common';
-import { Inject } from '@nestjs/common';
 import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationPreferenceService } from '../services/notification-preference.service';
 import { PushDeviceService } from '../services/push-device.service';
-import type { IFirebasePushProvider } from '../interfaces/firebase-push.interface';
-import { FIREBASE_PUSH_PROVIDER } from '../interfaces/firebase-push.interface';
+import { FirebasePushProvider } from '../providers/firebase-push.provider';
 import { MailService } from '../../mail/mail.service';
 import { NotificationType } from '@prisma/client';
 
@@ -39,8 +37,7 @@ export class NotificationDispatchProcessor extends WorkerHost {
     private readonly prisma: PrismaService,
     private readonly notificationPreferenceService: NotificationPreferenceService,
     private readonly pushDeviceService: PushDeviceService,
-    @Inject(FIREBASE_PUSH_PROVIDER)
-    private readonly firebasePushProvider: IFirebasePushProvider,
+    private readonly firebasePushProvider: FirebasePushProvider,
     private readonly mailService: MailService,
   ) {
     super();

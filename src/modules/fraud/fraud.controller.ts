@@ -20,7 +20,7 @@ import { FraudFlagFilterDto } from './dto/fraud-flag-filter.dto';
 
 @ApiTags('fraud')
 @ApiBearerAuth()
-@Controller('admin/fraud')
+@Controller('admin/fraud/flags')
 @UseGuards(PlatformRoleGuard)
 export class FraudController {
   constructor(private readonly fraudService: FraudService) {}
@@ -46,11 +46,12 @@ export class FraudController {
     @Query('cursor') cursor: string | undefined,
     @Query('limit') limit: string | undefined,
   ) {
-    return this.fraudService.findAll(
-      filter,
-      cursor,
-      limit ? Number(limit) : undefined,
-    );
+    const limitParsed = limit ? parseInt(limit, 10) : undefined;
+    const safeLimit =
+      limitParsed && !isNaN(limitParsed) && limitParsed > 0
+        ? Math.min(limitParsed, 50)
+        : undefined;
+    return this.fraudService.findAll(filter, cursor, safeLimit);
   }
 
   @Get(':id')

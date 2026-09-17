@@ -166,7 +166,10 @@ export default (): AppConfig => ({
     ),
     tierMapping: (() => {
       try {
-        return JSON.parse(process.env.REVENUECAT_TIER_MAPPING ?? '');
+        const parsed: unknown = JSON.parse(
+          process.env.REVENUECAT_TIER_MAPPING ?? '',
+        );
+        return parsed as Record<string, string>;
       } catch {
         return {};
       }

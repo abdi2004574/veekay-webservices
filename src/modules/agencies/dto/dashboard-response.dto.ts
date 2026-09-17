@@ -1,5 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
 
 export class KpiResponseDto {
   @ApiProperty({ example: 42 })
@@ -111,3 +110,4 @@ export class RevenueLedgerResponseDto {
   @ApiProperty({ example: true })
   hasMore: boolean;
 }
+

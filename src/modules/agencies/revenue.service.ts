@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import type { Prisma } from '@prisma/client';
 import { TripBookingStatus, AgencySubscriptionTier } from '@prisma/client';
 import { AppException } from '../../common/errors/app.exception';
 import {
@@ -51,7 +52,7 @@ export class AgencyRevenueService {
 
     const decodedCursor = decodeCursor(cursor);
 
-    const whereClause: any = {
+    const whereClause: Prisma.TripBookingWhereInput = {
       agencyId,
       status: TripBookingStatus.completed,
     };
@@ -165,7 +166,7 @@ export class AgencyRevenueService {
 
     const csvContent = [
       headers.join(','),
-      ...rows.map((row) => row.map((cell) => '').join(',')),
+      ...rows.map((row) => row.map(() => '').join(',')),
     ].join('\n');
 
     return csvContent;

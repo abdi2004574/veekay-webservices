@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { NotificationType } from '@prisma/client';
+import { NotificationType, Post } from '@prisma/client';
 import { AppException } from '../../common/errors/app.exception';
 import { PrismaService } from '../prisma/prisma.service';
 import { FriendsService } from '../friends/friends.service';
@@ -17,6 +17,30 @@ const AUTHOR_SELECT = {
   },
 };
 
+interface PostViewModel {
+  id: string;
+  author: {
+    id: string;
+    username: string;
+    displayName: string;
+    travelerProfile: { photoMediaId: string | null };
+  };
+  likesCount: number;
+  commentsCount: number;
+  isLikedByMe: boolean;
+  imageUrl: string | null;
+  repostOf: {
+    id: string;
+    author: {
+      id: string;
+      username: string;
+      displayName: string;
+      travelerProfile: { photoMediaId: string | null };
+    };
+    imageUrl: string | null;
+  } | null;
+}
+
 @Injectable()
 export class PostsService {
   constructor(
@@ -26,7 +50,7 @@ export class PostsService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
-  private async attachViewerContext(posts: any[], viewerId: string) {
+  private async attachViewerContext(posts: Post[], viewerId: string) {
     if (posts.length === 0) {
       return posts;
     }
@@ -63,7 +87,7 @@ export class PostsService {
     }));
   }
 
-  async create(authorId: string, dto: CreatePostDto) {
+  async create(authorId: string, dto: CreatePostDto): Promise<Post> {
     return this.prisma.post.create({
       data: {
         authorId,
@@ -75,7 +99,7 @@ export class PostsService {
     });
   }
 
-  async findByIdOrThrow(postId: string) {
+  async findByIdOrThrow(postId: string): Promise<Post> {
     const post = await this.prisma.post.findUnique({ where: { id: postId } });
     if (!post) {
       throw AppException.notFound('Post not found.');
@@ -83,7 +107,7 @@ export class PostsService {
     return post;
   }
 
-  async update(postId: string, authorId: string, dto: UpdatePostDto) {
+  async update(postId: string, authorId: string, dto: UpdatePostDto): Promise<Post> {
     const post = await this.findByIdOrThrow(postId);
     if (post.authorId !== authorId) {
       throw AppException.forbidden('You can only edit your own posts.');
@@ -99,7 +123,7 @@ export class PostsService {
     });
   }
 
-  async remove(postId: string, authorId: string) {
+  async remove(postId: string, authorId: string): Promise<void> {
     const post = await this.findByIdOrThrow(postId);
     if (post.authorId !== authorId) {
       throw AppException.forbidden('You can only delete your own posts.');
@@ -107,7 +131,7 @@ export class PostsService {
     await this.prisma.post.delete({ where: { id: postId } });
   }
 
-  async like(postId: string, userId: string) {
+  async like(postId: string, userId: string): Promise<void> {
     const post = await this.findByIdOrThrow(postId);
     const existing = await this.prisma.postLike.findUnique({
       where: { postId_userId: { postId, userId } },
@@ -132,7 +156,7 @@ export class PostsService {
     }
   }
 
-  async unlike(postId: string, userId: string) {
+  async unlike(postId: string, userId: string): Promise<void> {
     const existing = await this.prisma.postLike.findUnique({
       where: { postId_userId: { postId, userId } },
     });
@@ -142,7 +166,7 @@ export class PostsService {
     await this.prisma.postLike.delete({ where: { id: existing.id } });
   }
 
-  async repost(postId: string, authorId: string, caption?: string) {
+  async repost(postId: string, authorId: string, caption?: string): Promise<Post> {
     const originalPost = await this.findByIdOrThrow(postId);
     const newPost = await this.prisma.post.create({
       data: {
@@ -169,7 +193,7 @@ export class PostsService {
     return newPost;
   }
 
-  async getFeed(viewerId: string, cursor?: string, limit = 20) {
+  async getFeed(viewerId: string, cursor?: string, limit = 20): Promise<{ items: PostViewModel[]; nextCursor: string | null }> {
     const friendIds = await this.friendsService.getFriendIds(viewerId);
     const authorIds = [viewerId, ...friendIds];
 
@@ -200,7 +224,7 @@ export class PostsService {
     viewerId: string,
     cursor?: string,
     limit = 20,
-  ) {
+  ): Promise<{ items: PostViewModel[]; nextCursor: string | null }> {
     const posts = await this.prisma.post.findMany({
       where: { authorId },
       orderBy: { createdAt: 'desc' },

@@ -70,7 +70,9 @@ export async function resetDb(): Promise<void> {
     }
   }
   // Clear Mailhog emails to prevent stale OTP codes from previous tests
-  await fetch('http://localhost:58025/api/v1/messages', { method: 'DELETE' }).catch(() => {});
+  await fetch('http://localhost:58025/api/v1/messages', {
+    method: 'DELETE',
+  }).catch(() => {});
 }
 
 export async function disconnectDb(): Promise<void> {

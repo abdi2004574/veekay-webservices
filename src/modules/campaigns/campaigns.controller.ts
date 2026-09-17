@@ -15,6 +15,7 @@ import { RequireRole } from '../../common/decorators/require-role.decorator';
 import { CampaignsService } from './campaigns.service';
 import { CreateCampaignDto } from './dto/create-campaign.dto';
 import { UpdateCampaignDto } from './dto/update-campaign.dto';
+import type { CampaignItem } from './campaigns.service';
 
 @ApiTags('campaigns')
 @ApiBearerAuth()
@@ -28,13 +29,13 @@ export class CampaignsController {
   async create(
     @Body() dto: CreateCampaignDto,
     @CurrentUser('userId') userId: string,
-  ) {
+  ): Promise<CampaignItem> {
     return this.campaignsService.create(userId, dto);
   }
 
   @Get('mine')
   @ApiOperation({ summary: 'List your own campaigns.' })
-  async listMine(@CurrentUser('userId') userId: string) {
+  async listMine(@CurrentUser('userId') userId: string): Promise<CampaignItem[]> {
     return this.campaignsService.listMine(userId);
   }
 
@@ -48,7 +49,7 @@ export class CampaignsController {
     @Query('limit') limit: string | undefined,
     @Query('search') search: string | undefined,
     @Query('creatorId') creatorId: string | undefined,
-  ) {
+  ): Promise<{ items: CampaignItem[]; nextCursor: string | null }> {
     return this.campaignsService.listPublic(
       cursor,
       limit ? Number(limit) : undefined,
@@ -64,7 +65,7 @@ export class CampaignsController {
   async getDetail(
     @Param('id') id: string,
     @CurrentUser('userId') userId: string,
-  ) {
+  ): Promise<CampaignItem & { isCreator: boolean }> {
     return this.campaignsService.getDetail(id, userId);
   }
 
@@ -75,7 +76,7 @@ export class CampaignsController {
   async listTopContributors(
     @Param('id') id: string,
     @CurrentUser('userId') userId: string,
-  ) {
+  ): Promise<{ items: never[] }> {
     return this.campaignsService.listTopContributors(id, userId);
   }
 
@@ -85,13 +86,16 @@ export class CampaignsController {
     @Param('id') id: string,
     @Body() dto: UpdateCampaignDto,
     @CurrentUser('userId') userId: string,
-  ) {
+  ): Promise<CampaignItem> {
     return this.campaignsService.update(id, userId, dto);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete your own campaign.' })
-  async remove(@Param('id') id: string, @CurrentUser('userId') userId: string) {
+  async remove(
+    @Param('id') id: string,
+    @CurrentUser('userId') userId: string,
+  ): Promise<void> {
     await this.campaignsService.remove(id, userId);
   }
 }

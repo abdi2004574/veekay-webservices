@@ -1,7 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
-  IsIn,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -141,22 +140,24 @@ export function mapProductToTier(
 }
 
 export function isCancellationOrExpirationEvent(type: string): boolean {
+  const event = type as RevenueCatEventType;
   return (
-    type === RevenueCatEventType.CANCELLATION ||
-    type === RevenueCatEventType.EXPIRATION ||
-    type === RevenueCatEventType.BILLING_ISSUE
+    event === RevenueCatEventType.CANCELLATION ||
+    event === RevenueCatEventType.EXPIRATION ||
+    event === RevenueCatEventType.BILLING_ISSUE
   );
 }
 
 export function isActiveSubscriptionEvent(type: string): boolean {
+  const event = type as RevenueCatEventType;
   return (
-    type === RevenueCatEventType.INITIAL_PURCHASE ||
-    type === RevenueCatEventType.RENEWAL ||
-    type === RevenueCatEventType.PRODUCT_CHANGE ||
-    type === RevenueCatEventType.UNCANCELLATION ||
-    type === RevenueCatEventType.NON_SUBSCRIPTION_PURCHASE ||
-    type === RevenueCatEventType.SUBSCRIPTION_EXTENDED ||
-    type === RevenueCatEventType.OFFER_REDEEMED
+    event === RevenueCatEventType.INITIAL_PURCHASE ||
+    event === RevenueCatEventType.RENEWAL ||
+    event === RevenueCatEventType.PRODUCT_CHANGE ||
+    event === RevenueCatEventType.UNCANCELLATION ||
+    event === RevenueCatEventType.NON_SUBSCRIPTION_PURCHASE ||
+    event === RevenueCatEventType.SUBSCRIPTION_EXTENDED ||
+    event === RevenueCatEventType.OFFER_REDEEMED
   );
 }
 
@@ -190,3 +191,4 @@ export function determineTierFromEvent(
 
   return 'basic';
 }
+

@@ -1,9 +1,13 @@
-import { Injectable, Logger } from '@nestjs/common';
+﻿import { Injectable, Logger } from '@nestjs/common';
 import {
+  Campaign,
+  CampaignPhoto,
   CampaignPrivacy,
   CampaignStatus,
   GroupMemberRole,
   NotificationType,
+  Prisma,
+  User,
   VerificationStatus,
 } from '@prisma/client';
 import { AppException } from '../../common/errors/app.exception';
@@ -27,6 +31,54 @@ const CREATOR_SELECT = {
 
 const NOT_DELETED = { deletedAt: null };
 
+export interface CampaignItem {
+  id: string;
+  creatorId: string;
+  title: string;
+  destination: string;
+  goalAmount: number;
+  currency: string;
+  story: string | null;
+  tripStartDate: Date;
+  tripEndDate: Date | null;
+  status: CampaignStatus;
+  privacy: CampaignPrivacy;
+  giftMode: boolean;
+  giftOccasion: string | null;
+  itineraryMediaId: string | null;
+  agencyQuoteMediaId: string | null;
+  viewsCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+  deletedById: string | null;
+  groupConversationId: string | null;
+  isGroup: boolean;
+  raisedAmount: number;
+  verificationStatus: VerificationStatus;
+  verificationNote: string | null;
+  verifiedBadgeAssignedAt: Date | null;
+  photos: Array<{ mediaId: string; position: number; url: string | null }>;
+  creator?: { id: string; username: string; displayName: string | null };
+  contributorsCount: number;
+}
+
+export interface AdminCampaignItem {
+  id: string;
+  title: string;
+  destination: string;
+  goalAmount: number;
+  raisedAmount: number;
+  currency: string;
+  status: CampaignStatus;
+  privacy: CampaignPrivacy;
+  isGiftMode: boolean;
+  creator: { id: string; displayName: string; email: string };
+  createdAt: Date;
+  flaggedAt?: Date;
+  flagReason?: string;
+}
+
 @Injectable()
 export class CampaignsService {
   private readonly logger = new Logger(CampaignsService.name);
@@ -39,7 +91,7 @@ export class CampaignsService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
-  private async attachViewUrls(campaigns: any[]) {
+  private async attachViewUrls(campaigns: (Campaign & { photos: CampaignPhoto[] })[]): Promise<CampaignItem[]> {
     const mediaIds = campaigns.flatMap((c) =>
       c.photos.map((p: { mediaId: string }) => p.mediaId),
     );
@@ -49,6 +101,7 @@ export class CampaignsService {
     return campaigns.map((campaign) => ({
       ...campaign,
       goalAmount: Number(campaign.goalAmount),
+      raisedAmount: Number(campaign.raisedAmount),
       photos: campaign.photos.map(
         (photo: { mediaId: string; position: number }) => ({
           mediaId: photo.mediaId,
@@ -75,7 +128,7 @@ export class CampaignsService {
     }
   }
 
-  async create(creatorId: string, dto: CreateCampaignDto) {
+  async create(creatorId: string, dto: CreateCampaignDto): Promise<CampaignItem> {
     this.validateDateRange(dto.tripStartDate, dto.tripEndDate);
     const isGroup = !!dto.isGroup;
 
@@ -116,7 +169,7 @@ export class CampaignsService {
     return withUrls;
   }
 
-  private async findOwnedOrThrow(campaignId: string, creatorId: string) {
+  private async findOwnedOrThrow(campaignId: string, creatorId: string): Promise<Campaign> {
     const campaign = await this.prisma.campaign.findUnique({
       where: { id: campaignId },
     });
@@ -129,7 +182,7 @@ export class CampaignsService {
     return campaign;
   }
 
-  async update(campaignId: string, creatorId: string, dto: UpdateCampaignDto) {
+  async update(campaignId: string, creatorId: string, dto: UpdateCampaignDto): Promise<CampaignItem> {
     await this.findOwnedOrThrow(campaignId, creatorId);
     this.validateDateRange(dto.tripStartDate, dto.tripEndDate);
 
@@ -189,7 +242,7 @@ export class CampaignsService {
     return withUrls;
   }
 
-  async remove(campaignId: string, creatorId: string) {
+  async remove(campaignId: string, creatorId: string): Promise<void> {
     await this.findOwnedOrThrow(campaignId, creatorId);
 
     const photos = await this.prisma.campaignPhoto.findMany({
@@ -211,7 +264,7 @@ export class CampaignsService {
     }
   }
 
-  async listMine(creatorId: string) {
+  async listMine(creatorId: string): Promise<CampaignItem[]> {
     const campaigns = await this.prisma.campaign.findMany({
       where: { creatorId, ...NOT_DELETED },
       orderBy: { createdAt: 'desc' },
@@ -225,7 +278,7 @@ export class CampaignsService {
     limit = 20,
     search?: string,
     creatorId?: string,
-  ) {
+  ): Promise<{ items: CampaignItem[]; nextCursor: string | null }> {
     const campaigns = await this.prisma.campaign.findMany({
       where: {
         privacy: CampaignPrivacy.public,
@@ -262,7 +315,7 @@ export class CampaignsService {
     return { items, nextCursor: hasMore ? page[page.length - 1].id : null };
   }
 
-  async getDetail(campaignId: string, viewerId: string) {
+  async getDetail(campaignId: string, viewerId: string): Promise<CampaignItem & { isCreator: boolean }> {
     const campaign = await this.prisma.campaign.findUnique({
       where: { id: campaignId },
       include: {
@@ -290,7 +343,7 @@ export class CampaignsService {
     return { ...withUrls, isCreator };
   }
 
-  async listTopContributors(campaignId: string, viewerId: string) {
+  async listTopContributors(campaignId: string, viewerId: string): Promise<{ items: never[] }> {
     const campaign = await this.prisma.campaign.findUnique({
       where: { id: campaignId },
     });
@@ -306,7 +359,9 @@ export class CampaignsService {
     return { items: [] };
   }
 
-  private toAdminCampaign(campaign: any) {
+  private toAdminCampaign(
+    campaign: Campaign & { creator: User },
+  ): AdminCampaignItem {
     return {
       id: campaign.id,
       title: campaign.title,
@@ -326,7 +381,7 @@ export class CampaignsService {
       ...(campaign.status === CampaignStatus.flagged
         ? {
             flaggedAt: campaign.updatedAt,
-            flagReason: campaign.verificationNote,
+            flagReason: campaign.verificationNote ?? undefined,
           }
         : {}),
     };
@@ -336,10 +391,10 @@ export class CampaignsService {
     filter: AdminCampaignFilterDto,
     cursor?: string,
     limit = 20,
-  ) {
+  ): Promise<{ data: AdminCampaignItem[]; meta: { cursor: string | null; hasMore: boolean } }> {
     const position = decodeCursor(cursor);
     const search = filter.search?.trim();
-    const where: any = {
+    const where: Prisma.CampaignWhereInput = {
       deletedAt: null,
       ...(search
         ? {
@@ -371,23 +426,7 @@ export class CampaignsService {
 
     const campaigns = await this.prisma.campaign.findMany({
       where,
-      select: {
-        id: true,
-        title: true,
-        destination: true,
-        goalAmount: true,
-        raisedAmount: true,
-        currency: true,
-        status: true,
-        privacy: true,
-        giftMode: true,
-        createdAt: true,
-        updatedAt: true,
-        verificationNote: true,
-        creator: {
-          select: { id: true, username: true, displayName: true, email: true },
-        },
-      },
+      include: { creator: true },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: limit + 1,
       ...(position
@@ -409,7 +448,7 @@ export class CampaignsService {
     campaignId: string,
     dto: UpdateCampaignFlagDto,
     actorUserId: string,
-  ) {
+  ): Promise<AdminCampaignItem> {
     const campaign = await this.prisma.campaign.findUnique({
       where: { id: campaignId },
       include: { creator: true },
@@ -460,7 +499,7 @@ export class CampaignsService {
     return this.toAdminCampaign(updated);
   }
 
-  async unflagCampaign(campaignId: string, actorUserId: string) {
+  async unflagCampaign(campaignId: string, actorUserId: string): Promise<AdminCampaignItem> {
     const campaign = await this.prisma.campaign.findUnique({
       where: { id: campaignId },
       include: { creator: true },
@@ -512,7 +551,7 @@ export class CampaignsService {
     status: VerificationStatus,
     note?: string,
     actorUserId?: string,
-  ) {
+  ): Promise<CampaignItem> {
     const campaign = await this.prisma.campaign.findUnique({
       where: { id: campaignId },
       include: { creator: true },
@@ -521,7 +560,7 @@ export class CampaignsService {
       throw AppException.notFound('Campaign not found.');
     }
 
-    const updateData: any = {
+    const updateData: Prisma.CampaignUpdateInput = {
       verificationStatus: status,
       verificationNote: note ?? null,
     };
@@ -545,7 +584,7 @@ export class CampaignsService {
           subjectType: 'user',
           subjectId: campaign.creatorId,
         });
-      } catch (error) {
+      } catch {
         // ignore duplicate badge
       }
     } else if (
@@ -568,7 +607,7 @@ export class CampaignsService {
         if (badge) {
           await this.verifiedBadgesService.revoke(actorUserId ?? '', badge.id);
         }
-      } catch (error) {
+      } catch {
         // ignore no badge
       }
     }

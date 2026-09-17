@@ -3,14 +3,12 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { AppConfig } from '../../config/configuration';
-import { AgencySubscriptionTier } from '@prisma/client';
+import { Agency, AgencySubscriptionTier, User } from '@prisma/client';
 import {
   RevenueCatEventType,
   RevenueCatWebhookEnvelope,
-  RevenueCatWebhookEvent,
   determineTierFromEvent,
   isActiveSubscriptionEvent,
-  isCancellationOrExpirationEvent,
 } from './revenuecat-webhook.dto';
 import Redis from 'ioredis';
 
@@ -103,33 +101,29 @@ export class RevenueCatWebhookService {
         return null;
       }
 
-      let agency: any = null;
-      let appUserId = '';
-
+      let agency: Agency | null = null;
+      
       if (event.original_app_user_id) {
         agency = await this.prisma.agency.findFirst({
           where: { userId: event.original_app_user_id },
         });
-        if (agency) appUserId = event.original_app_user_id;
-      }
+              }
 
       if (!agency && event.app_user_id) {
         agency = await this.prisma.agency.findFirst({
           where: { userId: event.app_user_id },
         });
-        if (agency) appUserId = event.app_user_id;
-      }
+              }
 
       if (!agency && event.aliases && event.aliases.length > 0) {
         const aliasIds = event.aliases.map((a) => a.id);
-        const aliasUser = await this.prisma.user.findFirst({
+        const aliasUser: User | null = await this.prisma.user.findFirst({
           where: { id: { in: aliasIds } },
           select: { id: true, agency: { select: { id: true, userId: true } } },
         });
         if (aliasUser && aliasUser.agency) {
           agency = aliasUser.agency;
-          appUserId = aliasUser.id;
-        }
+                  }
       }
 
       if (!agency) {
@@ -279,3 +273,4 @@ export class RevenueCatWebhookService {
     return crypto.timingSafeEqual(expectedBuf, signatureBuf);
   }
 }
+

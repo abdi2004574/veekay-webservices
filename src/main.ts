@@ -6,8 +6,11 @@ import { Logger } from 'nestjs-pino';
 import helmet from 'helmet';
 import compression from 'compression';
 import express from 'express';
+import type { Request, Response } from 'express';
 import { AppModule } from './app.module';
 import { AppConfig } from './config/configuration';
+
+type RawBodyRequest = Request & { rawBody?: Buffer };
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
@@ -30,8 +33,8 @@ async function bootstrap() {
 
   app.use(
     express.json({
-      verify: (req: any, _res: any, buffer: Buffer) => {
-        req.rawBody = buffer;
+      verify: (req: Request, _res: Response, buffer: Buffer) => {
+        (req as RawBodyRequest).rawBody = buffer;
       },
     }),
   );
@@ -60,4 +63,4 @@ async function bootstrap() {
   const port = config.get('port', { infer: true });
   await app.listen(port);
 }
-bootstrap();
+void bootstrap();

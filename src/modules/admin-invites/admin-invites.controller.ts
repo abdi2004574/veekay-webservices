@@ -1,11 +1,10 @@
-﻿import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RequirePlatformRole } from '../../common/decorators/require-platform-role.decorator';
 import { PlatformRole } from '@prisma/client';
 import { AdminInvitesService } from './admin-invites.service';
 import { CreateAdminInviteDto } from './dto/create-admin-invite.dto';
-import { RevokeAdminInviteDto } from './dto/revoke-admin-invite.dto';
 import { AcceptAdminInviteDto } from './dto/accept-admin-invite.dto';
 
 @ApiTags('admin-invites')
@@ -47,3 +46,4 @@ export class AdminInvitesController {
     return this.adminInvitesService.accept(userId, dto);
   }
 }
+

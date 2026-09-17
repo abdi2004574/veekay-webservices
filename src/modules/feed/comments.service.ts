@@ -1,5 +1,5 @@
-import { Injectable } from '@nestjs/common';
-import { NotificationType } from '@prisma/client';
+﻿import { Injectable } from '@nestjs/common';
+import { NotificationType, Prisma } from '@prisma/client';
 import { AppException } from '../../common/errors/app.exception';
 import { PrismaService } from '../prisma/prisma.service';
 import { PostsService } from './posts.service';
@@ -16,6 +16,25 @@ const AUTHOR_SELECT = {
   },
 };
 
+interface CommentViewModel {
+  id: string;
+  postId: string;
+  authorId: string;
+  text: string;
+  createdAt: Date;
+  updatedAt: Date;
+  author: {
+    id: string;
+    username: string;
+    displayName: string | null;
+    travelerProfile: {
+      photoMediaId: string | null;
+    } | null;
+  };
+  likesCount: number;
+  isLikedByMe: boolean;
+}
+
 @Injectable()
 export class CommentsService {
   constructor(
@@ -24,7 +43,7 @@ export class CommentsService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
-  private async attachViewerContext(comments: any[], viewerId: string) {
+  private async attachViewerContext(comments: CommentViewModel[], viewerId: string): Promise<CommentViewModel[]> {
     if (comments.length === 0) {
       return comments;
     }
@@ -40,7 +59,7 @@ export class CommentsService {
     }));
   }
 
-  async create(postId: string, authorId: string, dto: CreateCommentDto) {
+  async create(postId: string, authorId: string, dto: CreateCommentDto): Promise<Prisma.Comment> {
     const post = await this.postsService.findByIdOrThrow(postId);
     const comment = await this.prisma.comment.create({
       data: { postId, authorId, text: dto.text },
@@ -63,7 +82,7 @@ export class CommentsService {
     return comment;
   }
 
-  async findByIdOrThrow(commentId: string) {
+  async findByIdOrThrow(commentId: string): Promise<Prisma.Comment> {
     const comment = await this.prisma.comment.findUnique({
       where: { id: commentId },
     });
@@ -73,7 +92,7 @@ export class CommentsService {
     return comment;
   }
 
-  async update(commentId: string, authorId: string, dto: UpdateCommentDto) {
+  async update(commentId: string, authorId: string, dto: UpdateCommentDto): Promise<Prisma.Comment> {
     const comment = await this.findByIdOrThrow(commentId);
     if (comment.authorId !== authorId) {
       throw AppException.forbidden('You can only edit your own comments.');
@@ -84,7 +103,7 @@ export class CommentsService {
     });
   }
 
-  async remove(commentId: string, authorId: string) {
+  async remove(commentId: string, authorId: string): Promise<void> {
     const comment = await this.findByIdOrThrow(commentId);
     if (comment.authorId !== authorId) {
       throw AppException.forbidden('You can only delete your own comments.');
@@ -92,7 +111,7 @@ export class CommentsService {
     await this.prisma.comment.delete({ where: { id: commentId } });
   }
 
-  async like(commentId: string, userId: string) {
+  async like(commentId: string, userId: string): Promise<void> {
     const comment = await this.findByIdOrThrow(commentId);
     const existing = await this.prisma.commentLike.findUnique({
       where: { commentId_userId: { commentId, userId } },
@@ -117,7 +136,7 @@ export class CommentsService {
     }
   }
 
-  async unlike(commentId: string, userId: string) {
+  async unlike(commentId: string, userId: string): Promise<void> {
     const existing = await this.prisma.commentLike.findUnique({
       where: { commentId_userId: { commentId, userId } },
     });
@@ -127,7 +146,7 @@ export class CommentsService {
     await this.prisma.commentLike.delete({ where: { id: existing.id } });
   }
 
-  async list(postId: string, viewerId: string, cursor?: string, limit = 20) {
+  async list(postId: string, viewerId: string, cursor?: string, limit = 20): Promise<{ items: CommentViewModel[]; nextCursor: string | null }> {
     await this.postsService.findByIdOrThrow(postId);
     const comments = await this.prisma.comment.findMany({
       where: { postId },
@@ -150,3 +169,4 @@ export class CommentsService {
     };
   }
 }
+

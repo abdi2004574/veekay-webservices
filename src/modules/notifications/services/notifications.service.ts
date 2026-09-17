@@ -1,10 +1,9 @@
-import { Injectable, Inject, Logger } from '@nestjs/common';
+﻿import { Injectable, Inject, Logger } from '@nestjs/common';
 import { NotificationChannel, NotificationType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationPreferenceService } from './notification-preference.service';
 import { PushDeviceService } from './push-device.service';
-import type { IFirebasePushProvider } from '../interfaces/firebase-push.interface';
-import { FIREBASE_PUSH_PROVIDER } from '../interfaces/firebase-push.interface';
+import { FirebasePushProvider, SendTokensResult } from '../providers/firebase-push.provider';
 import { MailService } from '../../mail/mail.service';
 import { AppException } from '../../../common/errors/app.exception';
 import { CreateNotificationDto } from '../dto/create-notification.dto';
@@ -43,8 +42,7 @@ export class NotificationsService {
     private readonly prisma: PrismaService,
     private readonly notificationPreferenceService: NotificationPreferenceService,
     private readonly pushDeviceService: PushDeviceService,
-    @Inject(FIREBASE_PUSH_PROVIDER)
-    private readonly firebasePushProvider: IFirebasePushProvider,
+    private readonly firebasePushProvider: FirebasePushProvider,
     private readonly mailService: MailService,
   ) {}
 
@@ -189,7 +187,7 @@ export class NotificationsService {
     notification: Prisma.NotificationGetPayload<{}>,
     tokens: string[],
   ) {
-    const result = await this.firebasePushProvider.sendTokens(
+    const result: SendTokensResult = await this.firebasePushProvider.sendTokens(
       tokens,
       notification.title,
       notification.body,

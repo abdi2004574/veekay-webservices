@@ -1,15 +1,27 @@
-import { Injectable, Logger } from '@nestjs/common';
+﻿import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { initializeApp, getApps, cert } from 'firebase-admin';
 import { getMessaging } from 'firebase-admin/messaging';
 import { AppConfig } from '../../../config/configuration';
-import {
-  FIREBASE_PUSH_PROVIDER,
-  IFirebasePushProvider,
-  PushNotificationPayload,
-  PushResult,
-  SendTokensResult,
-} from '../interfaces/firebase-push.interface';
+
+export interface PushNotificationPayload {
+  token: string;
+  title: string;
+  body: string;
+  data?: Record<string, string>;
+}
+
+export interface PushResult {
+  ok: boolean;
+  messageId?: string;
+  error?: string;
+}
+
+export interface SendTokensResult {
+  successCount: number;
+  failureCount: number;
+  failedTokens: string[];
+}
 
 function fixPrivateKey(key: string): string {
   if (key.includes('\n')) {
@@ -19,7 +31,7 @@ function fixPrivateKey(key: string): string {
 }
 
 @Injectable()
-export class FirebasePushProvider implements IFirebasePushProvider {
+export class FirebasePushProvider {
   readonly name = 'firebase';
   private readonly logger = new Logger(FirebasePushProvider.name);
   private readonly isConfigured: boolean;
