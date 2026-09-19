@@ -1,4 +1,4 @@
-import * as Joi from 'joi';
+﻿import * as Joi from 'joi';
 
 export const envValidationSchema = Joi.object({
   NODE_ENV: Joi.string()
@@ -41,6 +41,7 @@ export const envValidationSchema = Joi.object({
   FIREBASE_CLIENT_EMAIL: Joi.string().allow('').optional(),
   FIREBASE_PRIVATE_KEY: Joi.string().allow('').optional(),
 
+  REVENUECAT_API_KEY: Joi.string().allow('').optional(),
   REVENUECAT_WEBHOOK_SECRET: Joi.string().allow('').optional(),
   REVENUECAT_TIMESTAMP_TOLERANCE_SECONDS: Joi.number().default(300),
   REVENUECAT_TIER_MAPPING: Joi.string().optional(),
@@ -67,3 +68,5 @@ export const envValidationSchema = Joi.object({
   THROTTLE_TTL_MS: Joi.number().default(60000),
   THROTTLE_LIMIT: Joi.number().default(100),
 }).unknown(true);
+
+

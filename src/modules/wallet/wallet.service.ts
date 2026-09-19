@@ -43,6 +43,7 @@ export interface RecordDonationParams {
   isGift: boolean;
   giftMessage?: string;
   idempotencyKey: string;
+  providerName?: string;
 }
 
 export type WalletTxClient = Parameters<
@@ -307,7 +308,7 @@ export class WalletService {
           referenceType: 'donation',
           referenceId: donation.id,
           idempotencyKey: params.idempotencyKey,
-          provider: this.fundingProvider.name,
+          provider: params.providerName ?? this.fundingProvider.name,
           donationId: donation.id,
         }),
       );
