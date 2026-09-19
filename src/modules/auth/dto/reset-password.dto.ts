@@ -4,15 +4,15 @@ import { IsEmail, IsString, Length, MinLength } from 'class-validator';
 export class ResetPasswordDto {
   @ApiProperty({ example: 'traveler@example.com' })
   @IsEmail()
-  email: string;
+  email!: string;
 
   @ApiProperty({ example: '123456', minLength: 6, maxLength: 6 })
   @IsString()
   @Length(6, 6)
-  otp: string;
+  otp!: string;
 
   @ApiProperty({ example: 'NewStrongPassword123!', minLength: 8 })
   @IsString()
   @MinLength(8)
-  newPassword: string;
+  newPassword!: string;
 }

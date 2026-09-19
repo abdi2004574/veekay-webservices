@@ -60,11 +60,12 @@ export class AgencySubscriptionService {
     const subscription = await this.stripe.subscriptions.create({
       customer: stripeCustomerId,
       items: [{ price: priceId }],
-      expand: ['latest_invoice.payment_intent'],
+      expand: ['latest_invoice'],
     });
 
-    const invoice = subscription.latest_invoice as Stripe.Invoice | null | undefined;
-    const clientSecret = invoice?.payment_intent?.client_secret;
+    const invoice = subscription.latest_invoice as
+      Stripe.Invoice | null | undefined;
+    const clientSecret = invoice?.confirmation_secret?.client_secret;
 
     await this.prisma.agency.update({
       where: { id: agencyId },

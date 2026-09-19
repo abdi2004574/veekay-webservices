@@ -1,4 +1,4 @@
--- DropIndex
+﻿-- DropIndex
 DROP INDEX "notification_preferences_user_id_type_key";
 
 -- AlterTable

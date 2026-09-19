@@ -1,19 +1,19 @@
-﻿import { Inject, Injectable } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
-import { JwtService } from "@nestjs/jwt";
-import { randomUUID, createHash } from "crypto";
-import { User } from "@prisma/client";
-import Redis from "ioredis";
-import ms, { StringValue } from "ms";
-import { AppException } from "../../common/errors/app.exception";
-import { AppConfig } from "../../config/configuration";
-import { PrismaService } from "../prisma/prisma.service";
-import { REDIS_CLIENT } from "../redis/redis.module";
-import { blacklistKey } from "./auth.constants";
+﻿import { Inject, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
+import { randomUUID, createHash } from 'crypto';
+import { User } from '@prisma/client';
+import Redis from 'ioredis';
+import ms, { StringValue } from 'ms';
+import { AppException } from '../../common/errors/app.exception';
+import { AppConfig } from '../../config/configuration';
+import { PrismaService } from '../prisma/prisma.service';
+import { REDIS_CLIENT } from '../redis/redis.module';
+import { blacklistKey } from './auth.constants';
 import {
   AccessTokenPayload,
   RefreshTokenPayload,
-} from "./interfaces/jwt-payload.interface";
+} from './interfaces/jwt-payload.interface';
 
 export interface TokenPair {
   accessToken: string;
@@ -30,7 +30,7 @@ export class TokenService {
   ) {}
 
   private hashToken(token: string): string {
-    return createHash("sha256").update(token).digest("hex");
+    return createHash('sha256').update(token).digest('hex');
   }
 
   async issueTokenPair(
@@ -42,7 +42,7 @@ export class TokenService {
       agencyId?: string;
     } = {},
   ): Promise<TokenPair> {
-    const jwt = this.config.get("jwt", { infer: true });
+    const jwt = this.config.get('jwt', { infer: true });
 
     const accessPayload: AccessTokenPayload = {
       sub: user.id,
@@ -72,7 +72,9 @@ export class TokenService {
         tokenHash: this.hashToken(refreshToken),
         deviceId: options.deviceId,
         deviceName: options.deviceName,
-        expiresAt: new Date(Date.now() + ms(jwt.refreshExpiresIn as StringValue)),
+        expiresAt: new Date(
+          Date.now() + ms(jwt.refreshExpiresIn as StringValue),
+        ),
       },
     });
 
@@ -82,7 +84,7 @@ export class TokenService {
   async rotateRefreshToken(
     refreshToken: string,
   ): Promise<{ user: User; tokens: TokenPair }> {
-    const jwt = this.config.get("jwt", { infer: true });
+    const jwt = this.config.get('jwt', { infer: true });
 
     let payload: RefreshTokenPayload;
     try {
@@ -90,7 +92,7 @@ export class TokenService {
         secret: jwt.refreshSecret,
       });
     } catch {
-      throw AppException.unauthorized("Invalid or expired refresh token.");
+      throw AppException.unauthorized('Invalid or expired refresh token.');
     }
 
     const stored = await this.prisma.refreshToken.findUnique({
@@ -103,7 +105,7 @@ export class TokenService {
       stored.expiresAt < new Date() ||
       stored.tokenHash !== this.hashToken(refreshToken)
     ) {
-      throw AppException.unauthorized("Invalid or expired refresh token.");
+      throw AppException.unauthorized('Invalid or expired refresh token.');
     }
 
     const user = await this.prisma.user.findUnique({
@@ -111,7 +113,7 @@ export class TokenService {
       include: { agency: { select: { id: true } } },
     });
     if (!user) {
-      throw AppException.unauthorized("Invalid or expired refresh token.");
+      throw AppException.unauthorized('Invalid or expired refresh token.');
     }
 
     await this.prisma.refreshToken.update({
@@ -129,7 +131,7 @@ export class TokenService {
   }
 
   async blacklistAccessToken(jti: string, accessToken: string): Promise<void> {
-    const jwt = this.config.get("jwt", { infer: true });
+    const jwt = this.config.get('jwt', { infer: true });
     let remainingSeconds = ms(jwt.accessExpiresIn as StringValue) / 1000;
 
     try {
@@ -144,11 +146,11 @@ export class TokenService {
       // fall back to the default access-token lifetime
     }
 
-    await this.redis.set(blacklistKey(jti), "1", "EX", remainingSeconds);
+    await this.redis.set(blacklistKey(jti), '1', 'EX', remainingSeconds);
   }
 
   async revokeRefreshTokenByValue(refreshToken: string): Promise<void> {
-    const jwt = this.config.get("jwt", { infer: true });
+    const jwt = this.config.get('jwt', { infer: true });
     let payload: RefreshTokenPayload;
     try {
       payload = this.jwtService.verify<RefreshTokenPayload>(refreshToken, {

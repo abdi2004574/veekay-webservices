@@ -102,4 +102,3 @@ export class AdminAgenciesController {
     return this.agenciesService.reject(id, dto.reason, userId);
   }
 }
-

@@ -3,48 +3,48 @@ import { CampaignPrivacy, CampaignStatus } from '@prisma/client';
 
 export class AdminCampaignCreatorDto {
   @ApiProperty()
-  id: string;
+  id!: string;
 
   @ApiProperty()
-  displayName: string;
+  displayName!: string;
 
   @ApiProperty()
-  email: string;
+  email!: string;
 }
 
 export class AdminCampaignDto {
   @ApiProperty()
-  id: string;
+  id!: string;
 
   @ApiProperty()
-  title: string;
+  title!: string;
 
   @ApiProperty()
-  destination: string;
+  destination!: string;
 
   @ApiProperty()
-  goalAmount: number;
+  goalAmount!: number;
 
   @ApiProperty()
-  raisedAmount: number;
+  raisedAmount!: number;
 
   @ApiProperty()
-  currency: string;
+  currency!: string;
 
   @ApiProperty({ enum: CampaignStatus })
-  status: CampaignStatus;
+  status!: CampaignStatus;
 
   @ApiProperty({ enum: CampaignPrivacy })
-  privacy: CampaignPrivacy;
+  privacy!: CampaignPrivacy;
 
   @ApiProperty()
-  isGiftMode: boolean;
+  isGiftMode!: boolean;
 
   @ApiProperty({ type: AdminCampaignCreatorDto })
-  creator: AdminCampaignCreatorDto;
+  creator!: AdminCampaignCreatorDto;
 
   @ApiProperty()
-  createdAt: Date;
+  createdAt!: Date;
 
   @ApiPropertyOptional()
   flaggedAt?: Date;

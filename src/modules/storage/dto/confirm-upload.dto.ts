@@ -4,5 +4,5 @@ import { IsUUID } from 'class-validator';
 export class ConfirmUploadDto {
   @ApiProperty()
   @IsUUID()
-  mediaId: string;
+  mediaId!: string;
 }

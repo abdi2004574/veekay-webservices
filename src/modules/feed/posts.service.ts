@@ -17,26 +17,29 @@ const AUTHOR_SELECT = {
   },
 };
 
-interface PostViewModel {
+type PostAuthorView = {
   id: string;
-  author: {
-    id: string;
-    username: string;
-    displayName: string;
-    travelerProfile: { photoMediaId: string | null };
-  };
+  username: string;
+  displayName: string | null;
+  travelerProfile: { photoMediaId: string | null } | null;
+};
+
+type PostWithView = Post & {
+  author: PostAuthorView;
+  repostOf: (Post & { author: PostAuthorView }) | null;
+  _count: { likes: number; comments: number };
+};
+
+export interface PostViewModel {
+  id: string;
+  author: PostAuthorView;
   likesCount: number;
   commentsCount: number;
   isLikedByMe: boolean;
   imageUrl: string | null;
   repostOf: {
     id: string;
-    author: {
-      id: string;
-      username: string;
-      displayName: string;
-      travelerProfile: { photoMediaId: string | null };
-    };
+    author: PostAuthorView;
     imageUrl: string | null;
   } | null;
 }
@@ -50,9 +53,12 @@ export class PostsService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
-  private async attachViewerContext(posts: Post[], viewerId: string) {
+  private async attachViewerContext(
+    posts: PostWithView[],
+    viewerId: string,
+  ): Promise<PostViewModel[]> {
     if (posts.length === 0) {
-      return posts;
+      return [];
     }
     const likes = await this.prisma.postLike.findMany({
       where: { userId: viewerId, postId: { in: posts.map((p) => p.id) } },
@@ -67,24 +73,28 @@ export class PostsService {
     const urlsByMediaId =
       await this.mediaAssetsService.resolveViewUrls(mediaIds);
 
-    return posts.map((post) => ({
-      ...post,
-      likesCount: post._count.likes,
-      commentsCount: post._count.comments,
-      isLikedByMe: likedPostIds.has(post.id),
-      imageUrl: post.imageMediaId
-        ? (urlsByMediaId.get(post.imageMediaId) ?? null)
-        : null,
-      repostOf: post.repostOf
-        ? {
-            ...post.repostOf,
-            imageUrl: post.repostOf.imageMediaId
-              ? (urlsByMediaId.get(post.repostOf.imageMediaId) ?? null)
-              : null,
-          }
-        : null,
-      _count: undefined,
-    }));
+    return posts.map((post) => {
+      const { _count, ...basePost } = post;
+      return {
+        id: basePost.id,
+        author: basePost.author,
+        likesCount: _count.likes,
+        commentsCount: _count.comments,
+        isLikedByMe: likedPostIds.has(basePost.id),
+        imageUrl: basePost.imageMediaId
+          ? (urlsByMediaId.get(basePost.imageMediaId) ?? null)
+          : null,
+        repostOf: basePost.repostOf
+          ? {
+              id: basePost.repostOf.id,
+              author: basePost.repostOf.author,
+              imageUrl: basePost.repostOf.imageMediaId
+                ? (urlsByMediaId.get(basePost.repostOf.imageMediaId) ?? null)
+                : null,
+            }
+          : null,
+      };
+    });
   }
 
   async create(authorId: string, dto: CreatePostDto): Promise<Post> {
@@ -107,7 +117,11 @@ export class PostsService {
     return post;
   }
 
-  async update(postId: string, authorId: string, dto: UpdatePostDto): Promise<Post> {
+  async update(
+    postId: string,
+    authorId: string,
+    dto: UpdatePostDto,
+  ): Promise<Post> {
     const post = await this.findByIdOrThrow(postId);
     if (post.authorId !== authorId) {
       throw AppException.forbidden('You can only edit your own posts.');
@@ -166,7 +180,11 @@ export class PostsService {
     await this.prisma.postLike.delete({ where: { id: existing.id } });
   }
 
-  async repost(postId: string, authorId: string, caption?: string): Promise<Post> {
+  async repost(
+    postId: string,
+    authorId: string,
+    caption?: string,
+  ): Promise<Post> {
     const originalPost = await this.findByIdOrThrow(postId);
     const newPost = await this.prisma.post.create({
       data: {
@@ -193,7 +211,11 @@ export class PostsService {
     return newPost;
   }
 
-  async getFeed(viewerId: string, cursor?: string, limit = 20): Promise<{ items: PostViewModel[]; nextCursor: string | null }> {
+  async getFeed(
+    viewerId: string,
+    cursor?: string,
+    limit = 20,
+  ): Promise<{ items: PostViewModel[]; nextCursor: string | null }> {
     const friendIds = await this.friendsService.getFriendIds(viewerId);
     const authorIds = [viewerId, ...friendIds];
 

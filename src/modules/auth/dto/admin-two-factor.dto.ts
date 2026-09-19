@@ -6,10 +6,10 @@ export class AdminTwoFactorDto {
     description: 'Pending-2FA token issued by /admin/auth/login.',
   })
   @IsString()
-  pendingToken: string;
+  pendingToken!: string;
 
   @ApiProperty({ example: '123456', minLength: 6, maxLength: 6 })
   @IsString()
   @Length(6, 6)
-  code: string;
+  code!: string;
 }

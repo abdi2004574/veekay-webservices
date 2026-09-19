@@ -5,17 +5,17 @@ import { NotificationChannel, NotificationType } from '@prisma/client';
 export class CreateNotificationDto {
   @ApiProperty({ enum: NotificationType })
   @IsEnum(NotificationType)
-  type: NotificationType;
+  type!: NotificationType;
 
   @ApiProperty()
   @IsString()
   @MaxLength(200)
-  title: string;
+  title!: string;
 
   @ApiProperty()
   @IsString()
   @MaxLength(2000)
-  body: string;
+  body!: string;
 
   @ApiProperty({ required: false })
   @IsOptional()

@@ -1,4 +1,4 @@
-﻿import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 import { TripRequestStatus } from '@prisma/client';
 import { IsEnum, IsOptional } from 'class-validator';
 

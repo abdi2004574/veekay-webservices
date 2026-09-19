@@ -3,7 +3,6 @@ import { PrismaService } from '../prisma/prisma.service';
 import {
   TripRequestStatus,
   TripBookingStatus,
-  AgencySubscriptionTier,
   DestinationType,
 } from '@prisma/client';
 import { AppException } from '../../common/errors/app.exception';
@@ -15,17 +14,44 @@ export class AgencyDashboardService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  private getCommissionRate(tier: AgencySubscriptionTier): number {
-    switch (tier) {
-      case AgencySubscriptionTier.basic:
-        return 0.15;
-      case AgencySubscriptionTier.premium:
-        return 0.1;
-      case AgencySubscriptionTier.featured:
-        return 0.08;
-      default:
-        return 0.15;
+  private getCommissionRate(): number {
+    const value = parseFloat(process.env.WALLET_DONATION_FEE_PERCENTAGE ?? '');
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  async getPopularPackages(agencyId: string, limit = 10) {
+    const bookings = await this.prisma.tripBooking.findMany({
+      where: { agencyId, status: TripBookingStatus.completed },
+      select: {
+        packageId: true,
+        amount: true,
+        package: { select: { id: true, title: true, basePrice: true, currency: true } },
+      },
+    });
+
+    const packageMap = new Map<string, { count: number; revenue: number; title: string; basePrice: number; currency: string }>();
+    for (const booking of bookings) {
+      if (booking.packageId && booking.package) {
+        const existing = packageMap.get(booking.packageId) || { count: 0, revenue: 0, title: booking.package.title, basePrice: Number(booking.package.basePrice), currency: booking.package.currency };
+        existing.count++;
+        existing.revenue += Number(booking.amount || 0);
+        packageMap.set(booking.packageId, existing);
+      }
     }
+
+    const packages = Array.from(packageMap.entries())
+      .map(([id, data]) => ({
+        packageId: id,
+        title: data.title,
+        basePrice: data.basePrice,
+        currency: data.currency,
+        bookingCount: data.count,
+        totalRevenue: Math.round(data.revenue * 100) / 100,
+      }))
+      .sort((a, b) => b.bookingCount - a.bookingCount)
+      .slice(0, limit);
+
+    return { packages };
   }
 
   async getKpis(agencyId: string) {

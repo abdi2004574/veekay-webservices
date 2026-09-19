@@ -1,4 +1,4 @@
--- CreateEnum
+﻿-- CreateEnum
 CREATE TYPE "NotificationType" AS ENUM ('donation', 'milestone', 'agency_response', 'chat_message', 'like', 'comment', 'share', 'review_received', 'verification_status', 'account_status', 'campaign_flagged', 'admin_broadcast', 'new_request', 'booking_update', 'payment_received', 'withdrawal_status', 'friend_request', 'shared_file', 'new_call', 'system_alert');
 
 -- CreateEnum

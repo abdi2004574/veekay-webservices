@@ -12,11 +12,13 @@ import { UserRole } from '@prisma/client';
 import type { Response } from 'express';
 import { AgencyDashboardService } from './dashboard.service';
 import { AgencyRevenueService } from './revenue.service';
+import { DynamicPricingService } from './dynamic-pricing.service';
 import {
   DashboardQueryDto,
   RevenueLedgerQueryDto,
   FundingTrendRange,
 } from './dto/dashboard-query.dto';
+import { CalculatePriceDto } from './dto/calculate-price.dto';
 
 @ApiTags('agency-dashboard')
 @ApiBearerAuth()
@@ -25,6 +27,7 @@ export class AgencyDashboardController {
   constructor(
     private readonly dashboardService: AgencyDashboardService,
     private readonly revenueService: AgencyRevenueService,
+    private readonly dynamicPricingService: DynamicPricingService,
   ) {}
 
   @Get('dashboard/kpis')
@@ -64,6 +67,28 @@ export class AgencyDashboardController {
   @ApiOperation({ summary: 'Get traveler destination preference distribution' })
   async getTravelerPreferences(@CurrentUser('agencyId') agencyId: string) {
     return this.dashboardService.getTravelerPreferences(agencyId);
+  }
+
+  @Get('dashboard/popular-packages')
+  @RequireRole(UserRole.agency)
+  @RequireVerifiedEmail()
+  @ApiOperation({ summary: 'Get most-booked packages by booking count' })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  async getPopularPackages(
+    @CurrentUser('agencyId') agencyId: string,
+    @Query('limit') limit: string | undefined,
+  ) {
+    return this.dashboardService.getPopularPackages(agencyId, limit ? Number(limit) : 10);
+  }
+
+  @Get('dashboard/calculate-price')
+  @RequireRole(UserRole.agency)
+  @RequireVerifiedEmail()
+  @ApiOperation({ summary: 'Calculate effective price for a package based on fundraising progress' })
+  @ApiQuery({ name: 'packageId', required: true, type: String })
+  @ApiQuery({ name: 'fundraisingPercentage', required: true, type: Number })
+  async calculatePrice(@Query() query: CalculatePriceDto) {
+    return this.dynamicPricingService.calculatePrice(query.packageId, query.fundraisingPercentage);
   }
 
   @Get('revenue/ledger')

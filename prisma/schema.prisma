@@ -224,6 +224,8 @@ model Agency {
   tripBookings          TripBooking[]
   smartReplyTemplates   SmartReplyTemplate[]
   stripeConnectAccounts StripeConnectAccount[]
+  agencyInvoices      AgencyInvoice[]
+  agencySettings      AgencySetting[]
 
   @@map("agencies")
 }
@@ -629,6 +631,7 @@ model TripRequest {
   confirmedAt DateTime?    @map("confirmed_at")
   completedAt DateTime?    @map("completed_at")
   booking     TripBooking? @relation("TripRequestBooking", fields: [bookingId], references: [id])
+  agencyInvoice AgencyInvoice? @relation("TripRequestInvoice")
 
   @@index([travelerId])
   @@index([agencyId])
@@ -960,6 +963,12 @@ enum WithdrawalStatus {
   paid
 }
 
+enum InvoiceStatus {
+  pending
+  paid
+  overdue
+}
+
 enum CampaignStatus {
   draft
   active
@@ -1255,6 +1264,40 @@ model FraudFlag {
   @@map("fraud_flags")
 }
 
+
+model AgencyInvoice {
+  id                String   @id @default(uuid())
+  agencyId          String   @map("agency_id")
+  tripRequestId     String?  @unique @map("trip_request_id")
+  tripRequestIdRel  TripRequest? @relation("TripRequestInvoice", fields: [tripRequestId], references: [id])
+  amount            Decimal
+  currency          String   @default("USD")
+  commissionAmount  Decimal  @default(0) @map("commission_amount")
+  netAmount         Decimal  @default(0) @map("net_amount")
+  status            InvoiceStatus @default(pending)
+  dueDate           DateTime @map("due_date")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  agency            Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@index([agencyId])
+  @@index([status])
+  @@map("agency_invoices")
+}
+
+model AgencySetting {
+  id        String   @id @default(uuid())
+  agencyId  String   @map("agency_id")
+  key       String
+  value     Json
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@unique([agencyId, key])
+  @@index([agencyId])
+  @@map("agency_settings")
+}
 
 model PlatformSetting {
   id          String   @id @default(uuid())

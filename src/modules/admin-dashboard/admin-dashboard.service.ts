@@ -14,7 +14,14 @@ import { FundingTrendRange } from './dto/funding-trends-query.dto';
 export class AdminDashboardService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getMetrics(): Promise<{ totalUsers: number; totalAgencies: number; totalCampaigns: number; totalDonations: number; activeCampaigns: number; pendingAgencies: number }> {
+  async getMetrics(): Promise<{
+    totalUsers: number;
+    totalAgencies: number;
+    totalCampaigns: number;
+    totalDonations: number;
+    activeCampaigns: number;
+    pendingAgencies: number;
+  }> {
     const [
       totalUsers,
       totalAgencies,
@@ -78,7 +85,9 @@ export class AdminDashboardService {
     return stats;
   }
 
-  async getFundingTrends(range: FundingTrendRange = '30d'): Promise<{ trends: { date: string; amount: number }[] }> {
+  async getFundingTrends(
+    range: FundingTrendRange = '30d',
+  ): Promise<{ trends: { date: string; amount: number }[] }> {
     const days = Number(range.slice(0, -1));
     const end = new Date();
     end.setUTCHours(23, 59, 59, 999);
@@ -111,13 +120,13 @@ export class AdminDashboardService {
   }
 
   async getTopDestinations(): Promise<{ name: string; count: number }[]> {
-    const rows = (await this.prisma.campaign.groupBy({
+    const rows = await this.prisma.campaign.groupBy({
       by: ['destination'],
       where: { deletedAt: null },
       _count: { _all: true },
       orderBy: { destination: 'asc' },
       take: 10,
-    }))
+    });
 
     return rows
       .map((row) => ({
@@ -127,7 +136,9 @@ export class AdminDashboardService {
       .sort((a, b) => b.count - a.count);
   }
 
-  async getTravelerPreferences(): Promise<{ label: DestinationType; count: number }[]> {
+  async getTravelerPreferences(): Promise<
+    { label: DestinationType; count: number }[]
+  > {
     const profiles = await this.prisma.travelerProfile.findMany({
       select: {
         destinationTypes: { select: { destinationType: true } },

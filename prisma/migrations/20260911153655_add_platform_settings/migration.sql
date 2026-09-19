@@ -1,4 +1,4 @@
--- CreateTable
+﻿-- CreateTable
 CREATE TABLE "platform_settings" (
     "id" TEXT NOT NULL,
     "key" TEXT NOT NULL,

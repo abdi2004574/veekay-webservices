@@ -5,5 +5,5 @@ export class UpdateStaffPermissionDto {
   @ApiProperty({ example: 'admin', enum: ['owner', 'admin', 'support'] })
   @IsString()
   @IsIn(['owner', 'admin', 'support'])
-  permission: 'owner' | 'admin' | 'support';
+  permission!: 'owner' | 'admin' | 'support';
 }

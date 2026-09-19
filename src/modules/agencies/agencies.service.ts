@@ -9,6 +9,7 @@ import { AppException } from '../../common/errors/app.exception';
 import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/services/notifications.service';
+import { VerifiedBadgesService } from '../verified-badges/verified-badges.service';
 import { AgencyRegistrationDto } from './dto/agency-registration.dto';
 import {
   encodeCursor,
@@ -80,6 +81,7 @@ export class AgenciesService {
     private readonly prisma: PrismaService,
     private readonly mailService: MailService,
     private readonly notificationsService: NotificationsService,
+    private readonly verifiedBadgesService: VerifiedBadgesService,
   ) {}
 
   async listDirectory(cursor?: string, limit = 20, search?: string) {
@@ -298,6 +300,11 @@ export class AgenciesService {
       updated.user.email,
       updated.agencyName,
     );
+
+    await this.verifiedBadgesService.assign(actorUserId, {
+      subjectType: 'agency',
+      subjectId: agencyId,
+    });
 
     return updated;
   }

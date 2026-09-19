@@ -8,5 +8,5 @@ export class RejectAgencyDto {
   })
   @IsString()
   @MaxLength(500)
-  reason: string;
+  reason!: string;
 }

@@ -31,7 +31,7 @@ export class FraudService {
       metadata?: string;
     },
   ): Promise<FraudFlag> {
-    let parsedMetadata: Record<string, unknown> | undefined;
+    let parsedMetadata: Prisma.InputJsonValue | undefined;
     if (dto.metadata) {
       try {
         parsedMetadata = JSON.parse(dto.metadata);
@@ -46,7 +46,7 @@ export class FraudService {
         type: dto.type,
         severity: dto.severity ?? FraudFlagSeverity.low,
         description: dto.description,
-        metadata: parsedMetadata as Prisma.JsonValue,
+        metadata: parsedMetadata,
       },
     });
 
@@ -176,7 +176,14 @@ export class FraudService {
       return this.create(userId, {
         type: FraudFlagType.frequent_profile_changes,
         severity: FraudFlagSeverity.low,
-        description: `User profile updated ${recentUpdates} times in the last ${windowDays} days (threshold: ${threshold}).`,
+        description:
+          'User profile updated ' +
+          recentUpdates +
+          ' times in the last ' +
+          windowDays +
+          ' days (threshold: ' +
+          threshold +
+          ').',
         metadata: JSON.stringify({
           updatesInWindow: recentUpdates,
           threshold,

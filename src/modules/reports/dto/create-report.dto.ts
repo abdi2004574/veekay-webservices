@@ -5,16 +5,16 @@ import { ReportTargetType } from '@prisma/client';
 export class CreateReportDto {
   @ApiProperty({ enum: ReportTargetType })
   @IsEnum(ReportTargetType)
-  targetType: ReportTargetType;
+  targetType!: ReportTargetType;
 
   @ApiProperty({ example: 'uuid-of-reported-item' })
   @IsString()
   @IsNotEmpty()
-  targetId: string;
+  targetId!: string;
 
   @ApiProperty({ example: 'This post contains spam' })
   @IsString()
   @IsNotEmpty()
   @MaxLength(1000)
-  reason: string;
+  reason!: string;
 }

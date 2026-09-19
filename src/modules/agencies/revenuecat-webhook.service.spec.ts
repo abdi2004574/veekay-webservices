@@ -1,6 +1,8 @@
 import { Test } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { RevenueCatWebhookService } from './revenuecat-webhook.service';
+import { RevenueCatApiService } from './revenuecat-api.service';
+import { WalletService } from '../wallet/wallet.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AppConfig } from '../../config/configuration';
 import { AgencySubscriptionTier } from '@prisma/client';
@@ -73,6 +75,8 @@ describe('RevenueCatWebhookService', () => {
         { provide: ConfigService, useValue: configService },
         { provide: PrismaService, useValue: prisma },
         { provide: 'REDIS_CLIENT', useValue: mockRedis },
+        { provide: RevenueCatApiService, useValue: { getCustomerInfo: jest.fn().mockResolvedValue(null) } },
+        { provide: WalletService, useValue: { recordDonation: jest.fn() } },
       ],
     }).compile();
 
@@ -122,7 +126,7 @@ describe('RevenueCatWebhookService', () => {
     const result = await service.processWebhook(validPayload, signature, body);
 
     expect(result!.eventId).toBe('evt-123');
-    expect(result!.tier).toBe('premium');
+    expect((result as { tier: string }).tier).toBe('premium');
     expect(prisma.agency.update).toHaveBeenCalledWith({
       where: { id: 'agency-1' },
       data: { subscriptionTier: AgencySubscriptionTier.premium },
@@ -160,7 +164,7 @@ describe('RevenueCatWebhookService', () => {
 
     const result = await service.processWebhook(validPayload, signature, body);
 
-    expect(result!.tier).toBe('premium');
+    expect((result as { tier: string }).tier).toBe('premium');
     expect(prisma.agency.update).not.toHaveBeenCalled();
   });
 
@@ -188,7 +192,7 @@ describe('RevenueCatWebhookService', () => {
 
     const result = await service.processWebhook(cancelPayload, signature, body);
 
-    expect(result!.tier).toBe('basic');
+    expect((result as { tier: string }).tier).toBe('basic');
   });
 
   it('maps expiry to basic tier', async () => {
@@ -219,7 +223,7 @@ describe('RevenueCatWebhookService', () => {
       body,
     );
 
-    expect(result!.tier).toBe('basic');
+    expect((result as { tier: string }).tier).toBe('basic');
   });
 
   it('maps billing issue to basic tier', async () => {
@@ -250,7 +254,7 @@ describe('RevenueCatWebhookService', () => {
       body,
     );
 
-    expect(result!.tier).toBe('basic');
+    expect((result as { tier: string }).tier).toBe('basic');
   });
 
   it('maps renewal to premium tier', async () => {
@@ -276,7 +280,7 @@ describe('RevenueCatWebhookService', () => {
       body,
     );
 
-    expect(result!.tier).toBe('premium');
+    expect((result as { tier: string }).tier).toBe('premium');
   });
 
   it('maps renewal with featured entitlement to featured tier', async () => {
@@ -303,7 +307,7 @@ describe('RevenueCatWebhookService', () => {
 
     const result = await service.processWebhook(payload, signature, body);
 
-    expect(result!.tier).toBe('featured');
+    expect((result as { tier: string }).tier).toBe('featured');
   });
 
   it('maps uncancelation to premium tier', async () => {
@@ -330,7 +334,7 @@ describe('RevenueCatWebhookService', () => {
 
     const result = await service.processWebhook(payload, signature, body);
 
-    expect(result!.tier).toBe('premium');
+    expect((result as { tier: string }).tier).toBe('premium');
   });
 
   it('maps product change to new tier', async () => {
@@ -357,7 +361,7 @@ describe('RevenueCatWebhookService', () => {
 
     const result = await service.processWebhook(payload, signature, body);
 
-    expect(result!.tier).toBe('featured');
+    expect((result as { tier: string }).tier).toBe('featured');
   });
 
   it('returns null for unsupported event type', async () => {
@@ -507,7 +511,7 @@ describe('RevenueCatWebhookService', () => {
 
     const result = await service.processWebhook(payload, signature, body);
 
-    expect(result!.tier).toBe('basic');
+    expect((result as { tier: string }).tier).toBe('basic');
   });
 
   it('falls back to product_id when entitlement_ids unmapped', async () => {
@@ -533,7 +537,7 @@ describe('RevenueCatWebhookService', () => {
 
     const result = await service.processWebhook(payload, signature, body);
 
-    expect(result!.tier).toBe('premium');
+    expect((result as { tier: string }).tier).toBe('premium');
   });
 
   it('race-safe idempotency - claim prevents duplicate processing', async () => {
@@ -552,7 +556,7 @@ describe('RevenueCatWebhookService', () => {
     mockRedis.set.mockResolvedValueOnce('OK').mockResolvedValueOnce(null);
 
     const result1 = await service.processWebhook(validPayload, signature, body);
-    expect(result1!.tier).toBe('premium');
+    expect((result1 as { tier: string }).tier).toBe('premium');
 
     mockRedis.get.mockResolvedValueOnce(
       JSON.stringify({
@@ -563,7 +567,7 @@ describe('RevenueCatWebhookService', () => {
     );
 
     const result2 = await service.processWebhook(validPayload, signature, body);
-    expect(result2!.tier).toBe('premium');
+    expect((result2 as { tier: string }).tier).toBe('premium');
     expect(prisma.agency.update).toHaveBeenCalledTimes(1);
   });
 
@@ -689,4 +693,3 @@ describe('RevenueCatWebhookService', () => {
     );
   });
 });
-

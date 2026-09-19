@@ -12,44 +12,44 @@ export class AdminUserProfileDto {
   badge?: string;
 
   @ApiProperty()
-  walletConnected: boolean;
+  walletConnected?: boolean;
 }
 
 export class AdminUserStatsDto {
   @ApiProperty()
-  campaignsCreated: number;
+  campaignsCreated!: number;
 
   @ApiProperty()
-  campaignsFunded: number;
+  campaignsFunded!: number;
 
   @ApiProperty()
-  donationsMade: number;
+  donationsMade!: number;
 }
 
 export class AdminUserDto {
   @ApiProperty()
-  id: string;
+  id!: string;
 
   @ApiProperty()
-  email: string;
+  email!: string;
 
   @ApiProperty()
-  displayName: string;
+  displayName!: string;
 
   @ApiProperty({ enum: UserRole })
-  role: UserRole | 'super_admin';
+  role!: UserRole | 'super_admin';
 
   @ApiProperty({ enum: PlatformRole })
-  platformRole: PlatformRole;
+  platformRole!: PlatformRole;
 
   @ApiProperty()
-  isActive: boolean;
+  isActive!: boolean;
 
   @ApiPropertyOptional()
   deactivatedAt?: Date;
 
   @ApiProperty()
-  createdAt: Date;
+  createdAt?: Date;
 
   @ApiPropertyOptional()
   lastLoginAt?: Date;

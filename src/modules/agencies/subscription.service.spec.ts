@@ -11,7 +11,9 @@ jest.mock('stripe', () => {
   const mockSubscriptions = {
     create: jest.fn().mockResolvedValue({
       id: 'sub_123',
-      latest_invoice: { payment_intent: { client_secret: 'pi_123_secret' } },
+      latest_invoice: {
+        confirmation_secret: { client_secret: 'pi_123_secret' },
+      },
     }),
     list: jest.fn().mockResolvedValue({ data: [] }),
     cancel: jest.fn().mockResolvedValue({ id: 'sub_123', status: 'canceled' }),
@@ -98,4 +100,3 @@ describe('AgencySubscriptionService', () => {
     ).rejects.toThrow('Agency not found');
   });
 });
-

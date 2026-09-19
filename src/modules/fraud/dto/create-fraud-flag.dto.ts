@@ -12,7 +12,7 @@ import { FraudFlagSeverity, FraudFlagType } from '@prisma/client';
 export class CreateFraudFlagDto {
   @ApiProperty({ enum: FraudFlagType })
   @IsEnum(FraudFlagType)
-  type: FraudFlagType;
+  type!: FraudFlagType;
 
   @ApiProperty({ enum: FraudFlagSeverity, required: false })
   @IsEnum(FraudFlagSeverity)
@@ -22,7 +22,7 @@ export class CreateFraudFlagDto {
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  description: string;
+  description!: string;
 
   @ApiProperty({ required: false })
   @IsOptional()

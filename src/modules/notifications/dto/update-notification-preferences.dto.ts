@@ -5,7 +5,7 @@ import { NotificationType } from '@prisma/client';
 export class UpdateNotificationPreferenceDto {
   @ApiProperty({ enum: NotificationType })
   @IsEnum(NotificationType)
-  type: NotificationType;
+  type!: NotificationType;
 
   @ApiProperty({ required: false, default: true })
   @IsOptional()

@@ -46,4 +46,3 @@ export class AdminInvitesController {
     return this.adminInvitesService.accept(userId, dto);
   }
 }
-

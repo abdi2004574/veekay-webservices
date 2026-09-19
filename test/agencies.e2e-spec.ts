@@ -82,7 +82,8 @@ describe('Admin Agencies (e2e)', () => {
   });
 
   it('approves a pending agency and sends confirmation email', async () => {
-    const { adminAccessToken } = await registerAndLoginAdmin(server);
+    const { adminAccessToken, userId: adminUserId } =
+      await registerAndLoginAdmin(server);
     const { agencyId } = await registerAndVerifyAgency(
       server,
       'approve1@e2e.test',
@@ -96,6 +97,21 @@ describe('Admin Agencies (e2e)', () => {
 
     expect(res.body.data.status).toEqual('approved');
     expect(res.body.data.agencyName).toEqual('Approve Agency');
+    const badgesRes = await request(server())
+      .get('/api/v1/admin/badges/')
+      .set('Authorization', `Bearer ${adminAccessToken}`)
+      .expect(200);
+
+    expect(badgesRes.body.data).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          subjectType: 'agency',
+          subjectId: agencyId,
+          revokedAt: null,
+          assignedById: adminUserId,
+        }),
+      ]),
+    );
   });
 
   it('rejects a pending agency with a reason and sends rejection email', async () => {

@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+﻿import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsNotEmpty,
@@ -47,23 +47,23 @@ export enum RevenueCatEntitlement {
 export class RevenueCatAlias {
   @ApiProperty({ description: 'Alias user ID' })
   @IsString()
-  id: string;
+  id!: string;
 }
 
 export class RevenueCatWebhookEvent {
   @ApiProperty({ description: 'Event type' })
   @IsNotEmpty()
   @IsString()
-  type: string;
+  type!: string;
 
   @ApiProperty({ description: 'Unique event id for idempotency' })
   @IsNotEmpty()
   @IsString()
-  id: string;
+  id!: string;
 
   @ApiProperty({ description: 'Event timestamp (Unix epoch milliseconds)' })
   @IsNumber()
-  event_timestamp_ms: number;
+  event_timestamp_ms!: number;
 
   @ApiProperty({ description: 'App user id set by mobile to backend user ID' })
   @IsOptional()
@@ -95,22 +95,42 @@ export class RevenueCatWebhookEvent {
   @IsOptional()
   @IsString()
   environment?: string;
+
+  @ApiProperty({ description: 'Donation price amount' })
+  @IsOptional()
+  @IsNumber()
+  price?: number;
+
+  @ApiProperty({ description: 'Donation price as string' })
+  @IsOptional()
+  @IsString()
+  price_string?: string;
+
+  @ApiProperty({ description: 'Currency code (e.g. USD)' })
+  @IsOptional()
+  @IsString()
+  currency?: string;
+
+  @ApiProperty({ description: 'Transaction ID' })
+  @IsOptional()
+  @IsString()
+  transaction_id?: string;
 }
 
 export class RevenueCatWebhookEnvelope {
   @ApiProperty({ description: 'RevenueCat API version' })
   @IsString()
-  api_version: string;
+  api_version?: string;
 
   @ApiProperty({ description: 'The event object' })
   @ValidateNested()
   @Type(() => RevenueCatWebhookEvent)
-  event: RevenueCatWebhookEvent;
+  event!: RevenueCatWebhookEvent;
 }
 
 export class RevenueCatWebhookResponse {
   @ApiProperty({ description: 'Whether the webhook was received' })
-  received: boolean;
+  received!: boolean;
 
   @ApiProperty({ description: 'Event id that was processed', required: false })
   @IsOptional()
@@ -191,4 +211,19 @@ export function determineTierFromEvent(
 
   return 'basic';
 }
+
+
+export function isDonationEvent(type: string): boolean {
+  return type === RevenueCatEventType.NON_SUBSCRIPTION_PURCHASE;
+}
+
+export function getDonationAmountFromProductId(productId: string | undefined): number {
+  const match = productId?.match(/^donation_(\d+)$/);
+  return match ? parseInt(match[1], 10) : 0;
+}
+
+export function isDonationProduct(productId?: string): boolean {
+  return productId ? /^donation_\d+$/.test(productId) : false;
+}
+
 

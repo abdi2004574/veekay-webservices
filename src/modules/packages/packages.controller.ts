@@ -13,6 +13,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 import { RequireRole } from '../../common/decorators/require-role.decorator';
 import { PackagesService } from './packages.service';
 import { CreatePackageDto } from './dto/create-package.dto';
@@ -71,6 +72,7 @@ export class PackagesController {
   }
 
   @Get()
+  @Public()
   @ApiOperation({
     summary: 'Browse active packages, filter by destination/season/theme.',
   })

@@ -15,13 +15,13 @@ export class ManualDonateDto {
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0.01)
   @Max(100000)
-  amount: number;
+  amount!: number;
 
   @ApiProperty({ default: 'USD', pattern: '^[A-Z]{3}$' })
   @IsOptional()
   @IsString()
   @Matches(/^[A-Z]{3}$/)
-  currency: string = 'USD';
+  currency?: string;
 
   @ApiProperty({ required: false, maxLength: 100 })
   @IsOptional()

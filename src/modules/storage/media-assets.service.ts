@@ -27,7 +27,10 @@ export class MediaAssetsService {
     private readonly friendsService: FriendsService,
   ) {}
 
-  async createUploadUrl(ownerId: string, dto: CreateUploadUrlDto): Promise<{ uploadUrl: string; mediaId: string; key: string }> {
+  async createUploadUrl(
+    ownerId: string,
+    dto: CreateUploadUrlDto,
+  ): Promise<{ uploadUrl: string; mediaId: string; key: string }> {
     const rule = MEDIA_PURPOSE_RULES[dto.purpose];
     if (!rule.contentTypes.includes(dto.contentType)) {
       throw AppException.badRequest(

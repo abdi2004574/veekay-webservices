@@ -16,7 +16,20 @@ export class DashboardQueryDto {
   })
   @IsOptional()
   @IsEnum(FundingTrendRange)
-  range?: FundingTrendRange = FundingTrendRange.THIRTY_DAYS;
+  range?: FundingTrendRange;
+
+  @ApiPropertyOptional({ default: 20, minimum: 1, maximum: 100 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit?: number;
+
+  @ApiPropertyOptional({ description: 'Cursor for pagination' })
+  @IsOptional()
+  @IsString()
+  cursor?: string;
 }
 
 export class RevenueLedgerQueryDto {
@@ -26,7 +39,7 @@ export class RevenueLedgerQueryDto {
   @IsInt()
   @Min(1)
   @Max(100)
-  limit?: number = 20;
+  limit?: number;
 
   @ApiPropertyOptional({ description: 'Cursor for pagination' })
   @IsOptional()

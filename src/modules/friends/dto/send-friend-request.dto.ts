@@ -6,5 +6,5 @@ export class SendFriendRequestDto {
     description: 'User id of the traveler to send a friend request to.',
   })
   @IsUUID()
-  addresseeId: string;
+  addresseeId!: string;
 }

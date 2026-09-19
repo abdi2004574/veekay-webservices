@@ -5,11 +5,11 @@ import { SocialProvider } from '@prisma/client';
 export class SocialLoginDto {
   @ApiProperty({ enum: SocialProvider, example: SocialProvider.google })
   @IsEnum(SocialProvider)
-  provider: SocialProvider;
+  provider!: SocialProvider;
 
   @ApiProperty({ description: 'Provider ID token, verified server-side.' })
   @IsString()
-  idToken: string;
+  idToken!: string;
 
   @ApiProperty({ example: 'device-uuid-1234', required: false })
   @IsOptional()

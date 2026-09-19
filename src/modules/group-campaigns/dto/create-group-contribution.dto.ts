@@ -11,7 +11,7 @@ export class CreateGroupContributionDto {
   @ApiProperty({ example: 250 })
   @IsNumber()
   @IsPositive()
-  amount: number;
+  amount!: number;
 
   @ApiProperty({ required: false, example: 'Flight deposit' })
   @IsOptional()

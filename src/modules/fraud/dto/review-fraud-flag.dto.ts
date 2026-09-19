@@ -5,7 +5,7 @@ import { FraudFlagStatus } from '@prisma/client';
 export class ReviewFraudFlagDto {
   @ApiProperty({ enum: FraudFlagStatus })
   @IsEnum(FraudFlagStatus)
-  status: FraudFlagStatus;
+  status!: FraudFlagStatus;
 
   @ApiProperty({ required: false })
   @IsOptional()

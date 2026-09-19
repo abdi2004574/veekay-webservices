@@ -1,4 +1,4 @@
-﻿import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 import { DestinationType } from '@prisma/client';
 import { IsEnum, IsOptional, IsString } from 'class-validator';
 

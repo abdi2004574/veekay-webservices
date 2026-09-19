@@ -3,17 +3,24 @@ import {
   AgencyStaffPermission,
   AgencyStatus,
   UserRole,
+  VerifiedBadgeSubjectType,
 } from '@prisma/client';
 import { AgenciesService } from './agencies.service';
 
 describe('AgenciesService', () => {
   let prisma: any;
   let service: AgenciesService;
+  let mockVerifiedBadgesService: any;
 
   beforeEach(() => {
     prisma = {
       user: { findUnique: jest.fn() },
-      agency: { findUnique: jest.fn(), findMany: jest.fn(), create: jest.fn() },
+      agency: {
+        findUnique: jest.fn(),
+        findMany: jest.fn(),
+        create: jest.fn(),
+        update: jest.fn(),
+      },
     };
     const mockMailService = {
       send: jest.fn().mockResolvedValue(undefined),
@@ -28,10 +35,14 @@ describe('AgenciesService', () => {
       markAllRead: jest.fn(),
       delete: jest.fn(),
     };
+    mockVerifiedBadgesService = {
+      assign: jest.fn().mockResolvedValue({ id: 'badge-1' }),
+    };
     service = new AgenciesService(
       prisma,
       mockMailService as any,
       mockNotificationsService as any,
+      mockVerifiedBadgesService,
     );
   });
 
@@ -198,6 +209,31 @@ describe('AgenciesService', () => {
         description: 'We plan dream trips.',
         reputationScore: null,
         reviewCount: 0,
+      });
+    });
+  });
+  describe('approve', () => {
+    it('assigns an agency verified badge after approval', async () => {
+      const agency = {
+        id: 'agency-1',
+        agencyName: 'Approved Agency',
+        status: AgencyStatus.pending_verification,
+        userId: 'owner-1',
+        user: { email: 'owner@e2e.test' },
+      };
+      prisma.agency.findUnique.mockResolvedValue(agency);
+      prisma.agency.update.mockResolvedValue(agency);
+
+      await service.approve('agency-1', 'admin-1');
+
+      expect(prisma.agency.update).toHaveBeenCalledWith({
+        where: { id: 'agency-1' },
+        data: { status: AgencyStatus.approved },
+        include: { user: true },
+      });
+      expect(mockVerifiedBadgesService.assign).toHaveBeenCalledWith('admin-1', {
+        subjectType: VerifiedBadgeSubjectType.agency,
+        subjectId: 'agency-1',
       });
     });
   });

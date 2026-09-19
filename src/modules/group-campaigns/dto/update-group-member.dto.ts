@@ -7,5 +7,5 @@ export class UpdateGroupMemberDto {
     example: true,
   })
   @IsBoolean()
-  canWithdraw: boolean;
+  canWithdraw!: boolean;
 }

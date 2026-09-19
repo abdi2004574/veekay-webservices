@@ -1,13 +1,14 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+﻿import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AgenciesService } from './agencies.service';
+import { Public } from '../../common/decorators/public.decorator';
 
 @ApiTags('agencies')
-@ApiBearerAuth()
 @Controller('agencies')
 export class AgencyDirectoryController {
   constructor(private readonly agenciesService: AgenciesService) {}
 
+  @Public()
   @Get()
   @ApiOperation({ summary: 'Browse approved agencies, most reputable first.' })
   async list(
@@ -22,6 +23,7 @@ export class AgencyDirectoryController {
     );
   }
 
+  @Public()
   @Get(':id')
   @ApiOperation({ summary: 'Public agency profile.' })
   async getById(@Param('id') id: string) {

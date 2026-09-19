@@ -7,6 +7,7 @@ import {
   UserRole,
   VerificationStatus,
   TravelerProfile,
+  User,
 } from '@prisma/client';
 import { TripRequestStatus } from '@prisma/client';
 import { Prisma } from '@prisma/client';
@@ -32,7 +33,7 @@ import {
   toCursorPage,
 } from '../../common/utils/cursor-pagination.util';
 
-interface TravelerProfileView {
+export interface TravelerProfileView {
   id: string;
   email: string;
   username: string;
@@ -54,7 +55,7 @@ interface TravelerProfileView {
   campaignsCount: number;
 }
 
-interface PublicProfileView {
+export interface PublicProfileView {
   id: string;
   username: string;
   displayName: string | null;
@@ -72,7 +73,7 @@ interface PublicProfileView {
   requestSent: boolean;
   requestReceived: boolean;
 }
-interface AdminUserSummary {
+export interface AdminUserSummary {
   id: string;
   email: string;
   displayName: string;
@@ -89,6 +90,27 @@ interface AdminUserSummary {
     walletConnected: boolean;
   };
 }
+
+type AdminUserSummaryInput = Pick<
+  User,
+  | 'id'
+  | 'email'
+  | 'displayName'
+  | 'username'
+  | 'role'
+  | 'platformRole'
+  | 'isActive'
+  | 'deactivatedAt'
+  | 'createdAt'
+  | 'lastLoginAt'
+> & {
+  travelerProfile?: {
+    bio: string | null;
+    location: string | null;
+    badge: import('@prisma/client').TravelerBadge;
+    walletConnected: boolean;
+  } | null;
+};
 
 @Injectable()
 export class UsersService {
@@ -151,7 +173,10 @@ export class UsersService {
     };
   }
 
-  async getPublicProfile(viewerId: string, targetUserId: string): Promise<PublicProfileView> {
+  async getPublicProfile(
+    viewerId: string,
+    targetUserId: string,
+  ): Promise<PublicProfileView> {
     const user = await this.prisma.user.findUnique({
       where: { id: targetUserId },
       include: { travelerProfile: true },
@@ -223,7 +248,20 @@ export class UsersService {
     };
   }
 
-  async searchTravelers(viewerId: string, query: string): Promise<Array<{ id: string; username: string; displayName: string | null; photoMediaId: string | null; isFriend: boolean; requestSent: boolean; requestReceived: boolean }>> {
+  async searchTravelers(
+    viewerId: string,
+    query: string,
+  ): Promise<
+    Array<{
+      id: string;
+      username: string;
+      displayName: string | null;
+      photoMediaId: string | null;
+      isFriend: boolean;
+      requestSent: boolean;
+      requestReceived: boolean;
+    }>
+  > {
     const trimmed = query.trim();
     if (!trimmed) {
       return [];
@@ -259,7 +297,10 @@ export class UsersService {
     );
   }
 
-  async setupProfile(userId: string, dto: ProfileSetupDto): Promise<TravelerProfile> {
+  async setupProfile(
+    userId: string,
+    dto: ProfileSetupDto,
+  ): Promise<TravelerProfile> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user || user.role !== UserRole.traveler) {
       throw AppException.forbidden(
@@ -339,7 +380,10 @@ export class UsersService {
     return profile;
   }
 
-  async updateProfile(userId: string, dto: UpdateProfileDto): Promise<TravelerProfileView> {
+  async updateProfile(
+    userId: string,
+    dto: UpdateProfileDto,
+  ): Promise<TravelerProfileView> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
       throw AppException.notFound('User not found.');
@@ -432,7 +476,14 @@ export class UsersService {
     return this.getMe(userId);
   }
 
-  async getNotificationPreferences(userId: string): Promise<Array<{ type: NotificationType; inAppEnabled: boolean; pushEnabled: boolean; emailEnabled: boolean }>> {
+  async getNotificationPreferences(userId: string): Promise<
+    Array<{
+      type: NotificationType;
+      inAppEnabled: boolean;
+      pushEnabled: boolean;
+      emailEnabled: boolean;
+    }>
+  > {
     const prefs = await this.prisma.notificationPreference.findMany({
       where: { userId },
     });
@@ -455,7 +506,12 @@ export class UsersService {
   async updateNotificationPreferences(
     userId: string,
     dto: UpdateNotificationPreferencesDto,
-  ): Promise<{ type: NotificationType; inAppEnabled: boolean; pushEnabled: boolean; emailEnabled: boolean }> {
+  ): Promise<{
+    type: NotificationType;
+    inAppEnabled: boolean;
+    pushEnabled: boolean;
+    emailEnabled: boolean;
+  }> {
     const type = dto.type ?? NotificationType.donation;
 
     const updateData: Record<string, boolean> = {};
@@ -484,7 +540,11 @@ export class UsersService {
     };
   }
 
-  async getPrivacySettings(userId: string): Promise<{ profileVisibility: ProfileVisibility; activityStatusVisible: boolean; readReceiptsEnabled: boolean }> {
+  async getPrivacySettings(userId: string): Promise<{
+    profileVisibility: ProfileVisibility;
+    activityStatusVisible: boolean;
+    readReceiptsEnabled: boolean;
+  }> {
     const settings = await this.prisma.privacySetting.findUnique({
       where: { userId },
     });
@@ -496,7 +556,14 @@ export class UsersService {
     };
   }
 
-  async updatePrivacySettings(userId: string, dto: UpdatePrivacySettingsDto): Promise<{ profileVisibility: ProfileVisibility; activityStatusVisible: boolean; readReceiptsEnabled: boolean }> {
+  async updatePrivacySettings(
+    userId: string,
+    dto: UpdatePrivacySettingsDto,
+  ): Promise<{
+    profileVisibility: ProfileVisibility;
+    activityStatusVisible: boolean;
+    readReceiptsEnabled: boolean;
+  }> {
     const settings = await this.prisma.privacySetting.upsert({
       where: { userId },
       create: {
@@ -632,7 +699,15 @@ export class UsersService {
     return updated;
   }
 
-  async getTopPerformingTravelers(limit = 10): Promise<Array<{ id: string; username: string; displayName: string | null; photoMediaId: string | null; completedTripCount: number }>> {
+  async getTopPerformingTravelers(limit = 10): Promise<
+    Array<{
+      id: string;
+      username: string;
+      displayName: string | null;
+      photoMediaId: string | null;
+      completedTripCount: number;
+    }>
+  > {
     const travelers = await this.prisma.user.findMany({
       where: { role: UserRole.traveler },
       select: {
@@ -668,7 +743,7 @@ export class UsersService {
       .sort((a, b) => b.completedTripCount - a.completedTripCount)
       .slice(0, limit);
   }
-  private toAdminUserSummary(user: Prisma.User): AdminUserSummary {
+  private toAdminUserSummary(user: AdminUserSummaryInput): AdminUserSummary {
     return {
       id: user.id,
       email: user.email,
@@ -696,7 +771,10 @@ export class UsersService {
     filter: AdminUserFilterDto,
     cursor?: string,
     limit = 20,
-  ): Promise<{ data: AdminUserSummary[]; meta: { cursor: string | null; hasMore: boolean } }> {
+  ): Promise<{
+    data: AdminUserSummary[];
+    meta: { cursor: string | null; hasMore: boolean };
+  }> {
     const position = decodeCursor(cursor);
     const search = filter.search?.trim();
     const where: Prisma.UserWhereInput = {
@@ -755,7 +833,15 @@ export class UsersService {
     };
   }
 
-  async getAdminUserDetail(userId: string): Promise<AdminUserSummary & { stats: { campaignsCreated: number; campaignsFunded: number; donationsMade: number } }> {
+  async getAdminUserDetail(userId: string): Promise<
+    AdminUserSummary & {
+      stats: {
+        campaignsCreated: number;
+        campaignsFunded: number;
+        donationsMade: number;
+      };
+    }
+  > {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: { travelerProfile: true },

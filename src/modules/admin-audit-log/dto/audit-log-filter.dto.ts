@@ -36,4 +36,3 @@ export class AuditLogFilterDto {
   @IsString()
   actorId?: string;
 }
-

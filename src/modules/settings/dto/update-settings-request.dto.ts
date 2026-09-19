@@ -5,5 +5,5 @@ import { IsObject } from 'class-validator';
 export class UpdateSettingsRequest {
   @ApiProperty({ type: Object })
   @IsObject()
-  settings: Record<string, Prisma.InputJsonValue>;
+  settings!: Record<string, Prisma.InputJsonValue>;
 }

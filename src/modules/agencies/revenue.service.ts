@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import type { Prisma } from '@prisma/client';
-import { TripBookingStatus, AgencySubscriptionTier } from '@prisma/client';
+import { TripBookingStatus } from '@prisma/client';
 import { AppException } from '../../common/errors/app.exception';
 import {
   encodeCursor,
@@ -15,24 +15,13 @@ export class AgencyRevenueService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  private getCommissionRate(tier: AgencySubscriptionTier): number {
-    switch (tier) {
-      case AgencySubscriptionTier.basic:
-        return 0.15;
-      case AgencySubscriptionTier.premium:
-        return 0.1;
-      case AgencySubscriptionTier.featured:
-        return 0.08;
-      default:
-        return 0.15;
-    }
+  private getCommissionRate(): number {
+    const value = parseFloat(process.env.WALLET_DONATION_FEE_PERCENTAGE ?? '');
+    return Number.isFinite(value) ? value : 0;
   }
 
-  private calculateCommission(
-    amount: number,
-    tier: AgencySubscriptionTier,
-  ): number {
-    const rate = this.getCommissionRate(tier);
+  private calculateCommission(amount: number): number {
+    const rate = this.getCommissionRate();
     return Math.round(amount * rate * 100) / 100;
   }
 
@@ -82,10 +71,7 @@ export class AgencyRevenueService {
 
     const items = page.items.map((booking) => {
       const amount = Number(booking.amount || 0);
-      const commission = this.calculateCommission(
-        amount,
-        agency.subscriptionTier,
-      );
+      const commission = this.calculateCommission(amount);
       return {
         bookingId: booking.id,
         packageId: booking.packageId,
@@ -145,10 +131,7 @@ export class AgencyRevenueService {
 
     const rows = bookings.map((booking) => {
       const amount = Number(booking.amount || 0);
-      const commission = this.calculateCommission(
-        amount,
-        agency.subscriptionTier,
-      );
+      const commission = this.calculateCommission(amount);
       return [
         booking.id,
         booking.packageId || '',
@@ -166,7 +149,7 @@ export class AgencyRevenueService {
 
     const csvContent = [
       headers.join(','),
-      ...rows.map((row) => row.map(() => '').join(',')),
+      ...rows.map((row) => row.join(',')),
     ].join('\n');
 
     return csvContent;

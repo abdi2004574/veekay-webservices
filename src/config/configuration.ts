@@ -1,4 +1,4 @@
-export interface AppConfig {
+﻿export interface AppConfig {
   nodeEnv: string;
   port: number;
   appUrl: string;
@@ -46,6 +46,7 @@ export interface AppConfig {
     lockoutMinutes: number;
   };
   swaggerEnabled: boolean;
+  agencyReputationScoreFormula: string;
   throttle: {
     ttlMs: number;
     limit: number;
@@ -60,6 +61,7 @@ export interface AppConfig {
   };
   revenuecat: {
     webhookSecret: string;
+    apiKey: string;
     timestampToleranceSeconds: number;
     tierMapping: Record<string, string>;
   };
@@ -134,6 +136,7 @@ export default (): AppConfig => ({
     lockoutMinutes: parseInt(process.env.LOGIN_LOCKOUT_MINUTES ?? '15', 10),
   },
   swaggerEnabled: process.env.SWAGGER_ENABLED !== 'false',
+  agencyReputationScoreFormula: process.env.AGENCY_REPUTATION_SCORE_FORMULA ?? '',
   throttle: {
     ttlMs: parseInt(process.env.THROTTLE_TTL_MS ?? '60000', 10),
     limit: parseInt(process.env.THROTTLE_LIMIT ?? '100', 10),
@@ -143,9 +146,8 @@ export default (): AppConfig => ({
       process.env.WALLET_HIGH_VALUE_THRESHOLD ?? '1000',
       10,
     ),
-    donationFeePercentage: parseInt(
+    donationFeePercentage: parseFloat(
       process.env.WALLET_DONATION_FEE_PERCENTAGE ?? '0',
-      10,
     ),
   },
   fraud: {
@@ -160,6 +162,7 @@ export default (): AppConfig => ({
   },
   revenuecat: {
     webhookSecret: process.env.REVENUECAT_WEBHOOK_SECRET ?? '',
+    apiKey: process.env.REVENUECAT_API_KEY ?? '',
     timestampToleranceSeconds: parseInt(
       process.env.REVENUECAT_TIMESTAMP_TOLERANCE_SECONDS ?? '300',
       10,
@@ -198,3 +201,5 @@ export default (): AppConfig => ({
     },
   },
 });
+
+

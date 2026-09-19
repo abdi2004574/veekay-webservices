@@ -3,7 +3,7 @@ import { VerificationStatus } from '@prisma/client';
 
 export class VerifyKycDto {
   @IsEnum(VerificationStatus)
-  status: VerificationStatus;
+  status!: VerificationStatus;
 
   @IsOptional()
   @IsString()

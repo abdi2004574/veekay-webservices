@@ -15,7 +15,7 @@ const CONVERSATION_TYPES = ['direct', 'group', 'agency'];
 export class CreateConversationDto {
   @ApiProperty({ enum: CONVERSATION_TYPES })
   @IsIn(CONVERSATION_TYPES)
-  type: 'direct' | 'group' | 'agency';
+  type!: 'direct' | 'group' | 'agency';
 
   @ApiProperty({ required: false, description: 'Required for type=direct.' })
   @IsOptional()
@@ -38,7 +38,7 @@ export class CreateConversationDto {
     required: false,
     type: [String],
     description:
-      'Required for type=group — friend user ids to add besides yourself.',
+      'Required for type=group � friend user ids to add besides yourself.',
   })
   @IsOptional()
   @IsArray()

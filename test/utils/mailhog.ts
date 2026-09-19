@@ -1,4 +1,4 @@
-const MAILHOG_API = 'http://localhost:58025/api/v2';
+const MAILHOG_API = process.env.MAILHOG_API || 'http://localhost:58025/api/v2';
 
 interface MailhogMessage {
   Content: { Body: string; Headers: { Subject: string[] } };
@@ -24,7 +24,7 @@ export async function fetchLatestOtp(email: string): Promise<string> {
 }
 
 export async function clearMailhog(): Promise<void> {
-  await fetch('http://localhost:58025/api/v1/messages', {
+  await fetch(MAILHOG_API.replace('/api/v2', '/api/v1') + '/messages', {
     method: 'DELETE',
   }).catch(() => {});
 }

@@ -1,4 +1,4 @@
-﻿import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 import { DestinationType, PackageStatus } from '@prisma/client';
 import {
   ArrayMaxSize,

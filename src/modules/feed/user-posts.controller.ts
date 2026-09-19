@@ -1,17 +1,16 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { UserRole } from '@prisma/client';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { RequireRole } from '../../common/decorators/require-role.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 import { PostsService } from './posts.service';
 
 @ApiTags('feed')
 @ApiBearerAuth()
-@RequireRole(UserRole.traveler)
 @Controller('users')
 export class UserPostsController {
   constructor(private readonly postsService: PostsService) {}
 
+  @Public()
   @Get(':id/posts')
   @ApiOperation({
     summary: "List a traveler's posts (shown on their profile).",

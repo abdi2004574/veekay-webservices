@@ -8,9 +8,9 @@ export class AgencyDocumentDto {
     example: AgencyDocumentType.business_license,
   })
   @IsEnum(AgencyDocumentType)
-  type: AgencyDocumentType;
+  type!: AgencyDocumentType;
 
   @ApiProperty({ description: 'Media asset id from a prior presigned upload.' })
   @IsString()
-  mediaId: string;
+  mediaId!: string;
 }

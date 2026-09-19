@@ -1,4 +1,4 @@
-import {
+﻿import {
   Body,
   Controller,
   Delete,
@@ -11,19 +11,20 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 import { RequireRole } from '../../common/decorators/require-role.decorator';
 import { ReviewsService } from './reviews.service';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { UpdateReviewDto } from './dto/update-review.dto';
 
 @ApiTags('reviews')
-@ApiBearerAuth()
 @Controller()
 export class ReviewsController {
   constructor(private readonly reviewsService: ReviewsService) {}
 
   @Post('agencies/:agencyId/reviews')
   @RequireRole(UserRole.traveler)
+  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Review an agency (one review per traveler per agency).',
   })
@@ -35,6 +36,7 @@ export class ReviewsController {
     return this.reviewsService.create(agencyId, reviewerId, dto);
   }
 
+  @Public()
   @Get('agencies/:agencyId/reviews')
   @ApiOperation({ summary: "List an agency's reviews, newest first." })
   async listForAgency(
@@ -51,6 +53,7 @@ export class ReviewsController {
 
   @Get('reviews/mine')
   @RequireRole(UserRole.traveler)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'List your own reviews across all agencies.' })
   async listMine(@CurrentUser('userId') reviewerId: string) {
     return this.reviewsService.listMine(reviewerId);
@@ -58,6 +61,7 @@ export class ReviewsController {
 
   @Patch('reviews/:id')
   @RequireRole(UserRole.traveler)
+  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Edit your own review (within 7 days of submission).',
   })
@@ -71,6 +75,7 @@ export class ReviewsController {
 
   @Delete('reviews/:id')
   @RequireRole(UserRole.traveler)
+  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Delete your own review (within 7 days of submission).',
   })

@@ -2,112 +2,111 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class KpiResponseDto {
   @ApiProperty({ example: 42 })
-  totalRequests: number;
+  totalRequests!: number;
 
   @ApiProperty({ example: 12 })
-  pendingRequests: number;
+  pendingRequests!: number;
 
   @ApiProperty({ example: 8 })
-  inDiscussionRequests: number;
+  inDiscussionRequests!: number;
 
   @ApiProperty({ example: 22 })
-  confirmedRequests: number;
+  confirmedRequests!: number;
 
   @ApiProperty({ example: 15 })
-  totalPackages: number;
+  totalPackages!: number;
 
   @ApiProperty({ example: 125000.5 })
-  totalRevenue: number;
+  totalRevenue!: number;
 
   @ApiProperty({ example: 2.5 })
-  avgResponseTimeHours: number;
+  avgResponseTimeHours!: number;
 }
 
 export class FundingTrendPointDto {
   @ApiProperty({ example: '2024-01-15' })
-  date: string;
+  date!: string;
 
   @ApiProperty({ example: 5000.0 })
-  amount: number;
+  amount!: number;
 }
 
 export class FundingTrendsResponseDto {
   @ApiProperty({ type: [FundingTrendPointDto] })
-  trends: FundingTrendPointDto[];
+  trends!: FundingTrendPointDto[];
 }
 
 export class TopDestinationDto {
   @ApiProperty({ example: 'Bali, Indonesia' })
-  destination: string;
+  destination!: string;
 
   @ApiProperty({ example: 8 })
-  bookingCount: number;
+  bookingCount!: number;
 
   @ApiProperty({ example: 45000.0 })
-  totalRevenue: number;
+  totalRevenue!: number;
 }
 
 export class TopDestinationsResponseDto {
   @ApiProperty({ type: [TopDestinationDto] })
-  destinations: TopDestinationDto[];
+  destinations!: TopDestinationDto[];
 }
 
 export class TravelerPreferenceDto {
   @ApiProperty({ example: 'beach' })
-  destinationType: string;
+  destinationType!: string;
 
   @ApiProperty({ example: 45 })
-  travelerCount: number;
+  travelerCount!: number;
 
   @ApiProperty({ example: 35.5 })
-  percentage: number;
+  percentage!: number;
 }
 
 export class TravelerPreferencesResponseDto {
   @ApiProperty({ type: [TravelerPreferenceDto] })
-  preferences: TravelerPreferenceDto[];
+  preferences!: TravelerPreferenceDto[];
 }
 
 export class RevenueLedgerItemDto {
   @ApiProperty({ example: 'tbk_abc123' })
-  bookingId: string;
+  bookingId!: string;
 
   @ApiProperty({ example: 'pkg_xyz789' })
-  packageId: string;
+  packageId!: string;
 
   @ApiProperty({ example: 'Bali Adventure Package' })
-  packageTitle: string;
+  packageTitle!: string;
 
   @ApiProperty({ example: 'traveler_123' })
-  travelerId: string;
+  travelerId!: string;
 
   @ApiProperty({ example: 'john.doe@example.com' })
-  travelerEmail: string;
+  travelerEmail!: string;
 
   @ApiProperty({ example: 5000.0 })
-  amount: number;
+  amount!: number;
 
   @ApiProperty({ example: 750.0 })
-  commission: number;
+  commission!: number;
 
   @ApiProperty({ example: 4250.0 })
-  netPayout: number;
+  netPayout!: number;
 
   @ApiProperty({ example: 'completed' })
-  status: string;
+  status!: string;
 
   @ApiProperty({ example: '2024-01-15T10:30:00Z' })
-  completedAt: string;
+  completedAt!: string;
 }
 
 export class RevenueLedgerResponseDto {
   @ApiProperty({ type: [RevenueLedgerItemDto] })
-  items: RevenueLedgerItemDto[];
+  items!: RevenueLedgerItemDto[];
 
   @ApiProperty({ example: 'cursor_xyz' })
-  nextCursor: string | null;
+  nextCursor!: string | null;
 
   @ApiProperty({ example: true })
-  hasMore: boolean;
+  hasMore!: boolean;
 }
-

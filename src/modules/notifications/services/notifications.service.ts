@@ -3,7 +3,10 @@ import { NotificationChannel, NotificationType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationPreferenceService } from './notification-preference.service';
 import { PushDeviceService } from './push-device.service';
-import { FirebasePushProvider, SendTokensResult } from '../providers/firebase-push.provider';
+import {
+  FirebasePushProvider,
+  SendTokensResult,
+} from '../providers/firebase-push.provider';
 import { MailService } from '../../mail/mail.service';
 import { AppException } from '../../../common/errors/app.exception';
 import { CreateNotificationDto } from '../dto/create-notification.dto';

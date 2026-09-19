@@ -49,7 +49,8 @@ export class RevenueCatWebhookController {
     @Req() req: Request,
   ): Promise<RevenueCatWebhookResponse> {
     const rawBody = (
-      (req as Request & { rawBody?: Buffer }).rawBody ?? Buffer.from(JSON.stringify(envelope))
+      (req as Request & { rawBody?: Buffer }).rawBody ??
+      Buffer.from(JSON.stringify(envelope))
     ).toString('utf8');
 
     try {

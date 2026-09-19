@@ -13,7 +13,7 @@ export class CreateReviewDto {
   @IsInt()
   @Min(1)
   @Max(5)
-  rating: number;
+  rating!: number;
 
   @ApiProperty({ required: false, maxLength: 500 })
   @IsOptional()

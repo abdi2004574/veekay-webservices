@@ -16,23 +16,23 @@ export class CreateGroupExpenseDto {
   @IsString()
   @MinLength(1)
   @MaxLength(120)
-  name: string;
+  name!: string;
 
   @ApiProperty({ example: 800 })
   @IsNumber()
   @IsPositive()
-  amount: number;
+  amount!: number;
 
   @ApiProperty({ enum: GroupExpenseCategory })
   @IsEnum(GroupExpenseCategory)
-  category: GroupExpenseCategory;
+  category!: GroupExpenseCategory;
 
   @ApiProperty({
     description:
-      'userId of the group member who paid — must be a current member.',
+      'userId of the group member who paid � must be a current member.',
   })
   @IsString()
-  paidByUserId: string;
+  paidByUserId!: string;
 
   @ApiProperty({
     required: false,

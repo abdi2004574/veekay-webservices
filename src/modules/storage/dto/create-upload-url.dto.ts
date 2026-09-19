@@ -5,9 +5,9 @@ import { IsEnum, IsString } from 'class-validator';
 export class CreateUploadUrlDto {
   @ApiProperty({ example: 'image/jpeg' })
   @IsString()
-  contentType: string;
+  contentType!: string;
 
   @ApiProperty({ enum: MediaPurpose, example: MediaPurpose.post_media })
   @IsEnum(MediaPurpose)
-  purpose: MediaPurpose;
+  purpose!: MediaPurpose;
 }

@@ -1,4 +1,4 @@
--- CreateEnum
+﻿-- CreateEnum
 CREATE TYPE "FraudFlagType" AS ENUM ('frequent_profile_changes', 'payment_method_mismatch', 'withdrawal_anomaly', 'personal_info_mismatch');
 
 -- CreateEnum

@@ -59,7 +59,10 @@ export class AdminCampaignsController {
       },
     },
   })
-  async list(@Query() filter: AdminCampaignFilterDto): Promise<{ data: AdminCampaignItem[]; meta: { cursor: string | null; hasMore: boolean } }> {
+  async list(@Query() filter: AdminCampaignFilterDto): Promise<{
+    data: AdminCampaignItem[];
+    meta: { cursor: string | null; hasMore: boolean };
+  }> {
     return this.campaignsService.listAdminCampaigns(
       filter,
       filter.cursor,

@@ -25,7 +25,7 @@ export class SendMessageDto {
   @ApiProperty({
     required: false,
     description:
-      'Required for type=image/document — a confirmed media asset id (purpose chat_image/chat_document).',
+      'Required for type=image/document � a confirmed media asset id (purpose chat_image/chat_document).',
   })
   @IsOptional()
   @IsString()

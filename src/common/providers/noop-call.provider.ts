@@ -5,7 +5,7 @@ export interface CreateCallSessionPayload {
   initiatedBy: string;
   agencyId: string;
   travelerId: string;
-  type: "audio" | "video";
+  type: 'audio' | 'video';
 }
 
 export interface CallSession {
@@ -14,8 +14,8 @@ export interface CallSession {
   agencyId: string;
   travelerId: string;
   initiatedBy: string;
-  type: "audio" | "video";
-  status: "ringing" | "active" | "ended" | "missed";
+  type: 'audio' | 'video';
+  status: 'ringing' | 'active' | 'ended' | 'missed';
   providerSessionId?: string;
   joinUrl?: string;
   startedAt?: Date;
@@ -25,7 +25,7 @@ export interface CallSession {
 
 @Injectable()
 export class NoopCallProvider {
-  readonly name = "noop";
+  readonly name = 'noop';
   private readonly logger = new Logger(NoopCallProvider.name);
 
   createSession(payload: CreateCallSessionPayload): Promise<CallSession> {
@@ -40,7 +40,7 @@ export class NoopCallProvider {
       travelerId: payload.travelerId,
       initiatedBy: payload.initiatedBy,
       type: payload.type,
-      status: "active",
+      status: 'active',
       providerSessionId: undefined,
       joinUrl: undefined,
       startedAt: now,

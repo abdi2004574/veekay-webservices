@@ -13,7 +13,7 @@ export class CreatePostDto {
   @IsString()
   @MinLength(1)
   @MaxLength(2200)
-  text: string;
+  text!: string;
 
   @ApiProperty({
     required: false,

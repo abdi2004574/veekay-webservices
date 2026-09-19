@@ -4,7 +4,7 @@ import { IsEmail, IsString, IsOptional, IsIn } from 'class-validator';
 export class CreateStaffInviteDto {
   @ApiProperty({ example: 'staff@example.com' })
   @IsEmail()
-  email: string;
+  email!: string;
 
   @ApiProperty({
     example: 'support',

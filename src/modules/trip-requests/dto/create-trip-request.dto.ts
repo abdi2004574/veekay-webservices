@@ -1,4 +1,4 @@
-﻿import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 import {
   IsOptional,
   IsString,
@@ -10,7 +10,7 @@ import {
 export class CreateTripRequestDto {
   @ApiProperty({ description: 'UUID of the target agency (must be approved).' })
   @IsUUID()
-  agencyId: string;
+  agencyId!: string;
 
   @ApiProperty({
     required: false,
@@ -37,5 +37,5 @@ export class CreateTripRequestDto {
   @IsString()
   @MinLength(1)
   @MaxLength(2000)
-  message: string;
+  message!: string;
 }

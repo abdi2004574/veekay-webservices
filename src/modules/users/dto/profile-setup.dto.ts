@@ -1,23 +1,30 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+﻿import { ApiProperty } from '@nestjs/swagger';
+import { DestinationType, Gender, TravelStyle } from '@prisma/client';
+import { PreviousTripInputDto } from './previous-trip-input.dto';
 import {
+  ArrayMaxSize,
   ArrayMinSize,
   IsArray,
-  IsDateString,
   IsEnum,
   IsOptional,
   IsString,
   MaxLength,
-  ValidateNested,
 } from 'class-validator';
-import { DestinationType, Gender, TravelStyle } from '@prisma/client';
-import { PreviousTripInputDto } from './previous-trip-input.dto';
 
 export class ProfileSetupDto {
-  @ApiProperty({
-    required: false,
-    description: 'Media asset id from a prior presigned upload.',
-  })
+  @ApiProperty({ required: false, maxLength: 300 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  bio?: string;
+
+  @ApiProperty({ required: false, maxLength: 100 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  location?: string;
+
+  @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
   photoMediaId?: string;
@@ -26,39 +33,32 @@ export class ProfileSetupDto {
   @IsArray()
   @ArrayMinSize(1)
   @IsEnum(DestinationType, { each: true })
-  destinationTypes: DestinationType[];
+  destinationTypes!: DestinationType[];
 
   @ApiProperty({ enum: TravelStyle, isArray: true })
   @IsArray()
   @ArrayMinSize(1)
   @IsEnum(TravelStyle, { each: true })
-  travelStyles: TravelStyle[];
+  travelStyles!: TravelStyle[];
 
   @ApiProperty({ enum: Gender, required: false })
   @IsOptional()
   @IsEnum(Gender)
   gender?: Gender;
 
-  @ApiProperty({ required: false, description: 'ISO date string.' })
+  @ApiProperty({ required: false })
   @IsOptional()
-  @IsDateString()
+  @IsString()
   dateOfBirth?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
-  @MaxLength(200)
-  bio?: string;
+  walletPaymentMethodId?: string;
 
-  @ApiProperty({ required: false, type: [PreviousTripInputDto] })
+  @ApiProperty({ type: [PreviousTripInputDto], required: false })
   @IsOptional()
   @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => PreviousTripInputDto)
+  @ArrayMinSize(1)
   previousTrips?: PreviousTripInputDto[];
-
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @IsString()
-  walletPaymentMethodId?: string;
 }

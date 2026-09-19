@@ -1,4 +1,4 @@
--- CreateEnum
+﻿-- CreateEnum
 CREATE TYPE "WalletTransactionDirection" AS ENUM ('credit', 'debit');
 
 -- CreateEnum

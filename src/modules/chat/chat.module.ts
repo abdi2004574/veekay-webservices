@@ -14,4 +14,3 @@ import { MessagesController } from './messages.controller';
   exports: [ChatCoreModule, MessagesService],
 })
 export class ChatModule {}
-

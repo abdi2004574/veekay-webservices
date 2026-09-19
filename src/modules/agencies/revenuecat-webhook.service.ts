@@ -3,17 +3,37 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { AppConfig } from '../../config/configuration';
-import { Agency, AgencySubscriptionTier, User } from '@prisma/client';
+import { Agency, AgencySubscriptionTier } from '@prisma/client';
 import {
   RevenueCatEventType,
   RevenueCatWebhookEnvelope,
+  RevenueCatWebhookEvent,
   determineTierFromEvent,
   isActiveSubscriptionEvent,
+  isDonationEvent,
+  isDonationProduct,
+  getDonationAmountFromProductId,
 } from './revenuecat-webhook.dto';
 import Redis from 'ioredis';
+import { RevenueCatApiService } from './revenuecat-api.service';
+import { WalletService } from '../wallet/wallet.service';
 
 const IDEMPOTENCY_TTL_SECONDS = 86400;
 const CLAIM_TTL_SECONDS = 300;
+
+export type SubscriptionResult = {
+  eventId: string;
+  agencyId: string;
+  tier: string;
+};
+
+export type DonationResult = {
+  eventId: string;
+  donationId: string;
+  amount: number;
+  campaignId: string;
+  donorUserId: string;
+};
 
 @Injectable()
 export class RevenueCatWebhookService {
@@ -23,13 +43,66 @@ export class RevenueCatWebhookService {
     private readonly configService: ConfigService<AppConfig, true>,
     private readonly prisma: PrismaService,
     @Inject('REDIS_CLIENT') private readonly redis: Redis,
+    private readonly revenueCatApiService: RevenueCatApiService,
+    private readonly walletService: WalletService,
   ) {}
+
+  async processDonationEvent(event: RevenueCatWebhookEvent): Promise<DonationResult> {
+    const eventId = event.id;
+
+    const donorUser = await this.prisma.user.findUnique({
+      where: { id: event.app_user_id ?? '' },
+    });
+    if (!donorUser) {
+      throw new Error('Donor user not found');
+    }
+
+    const attributes = await this.revenueCatApiService.getSubscriberAttributes(event.app_user_id ?? '');
+    const campaignId = attributes.campaign_id?.value;
+    if (!campaignId) {
+      throw new Error('Campaign ID not found in subscriber attributes');
+    }
+
+    const campaign = await this.prisma.campaign.findUnique({
+      where: { id: campaignId },
+    });
+    if (!campaign) {
+      throw new Error('Campaign not found');
+    }
+
+    const amount = getDonationAmountFromProductId(event.product_id);
+    if (amount <= 0) {
+      throw new Error('Invalid donation amount');
+    }
+
+    const idempotencyKey = event.transaction_id ?? event.id;
+
+    const result = await this.walletService.recordDonation({
+      campaignId,
+      donorUserId: donorUser.id,
+      donorDisplayName: donorUser.displayName ?? null,
+      amount,
+      currency: 'USD',
+      isAnonymous: false,
+      isGift: false,
+      idempotencyKey,
+      providerName: 'revenuecat',
+    });
+
+    return {
+      eventId,
+      donationId: result.donation!.id,
+      amount,
+      campaignId,
+      donorUserId: donorUser.id,
+    };
+  }
 
   async processWebhook(
     envelope: RevenueCatWebhookEnvelope,
     signature: string,
     rawBody: string,
-  ): Promise<{ eventId: string; agencyId: string; tier: string } | null> {
+  ): Promise<SubscriptionResult | DonationResult | null> {
     if (!this.verifySignature(rawBody, signature)) {
       throw new Error('Invalid webhook signature');
     }
@@ -101,29 +174,52 @@ export class RevenueCatWebhookService {
         return null;
       }
 
+      if (isDonationEvent(event.type)) {
+        if (!isDonationProduct(event.product_id)) {
+          await this.redis.del(claimKey);
+          this.logger.warn(
+            JSON.stringify({
+              audit: 'revenuecat.webhook.donation_invalid_product',
+              eventId,
+              productId: event.product_id,
+            }),
+          );
+          throw new Error('Invalid donation product');
+        }
+        const donationResult = await this.processDonationEvent(event);
+        await this.redis.set(
+          cacheKey,
+          JSON.stringify(donationResult),
+          'EX',
+          IDEMPOTENCY_TTL_SECONDS,
+        );
+        await this.redis.del(claimKey);
+        return donationResult;
+      }
+
       let agency: Agency | null = null;
-      
+
       if (event.original_app_user_id) {
         agency = await this.prisma.agency.findFirst({
           where: { userId: event.original_app_user_id },
         });
-              }
+      }
 
       if (!agency && event.app_user_id) {
         agency = await this.prisma.agency.findFirst({
           where: { userId: event.app_user_id },
         });
-              }
+      }
 
       if (!agency && event.aliases && event.aliases.length > 0) {
         const aliasIds = event.aliases.map((a) => a.id);
-        const aliasUser: User | null = await this.prisma.user.findFirst({
+        const aliasUser = await this.prisma.user.findFirst({
           where: { id: { in: aliasIds } },
-          select: { id: true, agency: { select: { id: true, userId: true } } },
+          select: { agency: true },
         });
         if (aliasUser && aliasUser.agency) {
           agency = aliasUser.agency;
-                  }
+        }
       }
 
       if (!agency) {
@@ -191,7 +287,7 @@ export class RevenueCatWebhookService {
         data: { subscriptionTier: tier as AgencySubscriptionTier },
       });
 
-      const result = { eventId, agencyId: agency.id, tier };
+      const result: SubscriptionResult = { eventId, agencyId: agency.id, tier };
 
       await this.redis.set(
         cacheKey,
@@ -273,4 +369,3 @@ export class RevenueCatWebhookService {
     return crypto.timingSafeEqual(expectedBuf, signatureBuf);
   }
 }
-

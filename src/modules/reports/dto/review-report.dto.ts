@@ -5,7 +5,7 @@ import { ReportStatus } from '@prisma/client';
 export class ReviewReportDto {
   @ApiProperty({ enum: ReportStatus })
   @IsEnum(ReportStatus)
-  status: ReportStatus;
+  status!: ReportStatus;
 
   @ApiProperty({ required: false, example: 'Reviewed and dismissed' })
   @IsOptional()

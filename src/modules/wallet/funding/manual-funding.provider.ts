@@ -17,13 +17,11 @@ import {
 export class ManualFundingProvider implements IFundingProvider {
   readonly name = 'manual';
 
-  deposit(
-    _request: FundingDepositRequest,
-  ): Promise<FundingProviderResult> {
-    return {
+  deposit(_request: FundingDepositRequest): Promise<FundingProviderResult> {
+    return Promise.resolve({
       ok: true,
       externalId: `manual-${Date.now()}`,
       message: 'Manual credit by admin',
-    };
+    });
   }
 }

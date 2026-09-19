@@ -1,7 +1,7 @@
 ﻿import { Body, Controller, Param, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
-import { Decimal } from '@prisma/client/runtime/library';
+
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { IdempotencyKey } from '../../common/decorators/idempotency-key.decorator';
 import { RequireRole } from '../../common/decorators/require-role.decorator';
@@ -13,7 +13,7 @@ import { WalletService } from '../wallet/wallet.service';
 
 interface CampaignView {
   creatorId: string;
-  raisedAmount: Decimal;
+  raisedAmount: number;
 }
 
 @ApiTags('campaigns')

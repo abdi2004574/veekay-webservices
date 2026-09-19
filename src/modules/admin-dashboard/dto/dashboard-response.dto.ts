@@ -2,63 +2,63 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class DashboardMetricsDto {
   @ApiProperty()
-  totalUsers: number;
+  totalUsers!: number;
 
   @ApiProperty()
-  totalAgencies: number;
+  totalAgencies!: number;
 
   @ApiProperty()
-  totalCampaigns: number;
+  totalCampaigns!: number;
 
   @ApiProperty()
-  totalDonations: number;
+  totalDonations!: number;
 
   @ApiProperty()
-  activeCampaigns: number;
+  activeCampaigns!: number;
 
   @ApiProperty()
-  pendingAgencies: number;
+  pendingAgencies!: number;
 }
 
 export class PaymentStatsDto {
   @ApiProperty({ description: 'Total amount of paid withdrawals.' })
-  totalWithdrawn: number;
+  totalWithdrawn!: number;
 
   @ApiProperty({ description: 'Number of withdrawals awaiting review.' })
-  pendingReview: number;
+  pendingReview!: number;
 
   @ApiProperty({ description: 'Number of approved withdrawals.' })
-  approved: number;
+  approved!: number;
 
   @ApiProperty({ description: 'Number of rejected withdrawals.' })
-  rejected: number;
+  rejected!: number;
 }
 
 export class FundingTrendPointDto {
   @ApiProperty()
-  date: string;
+  date!: string;
 
   @ApiProperty()
-  amount: number;
+  amount!: number;
 }
 
 export class FundingTrendsResponseDto {
   @ApiProperty({ type: FundingTrendPointDto, isArray: true })
-  trends: FundingTrendPointDto[];
+  trends!: FundingTrendPointDto[];
 }
 
 export class TopDestinationDto {
   @ApiProperty()
-  name: string;
+  name!: string;
 
   @ApiProperty()
-  count: number;
+  count!: number;
 }
 
 export class TravelerPreferenceDto {
   @ApiProperty()
-  label: string;
+  label!: string;
 
   @ApiProperty()
-  count: number;
+  count!: number;
 }

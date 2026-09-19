@@ -4,7 +4,9 @@ class MockQueue {
     this.name = name;
     this.opts = opts;
   }
-  async add() { return { id: "mock-job-id" }; }
+  async add() {
+    return { id: 'mock-job-id' };
+  }
   async close() {}
   async pause() {}
   async resume() {}
@@ -48,8 +50,8 @@ class MockWorkerHost {
 class MockJob {
   constructor(data) {
     this.data = data;
-    this.id = "mock-job-id";
-    this.name = "mock-job";
+    this.id = 'mock-job-id';
+    this.name = 'mock-job';
     this.opts = {};
     this.progress = 0;
     this.attemptsMade = 0;
@@ -90,7 +92,7 @@ class MockBullModule {
       exports: [],
     };
   }
-  
+
   static forRoot(options) {
     return {
       module: class MockBullRootModule {},
@@ -98,7 +100,7 @@ class MockBullModule {
       exports: [],
     };
   }
-  
+
   static forRootAsync(options) {
     return {
       module: class MockBullRootAsyncModule {},
@@ -115,7 +117,7 @@ module.exports = {
   QueueEvents: MockQueueEvents,
   QueueScheduler: MockQueueScheduler,
   Job: MockJob,
-  
+
   // @nestjs/bullmq exports
   WorkerHost: MockWorkerHost,
   Processor,

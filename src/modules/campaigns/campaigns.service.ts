@@ -91,7 +91,9 @@ export class CampaignsService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
-  private async attachViewUrls(campaigns: (Campaign & { photos: CampaignPhoto[] })[]): Promise<CampaignItem[]> {
+  private async attachViewUrls(
+    campaigns: (Campaign & { photos: CampaignPhoto[] })[],
+  ): Promise<CampaignItem[]> {
     const mediaIds = campaigns.flatMap((c) =>
       c.photos.map((p: { mediaId: string }) => p.mediaId),
     );
@@ -128,7 +130,10 @@ export class CampaignsService {
     }
   }
 
-  async create(creatorId: string, dto: CreateCampaignDto): Promise<CampaignItem> {
+  async create(
+    creatorId: string,
+    dto: CreateCampaignDto,
+  ): Promise<CampaignItem> {
     this.validateDateRange(dto.tripStartDate, dto.tripEndDate);
     const isGroup = !!dto.isGroup;
 
@@ -169,7 +174,10 @@ export class CampaignsService {
     return withUrls;
   }
 
-  private async findOwnedOrThrow(campaignId: string, creatorId: string): Promise<Campaign> {
+  private async findOwnedOrThrow(
+    campaignId: string,
+    creatorId: string,
+  ): Promise<Campaign> {
     const campaign = await this.prisma.campaign.findUnique({
       where: { id: campaignId },
     });
@@ -182,7 +190,11 @@ export class CampaignsService {
     return campaign;
   }
 
-  async update(campaignId: string, creatorId: string, dto: UpdateCampaignDto): Promise<CampaignItem> {
+  async update(
+    campaignId: string,
+    creatorId: string,
+    dto: UpdateCampaignDto,
+  ): Promise<CampaignItem> {
     await this.findOwnedOrThrow(campaignId, creatorId);
     this.validateDateRange(dto.tripStartDate, dto.tripEndDate);
 
@@ -315,7 +327,10 @@ export class CampaignsService {
     return { items, nextCursor: hasMore ? page[page.length - 1].id : null };
   }
 
-  async getDetail(campaignId: string, viewerId: string): Promise<CampaignItem & { isCreator: boolean }> {
+  async getDetail(
+    campaignId: string,
+    viewerId: string,
+  ): Promise<CampaignItem & { isCreator: boolean }> {
     const campaign = await this.prisma.campaign.findUnique({
       where: { id: campaignId },
       include: {
@@ -343,7 +358,10 @@ export class CampaignsService {
     return { ...withUrls, isCreator };
   }
 
-  async listTopContributors(campaignId: string, viewerId: string): Promise<{ items: never[] }> {
+  async listTopContributors(
+    campaignId: string,
+    viewerId: string,
+  ): Promise<{ items: never[] }> {
     const campaign = await this.prisma.campaign.findUnique({
       where: { id: campaignId },
     });
@@ -391,7 +409,10 @@ export class CampaignsService {
     filter: AdminCampaignFilterDto,
     cursor?: string,
     limit = 20,
-  ): Promise<{ data: AdminCampaignItem[]; meta: { cursor: string | null; hasMore: boolean } }> {
+  ): Promise<{
+    data: AdminCampaignItem[];
+    meta: { cursor: string | null; hasMore: boolean };
+  }> {
     const position = decodeCursor(cursor);
     const search = filter.search?.trim();
     const where: Prisma.CampaignWhereInput = {
@@ -499,7 +520,10 @@ export class CampaignsService {
     return this.toAdminCampaign(updated);
   }
 
-  async unflagCampaign(campaignId: string, actorUserId: string): Promise<AdminCampaignItem> {
+  async unflagCampaign(
+    campaignId: string,
+    actorUserId: string,
+  ): Promise<AdminCampaignItem> {
     const campaign = await this.prisma.campaign.findUnique({
       where: { id: campaignId },
       include: { creator: true },

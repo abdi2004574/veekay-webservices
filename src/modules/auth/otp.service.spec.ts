@@ -21,7 +21,10 @@ describe('OtpService', () => {
     };
     prisma = {
       otpCode: otpCodeMock,
-      $transaction: jest.fn(async (cb) => { void 0; return cb(txMock); }),
+      $transaction: jest.fn(async (cb) => {
+        void 0;
+        return cb(txMock);
+      }),
     };
     passwordService = {
       hash: jest.fn((value) => Promise.resolve('hashed:' + value)),

@@ -1,4 +1,4 @@
--- CreateEnum
+﻿-- CreateEnum
 CREATE TYPE "PaymentMethodType" AS ENUM ('card');
 
 -- CreateEnum

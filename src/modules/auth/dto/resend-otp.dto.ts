@@ -5,9 +5,9 @@ import { OtpType } from '@prisma/client';
 export class ResendOtpDto {
   @ApiProperty({ example: 'traveler@example.com' })
   @IsEmail()
-  email: string;
+  email!: string;
 
   @ApiProperty({ enum: OtpType, example: OtpType.email_verify })
   @IsEnum(OtpType)
-  type: OtpType;
+  type!: OtpType;
 }

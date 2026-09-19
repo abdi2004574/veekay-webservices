@@ -11,21 +11,21 @@ import { NotificationType } from '@prisma/client';
 export class BroadcastNotificationDto {
   @ApiProperty({ enum: NotificationType })
   @IsEnum(NotificationType)
-  type: NotificationType;
+  type!: NotificationType;
 
   @ApiProperty()
   @IsString()
   @MaxLength(200)
-  title: string;
+  title!: string;
 
   @ApiProperty()
   @IsString()
   @MaxLength(2000)
-  body: string;
+  body!: string;
 
   @ApiProperty({ enum: ['all', 'role', 'user'], default: 'all' })
   @IsEnum(['all', 'role', 'user'] as const)
-  target: 'all' | 'role' | 'user';
+  target!: 'all' | 'role' | 'user';
 
   @ApiProperty({ required: false, enum: ['traveler', 'agency'] })
   @ValidateIf((o: BroadcastNotificationDto) => o.target === 'role')

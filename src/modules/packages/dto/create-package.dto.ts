@@ -17,7 +17,7 @@ export class CreatePackageDto {
   @IsString()
   @MinLength(1)
   @MaxLength(120)
-  title: string;
+  title!: string;
 
   @ApiProperty({
     required: false,
@@ -31,12 +31,12 @@ export class CreatePackageDto {
   @ApiProperty({ example: 2500 })
   @IsInt()
   @IsPositive()
-  basePrice: number;
+  basePrice!: number;
 
   @ApiProperty({ default: 'USD' })
   @IsString()
   @MaxLength(3)
-  currency: string;
+  currency!: string;
 
   @ApiProperty({ required: false, enum: DestinationType })
   @IsOptional()

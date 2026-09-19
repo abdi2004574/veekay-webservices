@@ -1,4 +1,4 @@
--- DropIndex
+﻿-- DropIndex
 DROP INDEX "trip_requests_agency_id_status_idx";
 
 -- DropIndex

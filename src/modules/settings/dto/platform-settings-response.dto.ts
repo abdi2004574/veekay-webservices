@@ -12,5 +12,5 @@ export interface PlatformSetting {
 
 export class PlatformSettingsResponse {
   @ApiProperty({ type: [Object] })
-  settings: PlatformSetting[];
+  settings!: PlatformSetting[];
 }

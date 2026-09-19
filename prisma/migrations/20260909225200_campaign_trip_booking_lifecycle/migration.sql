@@ -1,4 +1,4 @@
--- AlterEnum
+﻿-- AlterEnum
 ALTER TYPE "CampaignStatus" ADD VALUE 'funded';
 
 -- AlterEnum

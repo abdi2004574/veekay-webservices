@@ -11,28 +11,28 @@ import {
 export class PreviousTripInputDto {
   @ApiProperty({ description: 'Media asset id from a prior presigned upload.' })
   @IsString()
-  mediaId: string;
+  mediaId!: string;
 
   @ApiProperty()
   @IsString()
-  name: string;
+  name!: string;
 
   @ApiProperty()
   @IsString()
-  location: string;
+  location!: string;
 
   @ApiProperty({ description: 'ISO date string.' })
   @IsDateString()
-  startDate: string;
+  startDate!: string;
 
   @ApiProperty({ description: 'ISO date string.' })
   @IsDateString()
-  endDate: string;
+  endDate!: string;
 
   @ApiProperty({ default: 1 })
   @IsInt()
   @Min(1)
-  travelerCount: number;
+  travelerCount!: number;
 
   @ApiProperty({ required: false })
   @IsOptional()

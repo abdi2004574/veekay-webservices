@@ -4,7 +4,7 @@ import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
 export class ReviewWithdrawalRequestDto {
   @ApiProperty({ enum: ['approved', 'rejected'] })
   @IsIn(['approved', 'rejected'])
-  decision: 'approved' | 'rejected';
+  decision!: 'approved' | 'rejected';
 
   @ApiProperty({ required: false, maxLength: 500 })
   @IsOptional()

@@ -20,22 +20,22 @@ export class CreateCampaignDto {
   @IsString()
   @MinLength(1)
   @MaxLength(120)
-  title: string;
+  title!: string;
 
   @ApiProperty({ example: 'Santorini, Greece' })
   @IsString()
   @MinLength(1)
   @MaxLength(120)
-  destination: string;
+  destination!: string;
 
   @ApiProperty({ example: 5000 })
   @IsNumber()
   @IsPositive()
-  goalAmount: number;
+  goalAmount!: number;
 
   @ApiProperty()
   @IsDateString()
-  tripStartDate: string;
+  tripStartDate!: string;
 
   @ApiProperty({ required: false })
   @IsOptional()
@@ -50,11 +50,11 @@ export class CreateCampaignDto {
 
   @ApiProperty({ enum: CampaignPrivacy, default: CampaignPrivacy.public })
   @IsEnum(CampaignPrivacy)
-  privacy: CampaignPrivacy;
+  privacy?: CampaignPrivacy;
 
   @ApiProperty({ default: false })
   @IsBoolean()
-  giftMode: boolean;
+  giftMode!: boolean;
 
   @ApiProperty({ required: false })
   @IsOptional()
@@ -71,7 +71,7 @@ export class CreateCampaignDto {
   @ArrayMinSize(1)
   @ArrayMaxSize(5)
   @IsString({ each: true })
-  photoMediaIds: string[];
+  photoMediaIds!: string[];
 
   @ApiProperty({ required: false })
   @IsOptional()
