@@ -1,4 +1,4 @@
-﻿import { ConversationType } from '@prisma/client';
+import { ConversationType } from '@prisma/client';
 import { CallsService } from './calls.service';
 
 describe('CallsService', () => {
@@ -24,22 +24,19 @@ describe('CallsService', () => {
       create: jest.fn().mockResolvedValue({ id: 'notif-1' }),
     };
     callProvider = {
-      createSession: jest.fn().mockImplementation(async (payload) => {
+      createSession: jest.fn().mockImplementation(async (agencyId, travelerId) => {
         return {
-          id: `call-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          conversationId: payload.conversationId,
-          agencyId: payload.agencyId,
-          travelerId: payload.travelerId,
-          initiatedBy: payload.initiatedBy,
-          type: payload.type,
+          id: 'call-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+          agencyId,
+          travelerId,
           status: 'active',
           providerSessionId: undefined,
           joinUrl: undefined,
-          startedAt: new Date(),
           createdAt: new Date(),
         };
       }),
       endSession: jest.fn().mockResolvedValue(undefined),
+      getSession: jest.fn().mockResolvedValue(null),
     };
     service = new CallsService(
       prisma,
@@ -86,13 +83,10 @@ describe('CallsService', () => {
         type: 'audio',
       });
 
-      expect(callProvider.createSession).toHaveBeenCalledWith({
-        conversationId: 'conv-1',
-        initiatedBy: 'user-1',
-        agencyId: 'agency-1',
-        travelerId: 'user-1',
-        type: 'audio',
-      });
+      expect(callProvider.createSession).toHaveBeenCalledWith(
+        'agency-1',
+        'user-1',
+      );
       expect(notificationsService.create).toHaveBeenCalledWith(
         'agency-user-1',
         {
@@ -108,10 +102,9 @@ describe('CallsService', () => {
           },
         },
       );
-      expect(result.conversationId).toBe('conv-1');
+      expect(result.id).toBeDefined();
       expect(result.agencyId).toBe('agency-1');
       expect(result.travelerId).toBe('user-1');
-      expect(result.type).toBe('audio');
       expect(result.status).toBe('active');
     });
 
@@ -134,13 +127,10 @@ describe('CallsService', () => {
         type: 'video',
       });
 
-      expect(callProvider.createSession).toHaveBeenCalledWith({
-        conversationId: 'conv-1',
-        initiatedBy: 'agency-staff-1',
-        agencyId: 'agency-1',
-        travelerId: 'traveler-1',
-        type: 'video',
-      });
+      expect(callProvider.createSession).toHaveBeenCalledWith(
+        'agency-1',
+        'traveler-1',
+      );
       expect(notificationsService.create).toHaveBeenCalledWith('traveler-1', {
         type: 'new_call',
         title: 'Agency is calling',

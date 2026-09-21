@@ -1,57 +1,33 @@
-﻿import { Injectable, Logger } from '@nestjs/common';
-
-export interface CreateCallSessionPayload {
-  conversationId: string;
-  initiatedBy: string;
-  agencyId: string;
-  travelerId: string;
-  type: 'audio' | 'video';
-}
-
-export interface CallSession {
-  id: string;
-  conversationId: string;
-  agencyId: string;
-  travelerId: string;
-  initiatedBy: string;
-  type: 'audio' | 'video';
-  status: 'ringing' | 'active' | 'ended' | 'missed';
-  providerSessionId?: string;
-  joinUrl?: string;
-  startedAt?: Date;
-  endedAt?: Date;
-  createdAt: Date;
-}
+import { Injectable, Logger } from '@nestjs/common';
+import { ICallProvider, CallSession } from '../interfaces/call-provider.interface';
 
 @Injectable()
-export class NoopCallProvider {
+export class NoopCallProvider implements ICallProvider {
   readonly name = 'noop';
   private readonly logger = new Logger(NoopCallProvider.name);
 
-  createSession(payload: CreateCallSessionPayload): Promise<CallSession> {
-    this.logger.warn(
-      `NoopCallProvider: no vendor configured, returning stub session for conversation ${payload.conversationId}`,
-    );
+  createSession(agencyId: string, travelerId: string): Promise<CallSession> {
+    this.logger.warn('NoopCallProvider: no vendor configured, returning stub session for agency ' + agencyId + ', traveler ' + travelerId);
     const now = new Date();
     return Promise.resolve({
-      id: `call-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      conversationId: payload.conversationId,
-      agencyId: payload.agencyId,
-      travelerId: payload.travelerId,
-      initiatedBy: payload.initiatedBy,
-      type: payload.type,
+      id: 'call-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+      agencyId,
+      travelerId,
       status: 'active',
       providerSessionId: undefined,
       joinUrl: undefined,
-      startedAt: now,
       createdAt: now,
+      endedAt: undefined,
     });
   }
 
   endSession(sessionId: string): Promise<void> {
-    this.logger.warn(
-      `NoopCallProvider: endSession called for ${sessionId} with no vendor configured.`,
-    );
+    this.logger.warn('NoopCallProvider: endSession called for ' + sessionId + ' with no vendor configured.');
     return Promise.resolve();
+  }
+
+  getSession(sessionId: string): Promise<CallSession | null> {
+    this.logger.warn('NoopCallProvider: getSession called for ' + sessionId + ' with no vendor configured.');
+    return Promise.resolve(null);
   }
 }

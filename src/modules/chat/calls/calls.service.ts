@@ -1,13 +1,10 @@
-﻿import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConversationType } from '@prisma/client';
 import { AppException } from '../../../common/errors/app.exception';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ConversationsService } from '../conversations.service';
 import { NotificationsService } from '../../notifications/services/notifications.service';
-import {
-  NoopCallProvider,
-  CreateCallSessionPayload,
-} from '../../../common/providers/noop-call.provider';
+import { ICallProvider } from '../../../common/interfaces/call-provider.interface';
 import { CreateCallDto } from './dto/create-call.dto';
 import { NotificationType } from '@prisma/client';
 
@@ -19,7 +16,7 @@ export class CallsService {
     private readonly prisma: PrismaService,
     private readonly conversationsService: ConversationsService,
     private readonly notificationsService: NotificationsService,
-    private readonly callProvider: NoopCallProvider,
+    private readonly callProvider: ICallProvider,
   ) {}
 
   async create(conversationId: string, callerId: string, dto: CreateCallDto) {
@@ -59,15 +56,7 @@ export class CallsService {
       agencyUserId = agency.userId;
     }
 
-    const payload: CreateCallSessionPayload = {
-      conversationId,
-      initiatedBy: callerId,
-      agencyId,
-      travelerId,
-      type: dto.type,
-    };
-
-    const session = await this.callProvider.createSession(payload);
+    const session = await this.callProvider.createSession(agencyId, travelerId);
 
     const recipientId = isAgencyStaff ? travelerId : agencyUserId;
     const callerLabel = isAgencyStaff ? 'Agency' : 'Traveler';
@@ -90,6 +79,6 @@ export class CallsService {
 
   async end(sessionId: string, callerId: string): Promise<void> {
     await this.callProvider.endSession(sessionId);
-    this.logger.log(`Call ${sessionId} ended by user ${callerId}`);
+    this.logger.log('Call ' + sessionId + ' ended by user ' + callerId);
   }
 }
