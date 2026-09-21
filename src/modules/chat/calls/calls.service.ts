@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import { ConversationType } from '@prisma/client';
 import { AppException } from '../../../common/errors/app.exception';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -16,6 +16,7 @@ export class CallsService {
     private readonly prisma: PrismaService,
     private readonly conversationsService: ConversationsService,
     private readonly notificationsService: NotificationsService,
+    @Inject(ICallProvider)
     private readonly callProvider: ICallProvider,
   ) {}
 
@@ -82,3 +83,4 @@ export class CallsService {
     this.logger.log('Call ' + sessionId + ' ended by user ' + callerId);
   }
 }
+
