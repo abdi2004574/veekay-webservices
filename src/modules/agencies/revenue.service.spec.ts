@@ -3,6 +3,7 @@ import { AgencyRevenueService } from './revenue.service';
 
 describe('AgencyRevenueService', () => {
   let prisma: any;
+  let configService: any;
   let service: AgencyRevenueService;
 
   beforeEach(() => {
@@ -10,7 +11,12 @@ describe('AgencyRevenueService', () => {
       agency: { findUnique: jest.fn() },
       tripBooking: { findMany: jest.fn() },
     };
-    service = new AgencyRevenueService(prisma);
+    configService = { get: jest.fn() };
+    configService.get.mockImplementation((key: string) => {
+      if (key === 'stripe.commissionPercent') return 0.1;
+      return undefined;
+    });
+    service = new AgencyRevenueService(prisma, configService);
   });
 
   describe('getRevenueLedger', () => {
@@ -24,7 +30,6 @@ describe('AgencyRevenueService', () => {
 
     it('returns paginated revenue ledger with commission calculations', async () => {
       prisma.agency.findUnique.mockResolvedValue({ subscriptionTier: 'basic' });
-      process.env.WALLET_DONATION_FEE_PERCENTAGE = '0.1';
 
       prisma.tripBooking.findMany.mockResolvedValue([
         {
@@ -83,18 +88,17 @@ describe('AgencyRevenueService', () => {
 
     it('supports cursor-based pagination', async () => {
       const bookings = Array.from({ length: 25 }, (_, i) => ({
-        id: `booking-${i}`,
-        packageId: `pkg-${i}`,
-        travelerId: `traveler-${i}`,
+        id: 'booking-' + i,
+        packageId: 'pkg-' + i,
+        travelerId: 'traveler-' + i,
         amount: '100',
         status: TripBookingStatus.completed,
         completedAt: new Date(2024, 0, 20 - i),
         createdAt: new Date(2024, 0, 10 - i),
-        package: { title: `Package ${i}` },
-        traveler: { email: `traveler${i}@example.com` },
+        package: { title: 'Package ' + i },
+        traveler: { email: 'traveler' + i + '@example.com' },
       }));
       prisma.agency.findUnique.mockResolvedValue({ subscriptionTier: 'basic' });
-      process.env.WALLET_DONATION_FEE_PERCENTAGE = '0.1';
 
       prisma.tripBooking.findMany.mockResolvedValueOnce(bookings);
 
@@ -115,7 +119,6 @@ describe('AgencyRevenueService', () => {
 
     it('handles null amount as zero', async () => {
       prisma.agency.findUnique.mockResolvedValue({ subscriptionTier: 'basic' });
-      process.env.WALLET_DONATION_FEE_PERCENTAGE = '0.1';
 
       prisma.tripBooking.findMany.mockResolvedValue([
         {
@@ -150,7 +153,6 @@ describe('AgencyRevenueService', () => {
 
     it('exports CSV with correct headers and rows', async () => {
       prisma.agency.findUnique.mockResolvedValue({ subscriptionTier: 'basic', agencyName: 'Test Agency' });
-      process.env.WALLET_DONATION_FEE_PERCENTAGE = '0.1';
 
       prisma.tripBooking.findMany.mockResolvedValue([
         {

@@ -1,5 +1,5 @@
-import { Body, Controller, Post } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Post } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RequireVerifiedEmail } from '../../common/decorators/require-verified-email.decorator';
 import { RequireRole } from '../../common/decorators/require-role.decorator';
@@ -24,5 +24,14 @@ export class AgenciesController {
     @CurrentUser('userId') userId: string,
   ) {
     return this.agenciesService.submitRegistration(userId, dto);
+  }
+
+  @Get('status')
+  @RequireRole(UserRole.agency)
+  @RequireVerifiedEmail()
+  @ApiOperation({ summary: "Get the authenticated agency's own approval status." })
+  @ApiResponse({ status: 200, description: "The agency's approval status and rejection reason." })
+  async getStatus(@CurrentUser('userId') userId: string) {
+    return this.agenciesService.getMyStatus(userId);
   }
 }

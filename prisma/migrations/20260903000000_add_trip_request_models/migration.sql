@@ -1,4 +1,4 @@
-﻿-- CreateEnum
+-- CreateEnum
 CREATE TYPE "TripRequestStatus" AS ENUM ('pending', 'in_discussion', 'confirmed', 'completed', 'declined', 'cancelled');
 
 -- CreateTable

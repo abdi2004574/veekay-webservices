@@ -1,4 +1,4 @@
-﻿-- CreateEnum
+-- CreateEnum
 CREATE TYPE "InvoiceStatus" AS ENUM ('pending', 'paid', 'overdue');
 
 -- AlterEnum

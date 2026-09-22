@@ -1,4 +1,4 @@
-﻿-- Add soft-delete fields to campaigns table
+-- Add soft-delete fields to campaigns table
 ALTER TABLE "campaigns" ADD COLUMN "deleted_at" TIMESTAMP(3);
 ALTER TABLE "campaigns" ADD COLUMN "deleted_by_id" TEXT;
 

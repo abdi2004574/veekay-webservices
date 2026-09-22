@@ -118,6 +118,83 @@ export class AgenciesService {
     return toDirectoryEntry(agency);
   }
 
+  async getMyAgencyDetail(userId: string) {
+    const agency = await this.prisma.agency.findUnique({
+      where: { userId },
+      select: {
+        id: true,
+        agencyName: true,
+        businessContact: true,
+        businessAddress: true,
+        status: true,
+        rejectionReason: true,
+        reputationScore: true,
+        subscriptionTier: true,
+        logoMediaId: true,
+        description: true,
+        refundNote: true,
+        createdAt: true,
+        updatedAt: true,
+        userId: true,
+        _count: {
+          select: {
+            reviews: true,
+            packages: true,
+            tripBookings: true,
+          },
+        },
+        documents: {
+          select: {
+            id: true,
+            type: true,
+            mediaId: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+
+    if (!agency) {
+      throw AppException.notFound(
+        'No agency profile is associated with this account.',
+      );
+    }
+
+    const verifiedBadge = await this.verifiedBadgesService.findActiveBySubject(
+      'agency',
+      agency.id,
+    );
+
+    return {
+      id: agency.id,
+      agencyName: agency.agencyName,
+      businessContact: agency.businessContact,
+      businessAddress: agency.businessAddress,
+      status: agency.status,
+      rejectionReason: agency.rejectionReason,
+      reputationScore:
+        agency.reputationScore === null
+          ? null
+          : Number(agency.reputationScore),
+      subscriptionTier: agency.subscriptionTier,
+      logoMediaId: agency.logoMediaId,
+      description: agency.description,
+      refundNote: agency.refundNote,
+      createdAt: agency.createdAt.toISOString(),
+      updatedAt: agency.updatedAt.toISOString(),
+      reviewCount: agency._count.reviews,
+      packageCount: agency._count.packages,
+      bookingCount: agency._count.tripBookings,
+      hasVerifiedBadge: verifiedBadge !== null,
+      documents: agency.documents.map((doc) => ({
+        id: doc.id,
+        type: doc.type,
+        mediaId: doc.mediaId,
+        createdAt: doc.createdAt.toISOString(),
+      })),
+    };
+  }
+
   async submitRegistration(userId: string, dto: AgencyRegistrationDto) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user || user.role !== UserRole.agency) {
@@ -151,6 +228,19 @@ export class AgenciesService {
       },
       include: { documents: true },
     });
+  }
+
+  async getMyStatus(userId: string) {
+    const agency = await this.prisma.agency.findUnique({
+      where: { userId },
+      select: { status: true, rejectionReason: true },
+    });
+
+    if (!agency) {
+      throw AppException.notFound('No agency profile is associated with this account.');
+    }
+
+    return { status: agency.status, rejectionReason: agency.rejectionReason };
   }
 
   async findPending() {

@@ -1,10 +1,11 @@
 import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  log: ['error'],
+});
 
 const MAILHOG_API = 'http://localhost:58025/api/v2';
 
-// Use actual PostgreSQL table names (Prisma uses snake_case plural by default)
 const TABLES = [
   'content_reports',
   'verified_badges',
@@ -52,8 +53,17 @@ const TABLES = [
 ];
 
 export async function resetDb(): Promise<void> {
-  const maxAttempts = 5;
-  const delayMs = 50;
+  // Terminate all other connections to the test database to prevent
+  // deadlocks with the app's Prisma connection pool, which may hold
+  // AccessShareLocks that conflict with TRUNCATE's AccessExclusiveLock.
+  await prisma.$executeRawUnsafe(`
+    SELECT pg_terminate_backend(pid)
+    FROM pg_stat_activity
+    WHERE datname = current_database()
+    AND pid <> pg_backend_pid()
+  `);
+
+  const maxAttempts = 10;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       await prisma.$executeRawUnsafe(
@@ -63,14 +73,15 @@ export async function resetDb(): Promise<void> {
     } catch (err: any) {
       const code = err?.code;
       if (code === '40P01' && attempt < maxAttempts) {
-        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        const delay = Math.min(100 * Math.pow(2, attempt - 1), 5000);
+        await new Promise((resolve) => setTimeout(resolve, delay));
         continue;
       }
       throw err;
     }
   }
-  // Clear Mailhog emails to prevent stale OTP codes from previous tests
-  await fetch('http://localhost:58025/api/v1/messages', {
+
+  await fetch(MAILHOG_API.replace('/api/v2', '/api/v1') + '/messages', {
     method: 'DELETE',
   }).catch(() => {});
 }

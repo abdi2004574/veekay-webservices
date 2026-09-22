@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import type { Prisma } from '@prisma/client';
 import { TripBookingStatus } from '@prisma/client';
@@ -13,11 +14,14 @@ import {
 export class AgencyRevenueService {
   private readonly logger = new Logger(AgencyRevenueService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
+  ) {}
 
   private getCommissionRate(): number {
-    const value = parseFloat(process.env.WALLET_DONATION_FEE_PERCENTAGE ?? '');
-    return Number.isFinite(value) ? value : 0;
+    // Commission rate — configured via STRIPE_COMMISSION_PERCENT env var (default 10)
+    return this.configService.get<number>('stripe.commissionPercent') ?? 0;
   }
 
   private calculateCommission(amount: number): number {
