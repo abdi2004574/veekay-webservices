@@ -1,4 +1,4 @@
-﻿import * as Joi from 'joi';
+import * as Joi from 'joi';
 
 export const envValidationSchema = Joi.object({
   NODE_ENV: Joi.string()
@@ -43,7 +43,9 @@ export const envValidationSchema = Joi.object({
 
   REVENUECAT_API_KEY: Joi.string().allow('').optional(),
   REVENUECAT_WEBHOOK_SECRET: Joi.string().allow('').optional(),
+  REVENUECAT_PROJECT_ID: Joi.string().allow('').optional(),
   REVENUECAT_TIMESTAMP_TOLERANCE_SECONDS: Joi.number().default(300),
+  REVENUECAT_ALLOW_SANDBOX: Joi.boolean().default(false),
   REVENUECAT_TIER_MAPPING: Joi.string().optional(),
 
   STRIPE_SECRET_KEY: Joi.string().allow('').optional(),
@@ -63,10 +65,17 @@ export const envValidationSchema = Joi.object({
   LOGIN_LOCKOUT_MINUTES: Joi.number().default(15),
 
   LOG_LEVEL: Joi.string().default('info'),
+
+  SENTRY_DSN: Joi.string().uri().allow('').optional(),
+
   SWAGGER_ENABLED: Joi.boolean().default(true),
 
   THROTTLE_TTL_MS: Joi.number().default(60000),
   THROTTLE_LIMIT: Joi.number().default(100),
+
+  WALLET_HIGH_VALUE_THRESHOLD: Joi.number().default(1000),
+  WALLET_DONATION_FEE_PERCENTAGE: Joi.number().default(0),
+  FUNDING_PROVIDER: Joi.string()
+    .valid('manual', 'revenuecat')
+    .default('manual'),
 }).unknown(true);
-
-

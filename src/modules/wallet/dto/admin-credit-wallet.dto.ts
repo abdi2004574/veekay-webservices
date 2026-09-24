@@ -26,4 +26,10 @@ export class AdminCreditWalletDto {
   @IsString()
   @MaxLength(200)
   description?: string;
+
+  @ApiProperty({ required: false, maxLength: 255 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  externalTransactionId?: string;
 }

@@ -17,11 +17,19 @@ export interface FundingProviderResult {
 }
 
 /**
- * Processor-agnostic funding-rail interface. The eventual client-confirmed
- * processor (JazzCash / Easypaisa / bank gateway / Stripe Connect � TBD) plugs
- * in here implementing IFundingProvider. Until that decision is made, the
- * ManualFundingProvider stub is the only registered implementation; admin
- * can use it to credit a wallet for MVP/testing only � see
+ * Processor-agnostic funding-rail interface. Concrete providers implement
+ * this interface and are injected via the FUNDING_PROVIDER token. The wallet
+ * ledger never calls a payment processor directly — the provider returns a
+ * verification result, and WalletService decides whether to credit.
+ *
+ * Current implementations:
+ * - ManualFundingProvider: admin-only stub that always succeeds (ops
+ *   reconciliation / testing only, gated behind super_admin + 2FA).
+ * - RevenueCatFundingProvider: verifies RevenueCat in-app purchase donations
+ *   via the RevenueCat REST API (projects endpoint).
+ *
+ * Note: Stripe Connect is used separately for agency/traveler payouts and
+ * commission splitting — not for wallet-funding deposits. See
  * docs/features/wallet-ledger.md.
  */
 export interface IFundingProvider {

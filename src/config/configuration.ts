@@ -1,4 +1,4 @@
-﻿export interface AppConfig {
+export interface AppConfig {
   nodeEnv: string;
   port: number;
   appUrl: string;
@@ -54,6 +54,7 @@
   wallet: {
     highValueWithdrawalThreshold: number;
     donationFeePercentage: number;
+    fundingProvider: 'manual' | 'revenuecat';
   };
   fraud: {
     profileChangeThreshold: number;
@@ -62,7 +63,9 @@
   revenuecat: {
     webhookSecret: string;
     apiKey: string;
+    projectId: string;
     timestampToleranceSeconds: number;
+    allowSandbox: boolean;
     tierMapping: Record<string, string>;
   };
   stripe: {
@@ -136,7 +139,8 @@ export default (): AppConfig => ({
     lockoutMinutes: parseInt(process.env.LOGIN_LOCKOUT_MINUTES ?? '15', 10),
   },
   swaggerEnabled: process.env.SWAGGER_ENABLED !== 'false',
-  agencyReputationScoreFormula: process.env.AGENCY_REPUTATION_SCORE_FORMULA ?? '',
+  agencyReputationScoreFormula:
+    process.env.AGENCY_REPUTATION_SCORE_FORMULA ?? '',
   throttle: {
     ttlMs: parseInt(process.env.THROTTLE_TTL_MS ?? '60000', 10),
     limit: parseInt(process.env.THROTTLE_LIMIT ?? '100', 10),
@@ -149,6 +153,8 @@ export default (): AppConfig => ({
     donationFeePercentage: parseFloat(
       process.env.WALLET_DONATION_FEE_PERCENTAGE ?? '0',
     ),
+    fundingProvider:
+      (process.env.FUNDING_PROVIDER as 'manual' | 'revenuecat') ?? 'manual',
   },
   fraud: {
     profileChangeThreshold: parseInt(
@@ -163,10 +169,12 @@ export default (): AppConfig => ({
   revenuecat: {
     webhookSecret: process.env.REVENUECAT_WEBHOOK_SECRET ?? '',
     apiKey: process.env.REVENUECAT_API_KEY ?? '',
+    projectId: process.env.REVENUECAT_PROJECT_ID ?? '',
     timestampToleranceSeconds: parseInt(
       process.env.REVENUECAT_TIMESTAMP_TOLERANCE_SECONDS ?? '300',
       10,
     ),
+    allowSandbox: process.env.REVENUECAT_ALLOW_SANDBOX === 'true',
     tierMapping: (() => {
       try {
         const parsed: unknown = JSON.parse(
@@ -201,5 +209,3 @@ export default (): AppConfig => ({
     },
   },
 });
-
-

@@ -181,12 +181,13 @@ export class WalletService {
       throw AppException.notFound('Target user not found.');
     }
 
+    const referenceId = dto.externalTransactionId ?? idempotencyKey;
     const result = await this.fundingProvider.deposit({
       walletAccountId: '',
       amount: dto.amount,
       currency: dto.currency,
       referenceType: 'manual_admin_credit',
-      referenceId: idempotencyKey,
+      referenceId,
       idempotencyKey,
       description: dto.description,
     });
@@ -406,7 +407,7 @@ export class WalletService {
       });
       if (!profile || !profile.identityVerified) {
         throw AppException.businessRule(
-          'Identity verification is required for withdrawals of \$1,000 or more. Please complete identity verification in your profile.',
+          'Identity verification is required for withdrawals of $1,000 or more. Please complete identity verification in your profile.',
         );
       }
     }

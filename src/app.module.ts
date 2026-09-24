@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 
+import { SentryModule } from '@sentry/nestjs/setup';
+
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -80,6 +82,8 @@ import { AppConfig } from './config/configuration';
 
 @Module({
   imports: [
+    SentryModule.forRoot(),
+
     ConfigModule.forRoot({
       isGlobal: true,
 

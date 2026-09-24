@@ -1,0 +1,335 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            node-modules-
+
+      - name: Cache Prisma generated client
+        uses: actions/cache@v4
+        with:
+          path: node_modules/.prisma
+          key: prisma-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            prisma-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Lint
+        run: |
+          if npm run lint; then
+            echo "Lint passed"
+          else
+            if grep -q '"lint"' package.json; then
+              echo "::error::Lint script exists but failed"
+              exit 1
+            else
+              echo "::notice::No lint script found, skipping"
+            fi
+          fi
+
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            node-modules-
+
+      - name: Cache Prisma generated client
+        uses: actions/cache@v4
+        with:
+          path: node_modules/.prisma
+          key: prisma-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            prisma-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+  unit-test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            node-modules-
+
+      - name: Cache Prisma generated client
+        uses: actions/cache@v4
+        with:
+          path: node_modules/.prisma
+          key: prisma-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            prisma-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Copy .env from template
+        run: cp .env.example .env
+
+      - name: Unit Tests
+        run: npm test
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            node-modules-
+
+      - name: Cache Prisma generated client
+        uses: actions/cache@v4
+        with:
+          path: node_modules/.prisma
+          key: prisma-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            prisma-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: dist/
+          retention-days: 1
+
+  e2e-test:
+    name: E2E Tests
+    if: ${{ github.event_name }} == "push" && ${{ github.ref }} == "refs/heads/main"
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: [lint, typecheck, build]
+    env:
+      POSTGRES_USER: "ci"
+      POSTGRES_PASSWORD: "ci-password"
+      POSTGRES_DB: "veakay_ci"
+      POSTGRES_TEST_DB: "veakay_ci_test"
+      REDIS_PASSWORD: "ci-redis-password"
+      S3_ACCESS_KEY: "ci-minio"
+      S3_SECRET_KEY: "ci-minio-secret"
+      S3_BUCKET: "veakay-ci"
+      S3_ENDPOINT: "http://localhost:57900"
+      S3_PUBLIC_ENDPOINT: "http://localhost:57900"
+      S3_REGION: "us-east-1"
+      S3_FORCE_PATH_STYLE: "true"
+      NODE_ENV: "test"
+      PORT: "57800"
+      APP_URL: "http://localhost:57800"
+      MAIL_HOST: "localhost"
+      MAIL_PORT: "57025"
+      MAIL_FROM: "noreply@veakay.local"
+      MAIL_SECURE: "false"
+      MINIO_CONSOLE_PORT: "57901"
+      DATABASE_URL: "postgresql://ci:ci-password@localhost:57432/veakay_ci?schema=public"
+      DATABASE_TEST_URL: "postgresql://ci:ci-password@localhost:57433/veakay_ci_test?schema=public"
+      REDIS_URL: "redis://:ci-redis-password@localhost:57379"
+      REDIS_TEST_URL: "redis://:ci-redis-password@localhost:57379"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            node-modules-
+
+      - name: Cache Prisma generated client
+        uses: actions/cache@v4
+        with:
+          path: node_modules/.prisma
+          key: prisma-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            prisma-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate
+
+      - name: Generate .env for CI
+        run: |
+          cat > .env <<EOF
+POSTGRES_USER=ci
+POSTGRES_PASSWORD=ci-password
+POSTGRES_DB=veakay_ci
+POSTGRES_PORT=57432
+POSTGRES_TEST_DB=veakay_ci_test
+POSTGRES_TEST_PORT=57433
+REDIS_PASSWORD=ci-redis-password
+REDIS_PORT=57379
+S3_ACCESS_KEY=ci-minio
+S3_SECRET_KEY=ci-minio-secret
+S3_BUCKET=veakay-ci
+S3_ENDPOINT=http://localhost:57900
+S3_PUBLIC_ENDPOINT=http://localhost:57900
+S3_REGION=us-east-1
+S3_FORCE_PATH_STYLE=true
+MINIO_CONSOLE_PORT=57901
+MINIO_API_PORT=57900
+NODE_ENV=test
+PORT=57800
+APP_URL=http://localhost:57800
+MAIL_HOST=localhost
+MAIL_PORT=57025
+MAIL_FROM=noreply@veakay.local
+MAIL_SECURE=false
+MAILHOG_UI_PORT=58025
+DATABASE_URL=postgresql://ci:ci-password@localhost:57432/veakay_ci?schema=public
+DATABASE_TEST_URL=postgresql://ci:ci-password@localhost:57433/veakay_ci_test?schema=public
+REDIS_URL=redis://:ci-redis-password@localhost:57379
+REDIS_TEST_URL=redis://:ci-redis-password@localhost:57379
+JWT_ACCESS_SECRET=ci_test_access_secret_1234567890
+JWT_REFRESH_SECRET=ci_test_refresh_secret_1234567890
+LOG_LEVEL=silent
+SWAGGER_ENABLED=false
+EOF
+          echo '.env configured'
+          grep -v '^#' .env | grep '=' | head -5
+
+      - name: Generate .env.test for E2E
+        run: |
+          cp .env .env.test
+          sed -i 's|^DATABASE_URL=.*|DATABASE_URL=postgresql://ci:ci-password@localhost:57433/veakay_ci_test?schema=public|' .env.test
+          echo '.env.test configured'
+          grep '^DATABASE_URL' .env.test
+          grep '^JWT_ACCESS_SECRET' .env.test
+
+      - name: Start Docker Compose services
+        run: docker compose up -d postgres postgres-test redis mailhog minio
+
+      - name: Service status
+        if: always()
+        run: docker compose ps
+
+      - name: Wait for services
+        run: |
+          check_port() {
+            local host="$1" port="$2"
+            for i in $(seq 1 60); do
+              if (echo >/dev/tcp/$host/$port) >/dev/null 2>&1; then
+                echo "$host:$port is ready"
+                return 0
+              fi
+              sleep 2
+            done
+            echo "::error::Timed out waiting for $host:$port"
+            return 1
+          }
+          check_port localhost 57433 || { echo "PostgreSQL test DB not ready"; docker compose ps; exit 1; }
+          check_port localhost 57379 || { echo "Redis not ready"; docker compose ps; exit 1; }
+          check_port localhost 57900 || { echo "MinIO not ready"; docker compose ps; exit 1; }
+          check_port localhost 57025 || { echo "MailHog SMTP not ready"; docker compose ps; exit 1; }
+          check_port localhost 58025 || { echo "MailHog API not ready"; docker compose ps; exit 1; }
+
+      - name: Run database migrations on test DB
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://ci:ci-password@localhost:57433/veakay_ci_test?schema=public
+
+      - name: Run E2E Tests
+        run: npm run test:e2e
+
+      - name: Upload E2E failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-failure
+          path: |
+            test/results/
+            coverage/
+            test/e2e-reports/
+          retention-days: 7
+
+      - name: Tear down Docker Compose
+        if: always()
+        run: docker compose down -v --remove-orphans
